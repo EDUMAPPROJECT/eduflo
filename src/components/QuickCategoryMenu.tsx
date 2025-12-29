@@ -2,14 +2,14 @@ import { useNavigate } from "react-router-dom";
 import { Calculator, BookOpen, Globe, FlaskConical, Music, Palette, Dumbbell, MoreHorizontal } from "lucide-react";
 
 const categories = [
-  { name: "수학", icon: Calculator, color: "bg-blue-100 text-blue-600" },
-  { name: "영어", icon: Globe, color: "bg-green-100 text-green-600" },
-  { name: "국어", icon: BookOpen, color: "bg-orange-100 text-orange-600" },
-  { name: "과학", icon: FlaskConical, color: "bg-purple-100 text-purple-600" },
-  { name: "음악", icon: Music, color: "bg-pink-100 text-pink-600" },
-  { name: "미술", icon: Palette, color: "bg-yellow-100 text-yellow-600" },
-  { name: "체육", icon: Dumbbell, color: "bg-red-100 text-red-600" },
-  { name: "전체", icon: MoreHorizontal, color: "bg-gray-100 text-gray-600" },
+  { name: "수학", icon: Calculator, color: "bg-primary/10 text-primary" },
+  { name: "영어", icon: Globe, color: "bg-emerald-100 text-emerald-600" },
+  { name: "국어", icon: BookOpen, color: "bg-teal-100 text-teal-600" },
+  { name: "과학", icon: FlaskConical, color: "bg-cyan-100 text-cyan-600" },
+  { name: "음악", icon: Music, color: "bg-primary/15 text-primary" },
+  { name: "미술", icon: Palette, color: "bg-lime-100 text-lime-600" },
+  { name: "체육", icon: Dumbbell, color: "bg-green-100 text-green-600" },
+  { name: "전체", icon: MoreHorizontal, color: "bg-muted text-muted-foreground" },
 ];
 
 const QuickCategoryMenu = () => {

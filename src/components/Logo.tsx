@@ -1,4 +1,4 @@
-import { MapPin } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 
 interface LogoProps {
   size?: "sm" | "md" | "lg";
@@ -26,15 +26,15 @@ const Logo = ({ size = "md", showText = true }: LogoProps) => {
           sizeClasses[size]
         )}
       >
-        <MapPin className={cn(
+        <GraduationCap className={cn(
           "text-primary-foreground",
-          size === "sm" ? "w-4 h-4" : size === "md" ? "w-6 h-6" : "w-10 h-10"
+          size === "sm" ? "w-5 h-5" : size === "md" ? "w-7 h-7" : "w-12 h-12"
         )} />
       </div>
       {showText && (
         <div className={cn("font-bold text-foreground", textSizeClasses[size])}>
           <span className="text-primary">에듀</span>
-          <span className="text-accent">맵</span>
+          <span className="text-primary/80">맵</span>
         </div>
       )}
     </div>

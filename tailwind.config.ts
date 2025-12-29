@@ -53,9 +53,9 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
         edumap: {
-          blue: "#1A3CED",
-          sky: "#0EA5E9",
-          light: "#E0F2FE",
+          mint: "#2EE5AC",
+          "mint-light": "#E0F8F1",
+          "mint-dark": "#26C090",
         },
       },
       borderRadius: {

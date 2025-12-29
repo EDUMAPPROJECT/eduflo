@@ -149,7 +149,7 @@ const HomePage = () => {
             selectedRegion={selectedRegion} 
             onRegionChange={handleRegionChange} 
           />
-          <Logo size="sm" />
+          <Logo size="sm" showText={false} />
         </div>
       </header>
 
