@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { useState, useEffect, useMemo } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import { Button } from "@/components/ui/button";
-import { MapPin, Navigation, AlertCircle } from "lucide-react";
+import { Navigation, AlertCircle } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
@@ -113,11 +113,16 @@ const LocationMap = ({ address, name }: LocationMapProps) => {
     );
   }
 
+  const position = useMemo<[number, number]>(
+    () => [coordinates.lat, coordinates.lng],
+    [coordinates.lat, coordinates.lng]
+  );
+
   return (
     <div className="space-y-3">
       <div className="w-full h-48 rounded-lg overflow-hidden">
         <MapContainer
-          center={[coordinates.lat, coordinates.lng]}
+          center={position}
           zoom={16}
           scrollWheelZoom={false}
           style={{ height: "100%", width: "100%" }}
@@ -126,12 +131,13 @@ const LocationMap = ({ address, name }: LocationMapProps) => {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <Marker position={[coordinates.lat, coordinates.lng]}>
+          <Marker position={position}>
             <Popup>
-              <div className="text-center">
+              <span className="text-center">
                 <strong>{name}</strong>
-                <p className="text-xs mt-1">{address}</p>
-              </div>
+                <br />
+                <span className="text-xs">{address}</span>
+              </span>
             </Popup>
           </Marker>
         </MapContainer>
