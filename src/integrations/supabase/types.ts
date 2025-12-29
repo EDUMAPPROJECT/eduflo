@@ -153,6 +153,103 @@ export type Database = {
         }
         Relationships: []
       }
+      seminar_applications: {
+        Row: {
+          attendee_count: number | null
+          created_at: string
+          id: string
+          message: string | null
+          seminar_id: string
+          student_grade: string | null
+          student_name: string
+          user_id: string
+        }
+        Insert: {
+          attendee_count?: number | null
+          created_at?: string
+          id?: string
+          message?: string | null
+          seminar_id: string
+          student_grade?: string | null
+          student_name: string
+          user_id: string
+        }
+        Update: {
+          attendee_count?: number | null
+          created_at?: string
+          id?: string
+          message?: string | null
+          seminar_id?: string
+          student_grade?: string | null
+          student_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seminar_applications_seminar_id_fkey"
+            columns: ["seminar_id"]
+            isOneToOne: false
+            referencedRelation: "seminars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seminars: {
+        Row: {
+          academy_id: string
+          capacity: number | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          image_url: string | null
+          location: string | null
+          status: Database["public"]["Enums"]["seminar_status"]
+          subject: string | null
+          target_grade: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          academy_id: string
+          capacity?: number | null
+          created_at?: string
+          date: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          status?: Database["public"]["Enums"]["seminar_status"]
+          subject?: string | null
+          target_grade?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          academy_id?: string
+          capacity?: number | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          status?: Database["public"]["Enums"]["seminar_status"]
+          subject?: string | null
+          target_grade?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seminars_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -191,6 +288,7 @@ export type Database = {
     Enums: {
       app_role: "parent" | "admin"
       consultation_status: "pending" | "completed"
+      seminar_status: "recruiting" | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -320,6 +418,7 @@ export const Constants = {
     Enums: {
       app_role: ["parent", "admin"],
       consultation_status: ["pending", "completed"],
+      seminar_status: ["recruiting", "closed"],
     },
   },
 } as const
