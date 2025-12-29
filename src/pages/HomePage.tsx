@@ -6,8 +6,10 @@ import Logo from "@/components/Logo";
 import QuickCategoryMenu from "@/components/QuickCategoryMenu";
 import SeminarFeedCard from "@/components/SeminarFeedCard";
 import EmptySeminarState from "@/components/EmptySeminarState";
+import LearningStyleBanner from "@/components/LearningStyleBanner";
+import RecommendedAcademies from "@/components/RecommendedAcademies";
 import { Button } from "@/components/ui/button";
-import { MapPin, Search, RefreshCw } from "lucide-react";
+import { MapPin, RefreshCw } from "lucide-react";
 
 interface Seminar {
   id: string;
@@ -33,6 +35,8 @@ const HomePage = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
+  const [learningStyle, setLearningStyle] = useState<string | null>(null);
+  const [checkingProfile, setCheckingProfile] = useState(true);
 
   const fetchSeminars = useCallback(async (pageNum: number, append: boolean = false) => {
     try {
@@ -83,6 +87,28 @@ const HomePage = () => {
   }, []);
 
   useEffect(() => {
+    const checkUserProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("learning_style")
+            .eq("id", user.id)
+            .maybeSingle();
+          
+          if (profile?.learning_style) {
+            setLearningStyle(profile.learning_style);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking profile:", error);
+      } finally {
+        setCheckingProfile(false);
+      }
+    };
+
+    checkUserProfile();
     fetchSeminars(0);
   }, [fetchSeminars]);
 
@@ -112,23 +138,16 @@ const HomePage = () => {
 
       {/* Main Content */}
       <main className="max-w-lg mx-auto px-4 py-6">
-        {/* Search Banner */}
-        <div className="gradient-primary rounded-2xl p-5 mb-6 shadow-soft">
-          <h2 className="text-primary-foreground font-semibold text-lg mb-2">
-            어떤 학원을 찾고 계세요?
-          </h2>
-          <p className="text-primary-foreground/80 text-sm mb-4">
-            과목, 위치, 특징으로 검색해보세요
-          </p>
-          <Button 
-            variant="secondary" 
-            className="w-full bg-card text-foreground hover:bg-card/90 gap-2"
-            onClick={() => navigate("/explore")}
-          >
-            <Search className="w-4 h-4" />
-            학원 검색하기
-          </Button>
-        </div>
+        {/* Learning Style Banner or Recommended Academies */}
+        {!checkingProfile && (
+          learningStyle ? (
+            <RecommendedAcademies learningStyle={learningStyle} />
+          ) : (
+            <section className="mb-6">
+              <LearningStyleBanner />
+            </section>
+          )
+        )}
 
         {/* Quick Category Menu */}
         <section className="mb-8">

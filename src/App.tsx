@@ -10,6 +10,8 @@ import ExplorePage from "./pages/ExplorePage";
 import MyPage from "./pages/MyPage";
 import SeminarDetailPage from "./pages/SeminarDetailPage";
 import AcademyDetailPage from "./pages/AcademyDetailPage";
+import LearningStyleTest from "./pages/LearningStyleTest";
+import LearningStyleResult from "./pages/LearningStyleResult";
 import AdminHomePage from "./pages/admin/AdminHomePage";
 import ConsultationManagementPage from "./pages/admin/ConsultationManagementPage";
 import ProfileManagementPage from "./pages/admin/ProfileManagementPage";
@@ -32,6 +34,8 @@ const App = () => (
           <Route path="/my" element={<MyPage />} />
           <Route path="/seminar/:id" element={<SeminarDetailPage />} />
           <Route path="/academy/:id" element={<AcademyDetailPage />} />
+          <Route path="/learning-style-test" element={<LearningStyleTest />} />
+          <Route path="/learning-style-result" element={<LearningStyleResult />} />
           {/* Admin Routes */}
           <Route path="/admin/home" element={<AdminHomePage />} />
           <Route path="/admin/consultations" element={<ConsultationManagementPage />} />
