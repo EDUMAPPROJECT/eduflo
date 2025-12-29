@@ -14,6 +14,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ArrowLeft,
   Calendar,
   Clock,
@@ -21,6 +28,7 @@ import {
   Users,
   Building2,
   GraduationCap,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -51,6 +59,8 @@ const SeminarDetailPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [applicationCount, setApplicationCount] = useState(0);
+  const [hasApplied, setHasApplied] = useState(false);
+  const [myApplication, setMyApplication] = useState<any>(null);
 
   // Form state
   const [studentName, setStudentName] = useState("");
@@ -61,6 +71,9 @@ const SeminarDetailPage = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      if (session?.user && id) {
+        checkExistingApplication(session.user.id);
+      }
     });
 
     if (id) {
@@ -106,6 +119,24 @@ const SeminarDetailPage = () => {
     }
   };
 
+  const checkExistingApplication = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from("seminar_applications")
+        .select("*")
+        .eq("seminar_id", id)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (data) {
+        setHasApplied(true);
+        setMyApplication(data);
+      }
+    } catch (error) {
+      console.error("Error checking application:", error);
+    }
+  };
+
   const handleApply = async () => {
     if (!user) {
       toast.error("로그인이 필요합니다");
@@ -118,13 +149,18 @@ const SeminarDetailPage = () => {
       return;
     }
 
+    if (!studentGrade) {
+      toast.error("학년을 선택해주세요");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const { error } = await supabase.from("seminar_applications").insert({
         seminar_id: id,
         user_id: user.id,
         student_name: studentName,
-        student_grade: studentGrade || null,
+        student_grade: studentGrade,
         attendee_count: attendeeCount,
         message: message || null,
       });
@@ -133,6 +169,12 @@ const SeminarDetailPage = () => {
 
       toast.success("설명회 신청이 완료되었습니다");
       setIsDialogOpen(false);
+      setHasApplied(true);
+      setMyApplication({
+        student_name: studentName,
+        student_grade: studentGrade,
+        attendee_count: attendeeCount,
+      });
       resetForm();
       fetchApplicationCount();
     } catch (error) {
@@ -294,21 +336,47 @@ const SeminarDetailPage = () => {
             </p>
           </div>
         </div>
+
+        {/* My Application Status */}
+        {hasApplied && myApplication && (
+          <div className="mb-6">
+            <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-primary mb-2">
+                <CheckCircle2 className="w-5 h-5" />
+                <span className="font-semibold">신청 완료</span>
+              </div>
+              <p className="text-sm text-foreground">
+                {myApplication.student_name} ({myApplication.student_grade}) · {myApplication.attendee_count}명 참석 예정
+              </p>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Fixed Bottom Button */}
       <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 z-50">
         <div className="max-w-lg mx-auto">
-          <Button
-            className="w-full h-14 text-base"
-            size="xl"
-            disabled={seminar.status === "closed" || remainingSpots <= 0}
-            onClick={() => setIsDialogOpen(true)}
-          >
-            {seminar.status === "closed" || remainingSpots <= 0
-              ? "모집 마감"
-              : "설명회 참가 신청하기"}
-          </Button>
+          {hasApplied ? (
+            <Button
+              className="w-full h-14 text-base"
+              variant="secondary"
+              disabled
+            >
+              <CheckCircle2 className="w-5 h-5 mr-2" />
+              신청 완료됨
+            </Button>
+          ) : (
+            <Button
+              className="w-full h-14 text-base"
+              size="xl"
+              disabled={seminar.status === "closed" || remainingSpots <= 0}
+              onClick={() => setIsDialogOpen(true)}
+            >
+              {seminar.status === "closed" || remainingSpots <= 0
+                ? "모집 마감"
+                : "설명회 참가 신청하기"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -329,13 +397,26 @@ const SeminarDetailPage = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="studentGrade">학년</Label>
-              <Input
-                id="studentGrade"
-                placeholder="예: 중학교 2학년"
-                value={studentGrade}
-                onChange={(e) => setStudentGrade(e.target.value)}
-              />
+              <Label htmlFor="studentGrade">학년 *</Label>
+              <Select value={studentGrade} onValueChange={setStudentGrade}>
+                <SelectTrigger>
+                  <SelectValue placeholder="학년을 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="초등 1학년">초등 1학년</SelectItem>
+                  <SelectItem value="초등 2학년">초등 2학년</SelectItem>
+                  <SelectItem value="초등 3학년">초등 3학년</SelectItem>
+                  <SelectItem value="초등 4학년">초등 4학년</SelectItem>
+                  <SelectItem value="초등 5학년">초등 5학년</SelectItem>
+                  <SelectItem value="초등 6학년">초등 6학년</SelectItem>
+                  <SelectItem value="중학교 1학년">중학교 1학년</SelectItem>
+                  <SelectItem value="중학교 2학년">중학교 2학년</SelectItem>
+                  <SelectItem value="중학교 3학년">중학교 3학년</SelectItem>
+                  <SelectItem value="고등학교 1학년">고등학교 1학년</SelectItem>
+                  <SelectItem value="고등학교 2학년">고등학교 2학년</SelectItem>
+                  <SelectItem value="고등학교 3학년">고등학교 3학년</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="attendeeCount">참석 인원</Label>

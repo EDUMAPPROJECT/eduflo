@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import Logo from "@/components/Logo";
+import ImageUpload from "@/components/ImageUpload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,6 +43,7 @@ interface Seminar {
   status: "recruiting" | "closed";
   subject: string | null;
   target_grade: string | null;
+  image_url: string | null;
   application_count?: number;
 }
 
@@ -78,6 +80,7 @@ const SeminarManagementPage = () => {
   const [capacity, setCapacity] = useState(30);
   const [subject, setSubject] = useState("");
   const [targetGrade, setTargetGrade] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -199,6 +202,7 @@ const SeminarManagementPage = () => {
         capacity,
         subject: subject || null,
         target_grade: targetGrade || null,
+        image_url: imageUrl || null,
         status: "recruiting",
       });
 
@@ -245,6 +249,7 @@ const SeminarManagementPage = () => {
     setCapacity(30);
     setSubject("");
     setTargetGrade("");
+    setImageUrl("");
   };
 
   const formatDate = (dateString: string) => {
@@ -355,6 +360,14 @@ const SeminarManagementPage = () => {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>포스터 이미지</Label>
+                <ImageUpload
+                  value={imageUrl}
+                  onChange={setImageUrl}
+                  folder="seminars"
+                />
               </div>
               <div className="space-y-2">
                 <Label>설명</Label>
