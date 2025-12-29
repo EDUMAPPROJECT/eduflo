@@ -7,9 +7,8 @@ const RoleSelection = () => {
   const navigate = useNavigate();
 
   const handleRoleSelect = (role: "parent" | "owner") => {
-    // Store role in localStorage for now
-    localStorage.setItem("edumap-role", role);
-    navigate("/home");
+    // Navigate to auth with role preference
+    navigate(`/auth?role=${role}`);
   };
 
   return (
