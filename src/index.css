@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    --background: 160 60% 97%;
+    --background: 170 45% 97%;
     --foreground: 0 0% 20%;
 
     --card: 0 0% 100%;
@@ -15,62 +15,62 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 20%;
 
-    --primary: 160 78% 54%;
+    --primary: 170 55% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 160 60% 93%;
-    --secondary-foreground: 160 78% 35%;
+    --secondary: 170 45% 93%;
+    --secondary-foreground: 170 55% 35%;
 
-    --muted: 160 30% 95%;
+    --muted: 170 25% 95%;
     --muted-foreground: 0 0% 53%;
 
-    --accent: 160 70% 45%;
+    --accent: 170 50% 48%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 160 20% 90%;
-    --input: 160 20% 90%;
-    --ring: 160 78% 54%;
+    --border: 170 20% 90%;
+    --input: 170 20% 90%;
+    --ring: 170 55% 55%;
 
     --radius: 0.75rem;
 
-    /* Custom EduMap tokens - Emerald Mint theme */
-    --gradient-primary: linear-gradient(135deg, hsl(160, 78%, 54%) 0%, hsl(160, 70%, 45%) 100%);
-    --gradient-hero: linear-gradient(180deg, hsl(160, 60%, 97%) 0%, hsl(160, 60%, 93%) 100%);
-    --shadow-soft: 0 4px 20px -4px hsl(160 78% 54% / 0.2);
-    --shadow-card: 0 2px 12px -2px hsl(160 78% 54% / 0.12);
+    /* Custom EduMap tokens - Teal theme matching logo */
+    --gradient-primary: linear-gradient(135deg, hsl(170, 55%, 55%) 0%, hsl(170, 50%, 48%) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(170, 45%, 97%) 0%, hsl(170, 45%, 93%) 100%);
+    --shadow-soft: 0 4px 20px -4px hsl(170 55% 55% / 0.2);
+    --shadow-card: 0 2px 12px -2px hsl(170 55% 55% / 0.12);
   }
 
   .dark {
-    --background: 160 20% 8%;
-    --foreground: 160 20% 95%;
+    --background: 170 20% 8%;
+    --foreground: 170 20% 95%;
 
-    --card: 160 20% 12%;
-    --card-foreground: 160 20% 95%;
+    --card: 170 20% 12%;
+    --card-foreground: 170 20% 95%;
 
-    --popover: 160 20% 12%;
-    --popover-foreground: 160 20% 95%;
+    --popover: 170 20% 12%;
+    --popover-foreground: 170 20% 95%;
 
-    --primary: 160 78% 50%;
+    --primary: 170 55% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 160 30% 18%;
-    --secondary-foreground: 160 60% 85%;
+    --secondary: 170 25% 18%;
+    --secondary-foreground: 170 45% 85%;
 
-    --muted: 160 20% 18%;
-    --muted-foreground: 160 15% 60%;
+    --muted: 170 20% 18%;
+    --muted-foreground: 170 15% 60%;
 
-    --accent: 160 70% 45%;
+    --accent: 170 50% 45%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 63% 40%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 160 20% 20%;
-    --input: 160 20% 20%;
-    --ring: 160 78% 50%;
+    --border: 170 20% 20%;
+    --input: 170 20% 20%;
+    --ring: 170 55% 50%;
   }
 }
 
