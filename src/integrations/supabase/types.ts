@@ -14,16 +14,183 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      academies: {
+        Row: {
+          address: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_mou: boolean | null
+          name: string
+          owner_id: string
+          profile_image: string | null
+          subject: string
+          tags: string[] | null
+          target_grade: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_mou?: boolean | null
+          name: string
+          owner_id: string
+          profile_image?: string | null
+          subject: string
+          tags?: string[] | null
+          target_grade?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_mou?: boolean | null
+          name?: string
+          owner_id?: string
+          profile_image?: string | null
+          subject?: string
+          tags?: string[] | null
+          target_grade?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bookmarks: {
+        Row: {
+          academy_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmarks_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultations: {
+        Row: {
+          academy_id: string
+          created_at: string
+          id: string
+          message: string | null
+          parent_id: string
+          status: Database["public"]["Enums"]["consultation_status"]
+          student_grade: string | null
+          student_name: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          parent_id: string
+          status?: Database["public"]["Enums"]["consultation_status"]
+          student_grade?: string | null
+          student_name: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          parent_id?: string
+          status?: Database["public"]["Enums"]["consultation_status"]
+          student_grade?: string | null
+          student_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultations_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          phone: string
+          updated_at: string
+          user_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          phone: string
+          updated_at?: string
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          phone?: string
+          updated_at?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "parent" | "admin"
+      consultation_status: "pending" | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +317,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["parent", "admin"],
+      consultation_status: ["pending", "completed"],
+    },
   },
 } as const
