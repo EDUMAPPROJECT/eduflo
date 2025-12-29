@@ -1,155 +1,141 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Logo from "@/components/Logo";
-import { Phone, ArrowRight, CheckCircle } from "lucide-react";
+import { Mail, Lock, ArrowRight, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
-type AuthStep = "phone" | "otp" | "welcome";
+type AuthStep = "login" | "signup" | "welcome";
 
 const AuthPage = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState<AuthStep>("phone");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
+  const [searchParams] = useSearchParams();
+  const [step, setStep] = useState<AuthStep>("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<"parent" | "admin">("parent");
+  const [selectedRole, setSelectedRole] = useState<"parent" | "admin">(
+    (searchParams.get("role") as "parent" | "admin") || "parent"
+  );
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    // Check if already logged in
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (session?.user && step !== "welcome") {
-          // Check if new signup
           if (event === "SIGNED_IN" && isNewUser) {
             setStep("welcome");
           } else if (event === "SIGNED_IN") {
-            navigate("/home");
+            navigateByRole();
           }
         }
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user && step === "phone") {
-        navigate("/home");
+      if (session?.user && step === "login") {
+        navigateByRole();
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, step, isNewUser]);
+  }, [navigate, step, isNewUser, selectedRole]);
 
-  const formatPhoneNumber = (value: string) => {
-    // Remove all non-digits
-    const digits = value.replace(/\D/g, "");
-    // Format as Korean phone number
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
-  };
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value);
-    setPhone(formatted);
-  };
-
-  const getFullPhoneNumber = () => {
-    const digits = phone.replace(/\D/g, "");
-    // Convert Korean phone format to international
-    if (digits.startsWith("010")) {
-      return `+82${digits.slice(1)}`;
+  const navigateByRole = () => {
+    if (selectedRole === "admin") {
+      navigate("/admin/home");
+    } else {
+      navigate("/home");
     }
-    return `+82${digits}`;
   };
 
-  const handleSendOtp = async () => {
-    const digits = phone.replace(/\D/g, "");
-    if (digits.length < 10) {
-      toast.error("올바른 휴대폰 번호를 입력해주세요");
+  const handleLogin = async () => {
+    if (!email || !password) {
+      toast.error("이메일과 비밀번호를 입력해주세요");
       return;
     }
 
     setLoading(true);
     try {
-      const fullPhone = getFullPhoneNumber();
-      
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: fullPhone,
-        options: {
-          data: {
-            role: selectedRole,
-          },
-        },
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
       if (error) {
-        if (error.message.includes("not enabled")) {
-          // For demo, skip OTP and show welcome
-          toast.info("데모 모드: OTP 인증을 건너뜁니다");
-          setIsNewUser(true);
-          setStep("welcome");
+        if (error.message.includes("Invalid login credentials")) {
+          toast.error("이메일 또는 비밀번호가 올바르지 않습니다");
         } else {
-          throw error;
+          toast.error(error.message);
         }
-      } else {
-        setStep("otp");
-        toast.success("인증번호가 발송되었습니다");
+        return;
       }
+
+      toast.success("로그인되었습니다");
+      navigateByRole();
     } catch (error: any) {
-      console.error("OTP send error:", error);
-      toast.error("인증번호 발송에 실패했습니다");
+      console.error("Login error:", error);
+      toast.error("로그인에 실패했습니다");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyOtp = async () => {
-    if (otp.length !== 6) {
-      toast.error("6자리 인증번호를 입력해주세요");
+  const handleSignup = async () => {
+    if (!email || !password) {
+      toast.error("이메일과 비밀번호를 입력해주세요");
+      return;
+    }
+
+    if (password.length < 6) {
+      toast.error("비밀번호는 6자 이상이어야 합니다");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error("비밀번호가 일치하지 않습니다");
       return;
     }
 
     setLoading(true);
     try {
-      const fullPhone = getFullPhoneNumber();
-      
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: fullPhone,
-        token: otp,
-        type: "sms",
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            role: selectedRole,
+          },
+          emailRedirectTo: `${window.location.origin}/`,
+        },
       });
 
-      if (error) throw error;
-
-      // Check if this is a new user
-      if (data.user?.created_at) {
-        const createdAt = new Date(data.user.created_at);
-        const now = new Date();
-        const diffMs = now.getTime() - createdAt.getTime();
-        const isRecent = diffMs < 60000; // Created within last minute
-        
-        if (isRecent) {
-          setIsNewUser(true);
-          setStep("welcome");
+      if (error) {
+        if (error.message.includes("User already registered")) {
+          toast.error("이미 가입된 이메일입니다");
         } else {
-          navigate("/home");
+          toast.error(error.message);
         }
+        return;
       }
+
+      setIsNewUser(true);
+      setStep("welcome");
+      toast.success("회원가입이 완료되었습니다");
     } catch (error: any) {
-      console.error("OTP verify error:", error);
-      toast.error("인증번호가 올바르지 않습니다");
+      console.error("Signup error:", error);
+      toast.error("회원가입에 실패했습니다");
     } finally {
       setLoading(false);
     }
   };
 
   const handleContinue = () => {
-    navigate("/home");
+    navigateByRole();
   };
 
   return (
@@ -160,13 +146,15 @@ const AuthPage = () => {
           <Logo size="lg" />
         </div>
 
-        {step === "phone" && (
+        {(step === "login" || step === "signup") && (
           <div className="w-full max-w-sm animate-fade-up">
             <h2 className="text-xl font-semibold text-foreground text-center mb-2">
-              휴대폰 번호로 시작하기
+              {step === "login" ? "로그인" : "회원가입"}
             </h2>
             <p className="text-muted-foreground text-sm text-center mb-8">
-              본인 인증을 위해 휴대폰 번호를 입력해주세요
+              {step === "login" 
+                ? "이메일로 로그인하세요" 
+                : "새 계정을 만들어주세요"}
             </p>
 
             {/* Role Selection */}
@@ -189,71 +177,89 @@ const AuthPage = () => {
 
             <div className="space-y-4">
               <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
-                  type="tel"
-                  placeholder="010-0000-0000"
-                  value={phone}
-                  onChange={handlePhoneChange}
+                  type="email"
+                  placeholder="이메일 주소"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="pl-12 h-14 text-lg"
-                  maxLength={13}
                 />
               </div>
 
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="비밀번호"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-12 pr-12 h-14 text-lg"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <Eye className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </button>
+              </div>
+
+              {step === "signup" && (
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="비밀번호 확인"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="pl-12 h-14 text-lg"
+                  />
+                </div>
+              )}
+
               <Button
-                onClick={handleSendOtp}
-                disabled={loading || phone.replace(/\D/g, "").length < 10}
+                onClick={step === "login" ? handleLogin : handleSignup}
+                disabled={loading}
                 className="w-full h-14 text-base"
                 size="xl"
               >
-                {loading ? "발송 중..." : "인증번호 받기"}
+                {loading 
+                  ? "처리 중..." 
+                  : step === "login" 
+                    ? "로그인" 
+                    : "가입하기"}
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </div>
-          </div>
-        )}
 
-        {step === "otp" && (
-          <div className="w-full max-w-sm animate-fade-up">
-            <h2 className="text-xl font-semibold text-foreground text-center mb-2">
-              인증번호 입력
-            </h2>
-            <p className="text-muted-foreground text-sm text-center mb-8">
-              {phone}으로 발송된 6자리 인증번호를 입력해주세요
-            </p>
-
-            <div className="flex justify-center mb-6">
-              <InputOTP
-                value={otp}
-                onChange={setOtp}
-                maxLength={6}
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} className="w-12 h-14 text-xl" />
-                  <InputOTPSlot index={1} className="w-12 h-14 text-xl" />
-                  <InputOTPSlot index={2} className="w-12 h-14 text-xl" />
-                  <InputOTPSlot index={3} className="w-12 h-14 text-xl" />
-                  <InputOTPSlot index={4} className="w-12 h-14 text-xl" />
-                  <InputOTPSlot index={5} className="w-12 h-14 text-xl" />
-                </InputOTPGroup>
-              </InputOTP>
+            <div className="mt-6 text-center">
+              {step === "login" ? (
+                <p className="text-sm text-muted-foreground">
+                  계정이 없으신가요?{" "}
+                  <button
+                    onClick={() => setStep("signup")}
+                    className="text-primary font-medium hover:underline"
+                  >
+                    회원가입
+                  </button>
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  이미 계정이 있으신가요?{" "}
+                  <button
+                    onClick={() => setStep("login")}
+                    className="text-primary font-medium hover:underline"
+                  >
+                    로그인
+                  </button>
+                </p>
+              )}
             </div>
-
-            <Button
-              onClick={handleVerifyOtp}
-              disabled={loading || otp.length !== 6}
-              className="w-full h-14 text-base"
-              size="xl"
-            >
-              {loading ? "확인 중..." : "인증하기"}
-            </Button>
-
-            <button
-              onClick={() => setStep("phone")}
-              className="w-full mt-4 text-sm text-muted-foreground hover:text-primary"
-            >
-              휴대폰 번호 다시 입력
-            </button>
           </div>
         )}
 
