@@ -1,4 +1,4 @@
-import { Home, MessageSquare, Building2 } from "lucide-react";
+import { Home, MessageSquare, Building2, Calendar } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -10,8 +10,9 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { icon: Home, label: "홈", path: "/admin/home" },
-  { icon: MessageSquare, label: "상담 관리", path: "/admin/consultations" },
-  { icon: Building2, label: "프로필 관리", path: "/admin/profile" },
+  { icon: Calendar, label: "설명회", path: "/admin/seminars" },
+  { icon: MessageSquare, label: "상담", path: "/admin/consultations" },
+  { icon: Building2, label: "프로필", path: "/admin/profile" },
 ];
 
 const AdminBottomNavigation = () => {
