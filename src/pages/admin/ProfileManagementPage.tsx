@@ -369,7 +369,7 @@ const ProfileManagementPage = () => {
       <div className="min-h-screen bg-background pb-20">
         <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
           <div className="max-w-lg mx-auto px-4 h-14 flex items-center">
-            <Logo size="sm" />
+            <Logo size="sm" showText={false} />
           </div>
         </header>
         <main className="max-w-lg mx-auto px-4 py-6">
@@ -389,8 +389,8 @@ const ProfileManagementPage = () => {
     <div className="min-h-screen bg-background pb-20">
       <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <Logo size="sm" />
-          <span className="text-xs font-medium text-muted-foreground">프로필 관리</span>
+          <Logo size="sm" showText={false} />
+          <span className="text-xs font-medium text-primary bg-secondary px-2 py-1 rounded-full">프로필 관리</span>
         </div>
       </header>
 

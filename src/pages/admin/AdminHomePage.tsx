@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import Logo from "@/components/Logo";
@@ -6,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare, Eye, TrendingUp, Calendar } from "lucide-react";
 
 const AdminHomePage = () => {
+  const navigate = useNavigate();
   const [todayConsultations, setTodayConsultations] = useState(0);
   const [profileViews, setProfileViews] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -67,7 +69,7 @@ const AdminHomePage = () => {
       {/* Header */}
       <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <Logo size="sm" />
+          <Logo size="sm" showText={false} />
           <span className="text-xs font-medium text-primary bg-secondary px-2 py-1 rounded-full">
             관리자 모드
           </span>
@@ -135,7 +137,7 @@ const AdminHomePage = () => {
           <div className="space-y-3">
             <Card 
               className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all duration-200"
-              onClick={() => window.location.href = "/admin/consultations"}
+              onClick={() => navigate("/admin/consultations")}
             >
               <CardContent className="p-4 flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
@@ -152,7 +154,7 @@ const AdminHomePage = () => {
 
             <Card 
               className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all duration-200"
-              onClick={() => window.location.href = "/admin/profile"}
+              onClick={() => navigate("/admin/profile")}
             >
               <CardContent className="p-4 flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">

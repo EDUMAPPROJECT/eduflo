@@ -267,8 +267,8 @@ const SeminarManagementPage = () => {
       {/* Header */}
       <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <Logo size="sm" />
-          <span className="text-xs font-medium text-muted-foreground">
+          <Logo size="sm" showText={false} />
+          <span className="text-xs font-medium text-primary bg-secondary px-2 py-1 rounded-full">
             설명회 관리
           </span>
         </div>

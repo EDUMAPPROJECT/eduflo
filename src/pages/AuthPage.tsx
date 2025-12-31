@@ -31,7 +31,7 @@ const AuthPage = () => {
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
       
       if (error) {
         logError('role-fetch', error);
@@ -40,7 +40,13 @@ const AuthPage = () => {
         return;
       }
       
-      if (roleData?.role === "admin") {
+      // If no role found, default to parent
+      if (!roleData) {
+        navigate("/home");
+        return;
+      }
+      
+      if (roleData.role === "admin") {
         navigate("/admin/home");
       } else {
         navigate("/home");

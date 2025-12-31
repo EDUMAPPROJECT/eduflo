@@ -27,9 +27,18 @@ const ProtectedAdminRoute = ({ children }: ProtectedAdminRouteProps) => {
           .from('user_roles')
           .select('role')
           .eq('user_id', session.user.id)
-          .single();
+          .maybeSingle();
           
-        if (error || roleData?.role !== 'admin') {
+        if (error) {
+          // Log only in development
+          if (import.meta.env.DEV) {
+            console.error('Role fetch error:', error);
+          }
+          navigate('/home');
+          return;
+        }
+        
+        if (!roleData || roleData.role !== 'admin') {
           navigate('/home');
           return;
         }
