@@ -36,6 +36,8 @@ import {
   Heart,
 } from "lucide-react";
 import { toast } from "sonner";
+import { logError } from "@/lib/errorLogger";
+import { consultationSchema, validateInput } from "@/lib/validation";
 
 const LocationMap = lazy(() => import("@/components/LocationMap"));
 
@@ -114,7 +116,7 @@ const AcademyDetailPage = () => {
       if (error) throw error;
       setAcademy(data);
     } catch (error) {
-      console.error("Error fetching academy:", error);
+      logError("fetch-academy", error);
     } finally {
       setLoading(false);
     }
@@ -175,7 +177,7 @@ const AcademyDetailPage = () => {
         toast.success("찜 목록에 추가되었습니다");
       }
     } catch (error) {
-      console.error("Error toggling bookmark:", error);
+      logError("toggle-bookmark", error);
     }
   };
 
@@ -186,19 +188,28 @@ const AcademyDetailPage = () => {
       return;
     }
 
-    if (!studentName.trim()) {
-      toast.error("학생 이름을 입력해주세요");
+    // Validate input
+    const validation = validateInput(consultationSchema, {
+      student_name: studentName,
+      student_grade: studentGrade || null,
+      message: message || null,
+    });
+
+    if (!validation.success) {
+      toast.error((validation as { success: false; error: string }).error);
       return;
     }
+
+    const validatedData = (validation as { success: true; data: { student_name: string; student_grade?: string | null; message?: string | null } }).data;
 
     setSubmitting(true);
     try {
       const { error } = await supabase.from("consultations").insert({
         academy_id: id,
         parent_id: user.id,
-        student_name: studentName,
-        student_grade: studentGrade || null,
-        message: message || null,
+        student_name: validatedData.student_name,
+        student_grade: validatedData.student_grade,
+        message: validatedData.message,
       });
 
       if (error) throw error;
@@ -209,7 +220,7 @@ const AcademyDetailPage = () => {
       setStudentGrade("");
       setMessage("");
     } catch (error) {
-      console.error("Error submitting consultation:", error);
+      logError("submit-consultation", error);
       toast.error("신청에 실패했습니다");
     } finally {
       setSubmitting(false);

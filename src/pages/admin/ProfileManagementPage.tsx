@@ -40,6 +40,8 @@ import {
   GraduationCap,
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
+import { logError } from "@/lib/errorLogger";
+import { academyProfileSchema, teacherSchema, classSchema, validateInput } from "@/lib/validation";
 
 type Academy = Database["public"]["Tables"]["academies"]["Row"];
 
@@ -137,7 +139,7 @@ const ProfileManagementPage = () => {
         fetchClasses(data.id);
       }
     } catch (error) {
-      console.error("Error fetching academy:", error);
+      logError("fetch-academy", error);
     } finally {
       setLoading(false);
     }
@@ -175,15 +177,30 @@ const ProfileManagementPage = () => {
   const handleSaveProfile = async () => {
     if (!academy) return;
 
+    // Validate input
+    const validation = validateInput(academyProfileSchema, {
+      name,
+      description: description || null,
+      profile_image: profileImage || null,
+      tags,
+    });
+
+    if (!validation.success) {
+      toast({ title: "오류", description: (validation as { success: false; error: string }).error, variant: "destructive" });
+      return;
+    }
+
+    const validatedData = (validation as { success: true; data: { name: string; description?: string | null; profile_image?: string | null; tags: string[] } }).data;
+
     setSaving(true);
     try {
       const { error } = await supabase
         .from("academies")
         .update({
-          name,
-          description,
-          profile_image: profileImage || null,
-          tags,
+          name: validatedData.name,
+          description: validatedData.description,
+          profile_image: validatedData.profile_image,
+          tags: validatedData.tags,
           updated_at: new Date().toISOString(),
         })
         .eq("id", academy.id);
@@ -192,7 +209,7 @@ const ProfileManagementPage = () => {
 
       toast({ title: "저장 완료", description: "프로필이 업데이트되었습니다." });
     } catch (error) {
-      console.error("Error saving academy:", error);
+      logError("save-academy", error);
       toast({ title: "오류", description: "저장에 실패했습니다.", variant: "destructive" });
     } finally {
       setSaving(false);
@@ -222,26 +239,41 @@ const ProfileManagementPage = () => {
   };
 
   const handleSaveTeacher = async () => {
-    if (!academy || !teacherName.trim()) return;
+    if (!academy) return;
+
+    // Validate input
+    const validation = validateInput(teacherSchema, {
+      name: teacherName,
+      subject: teacherSubject || null,
+      bio: teacherBio || null,
+      image_url: teacherImage || null,
+    });
+
+    if (!validation.success) {
+      toast({ title: "오류", description: (validation as { success: false; error: string }).error, variant: "destructive" });
+      return;
+    }
+
+    const validatedData = (validation as { success: true; data: { name: string; subject?: string | null; bio?: string | null; image_url?: string | null } }).data;
 
     try {
       if (editingTeacher) {
         await supabase
           .from("teachers")
           .update({
-            name: teacherName,
-            subject: teacherSubject || null,
-            bio: teacherBio || null,
-            image_url: teacherImage || null,
+            name: validatedData.name,
+            subject: validatedData.subject,
+            bio: validatedData.bio,
+            image_url: validatedData.image_url,
           })
           .eq("id", editingTeacher.id);
       } else {
         await supabase.from("teachers").insert({
           academy_id: academy.id,
-          name: teacherName,
-          subject: teacherSubject || null,
-          bio: teacherBio || null,
-          image_url: teacherImage || null,
+          name: validatedData.name,
+          subject: validatedData.subject,
+          bio: validatedData.bio,
+          image_url: validatedData.image_url,
         });
       }
 
@@ -250,7 +282,7 @@ const ProfileManagementPage = () => {
       resetTeacherForm();
       fetchTeachers(academy.id);
     } catch (error) {
-      console.error("Error saving teacher:", error);
+      logError("save-teacher", error);
       toast({ title: "오류", variant: "destructive" });
     }
   };

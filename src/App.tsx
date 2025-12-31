@@ -19,6 +19,7 @@ import ConsultationManagementPage from "./pages/admin/ConsultationManagementPage
 import ProfileManagementPage from "./pages/admin/ProfileManagementPage";
 import SeminarManagementPage from "./pages/admin/SeminarManagementPage";
 import PostManagementPage from "./pages/admin/PostManagementPage";
+import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,12 +44,12 @@ const App = () => {
             <Route path="/academy/:id" element={<AcademyDetailPage />} />
             <Route path="/learning-style-test" element={<LearningStyleTest />} />
             <Route path="/learning-style-result" element={<LearningStyleResult />} />
-            {/* Admin Routes */}
-            <Route path="/admin/home" element={<AdminHomePage />} />
-            <Route path="/admin/consultations" element={<ConsultationManagementPage />} />
-            <Route path="/admin/profile" element={<ProfileManagementPage />} />
-            <Route path="/admin/seminars" element={<SeminarManagementPage />} />
-            <Route path="/admin/posts" element={<PostManagementPage />} />
+            {/* Protected Admin Routes */}
+            <Route path="/admin/home" element={<ProtectedAdminRoute><AdminHomePage /></ProtectedAdminRoute>} />
+            <Route path="/admin/consultations" element={<ProtectedAdminRoute><ConsultationManagementPage /></ProtectedAdminRoute>} />
+            <Route path="/admin/profile" element={<ProtectedAdminRoute><ProfileManagementPage /></ProtectedAdminRoute>} />
+            <Route path="/admin/seminars" element={<ProtectedAdminRoute><SeminarManagementPage /></ProtectedAdminRoute>} />
+            <Route path="/admin/posts" element={<ProtectedAdminRoute><PostManagementPage /></ProtectedAdminRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

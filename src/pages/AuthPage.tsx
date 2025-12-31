@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import Logo from "@/components/Logo";
 import { Mail, Lock, ArrowRight, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { logError, getUserFriendlyMessage } from "@/lib/errorLogger";
 
 type AuthStep = "login" | "signup" | "welcome";
 
@@ -23,35 +24,54 @@ const AuthPage = () => {
   );
   const [showPassword, setShowPassword] = useState(false);
 
+  // Navigate based on server-side role from database
+  const navigateByDatabaseRole = async (userId: string) => {
+    try {
+      const { data: roleData, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+      
+      if (error) {
+        logError('role-fetch', error);
+        // Default to parent home if role check fails
+        navigate("/home");
+        return;
+      }
+      
+      if (roleData?.role === "admin") {
+        navigate("/admin/home");
+      } else {
+        navigate("/home");
+      }
+    } catch (error) {
+      logError('navigate-by-role', error);
+      navigate("/home");
+    }
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         if (session?.user && step !== "welcome") {
           if (event === "SIGNED_IN" && isNewUser) {
             setStep("welcome");
           } else if (event === "SIGNED_IN") {
-            navigateByRole();
+            await navigateByDatabaseRole(session.user.id);
           }
         }
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user && step === "login") {
-        navigateByRole();
+        await navigateByDatabaseRole(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, step, isNewUser, selectedRole]);
-
-  const navigateByRole = () => {
-    if (selectedRole === "admin") {
-      navigate("/admin/home");
-    } else {
-      navigate("/home");
-    }
-  };
+  }, [navigate, step, isNewUser]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -67,18 +87,16 @@ const AuthPage = () => {
       });
 
       if (error) {
-        if (error.message.includes("Invalid login credentials")) {
-          toast.error("이메일 또는 비밀번호가 올바르지 않습니다");
-        } else {
-          toast.error(error.message);
-        }
+        toast.error(getUserFriendlyMessage(error, "로그인에 실패했습니다"));
         return;
       }
 
       toast.success("로그인되었습니다");
-      navigateByRole();
-    } catch (error: any) {
-      console.error("Login error:", error);
+      if (data.user) {
+        await navigateByDatabaseRole(data.user.id);
+      }
+    } catch (error: unknown) {
+      logError('login', error);
       toast.error("로그인에 실패했습니다");
     } finally {
       setLoading(false);
@@ -126,16 +144,21 @@ const AuthPage = () => {
       setIsNewUser(true);
       setStep("welcome");
       toast.success("회원가입이 완료되었습니다");
-    } catch (error: any) {
-      console.error("Signup error:", error);
+    } catch (error: unknown) {
+      logError('signup', error);
       toast.error("회원가입에 실패했습니다");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleContinue = () => {
-    navigateByRole();
+  const handleContinue = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      await navigateByDatabaseRole(session.user.id);
+    } else {
+      navigate("/home");
+    }
   };
 
   return (

@@ -35,6 +35,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { logError } from "@/lib/errorLogger";
+import { seminarApplicationSchema, validateInput } from "@/lib/validation";
 
 interface Seminar {
   id: string;
@@ -106,7 +108,7 @@ const SeminarDetailPage = () => {
       if (error) throw error;
       setSeminar(data as any);
     } catch (error) {
-      console.error("Error fetching seminar:", error);
+      logError("fetch-seminar", error);
       toast.error("설명회 정보를 불러올 수 없습니다");
     } finally {
       setLoading(false);
@@ -122,7 +124,7 @@ const SeminarDetailPage = () => {
 
       setApplicationCount(count || 0);
     } catch (error) {
-      console.error("Error fetching application count:", error);
+      logError("fetch-application-count", error);
     }
   };
 
@@ -140,7 +142,7 @@ const SeminarDetailPage = () => {
         setMyApplication(data);
       }
     } catch (error) {
-      console.error("Error checking application:", error);
+      logError("check-application", error);
     }
   };
 
@@ -151,25 +153,30 @@ const SeminarDetailPage = () => {
       return;
     }
 
-    if (!studentName.trim()) {
-      toast.error("학생 이름을 입력해주세요");
+    // Validate input
+    const validation = validateInput(seminarApplicationSchema, {
+      student_name: studentName,
+      student_grade: studentGrade || null,
+      message: message || null,
+      attendee_count: attendeeCount,
+    });
+
+    if (!validation.success) {
+      toast.error((validation as { success: false; error: string }).error);
       return;
     }
 
-    if (!studentGrade) {
-      toast.error("학년을 선택해주세요");
-      return;
-    }
+    const validatedData = (validation as { success: true; data: { student_name: string; student_grade?: string | null; message?: string | null; attendee_count: number } }).data;
 
     setSubmitting(true);
     try {
       const { error } = await supabase.from("seminar_applications").insert({
         seminar_id: id,
         user_id: user.id,
-        student_name: studentName,
-        student_grade: studentGrade,
-        attendee_count: attendeeCount,
-        message: message || null,
+        student_name: validatedData.student_name,
+        student_grade: validatedData.student_grade,
+        attendee_count: validatedData.attendee_count,
+        message: validatedData.message,
       });
 
       if (error) throw error;
@@ -185,7 +192,7 @@ const SeminarDetailPage = () => {
       resetForm();
       fetchApplicationCount();
     } catch (error) {
-      console.error("Error applying:", error);
+      logError("apply-seminar", error);
       toast.error("신청에 실패했습니다");
     } finally {
       setSubmitting(false);
@@ -242,7 +249,7 @@ const SeminarDetailPage = () => {
         toast.success("링크가 복사되었습니다");
       }
     } catch (error) {
-      console.error("Share failed:", error);
+      logError("share", error);
     }
   };
 

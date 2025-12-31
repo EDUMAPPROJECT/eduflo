@@ -27,6 +27,8 @@ import { Plus, Pencil, Trash2, Bell, Megaphone, PartyPopper } from "lucide-react
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
+import { logError } from "@/lib/errorLogger";
+import { postSchema, validateInput } from "@/lib/validation";
 
 interface Post {
   id: string;
@@ -83,7 +85,7 @@ const PostManagementPage = () => {
         setPosts(postsData || []);
       }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      logError("fetch-posts", error);
     } finally {
       setLoading(false);
     }
@@ -112,10 +114,20 @@ const PostManagementPage = () => {
       return;
     }
 
-    if (!title.trim()) {
-      toast.error("제목을 입력해주세요");
+    // Validate input
+    const validation = validateInput(postSchema, {
+      title,
+      content: content || null,
+      category: category as "news" | "notice" | "event" | "review",
+      image_url: imageUrl || null,
+    });
+
+    if (!validation.success) {
+      toast.error((validation as { success: false; error: string }).error);
       return;
     }
+
+    const validatedData = (validation as { success: true; data: { title: string; content?: string | null; category: string; image_url?: string | null } }).data;
 
     setSubmitting(true);
     try {
@@ -123,10 +135,10 @@ const PostManagementPage = () => {
         const { error } = await supabase
           .from("posts")
           .update({
-            title,
-            content: content || null,
-            category,
-            image_url: imageUrl || null,
+            title: validatedData.title,
+            content: validatedData.content,
+            category: validatedData.category,
+            image_url: validatedData.image_url,
           })
           .eq("id", editingPost.id);
 
@@ -135,10 +147,10 @@ const PostManagementPage = () => {
       } else {
         const { error } = await supabase.from("posts").insert({
           academy_id: academyId,
-          title,
-          content: content || null,
-          category,
-          image_url: imageUrl || null,
+          title: validatedData.title,
+          content: validatedData.content,
+          category: validatedData.category,
+          image_url: validatedData.image_url,
         });
 
         if (error) throw error;
@@ -149,7 +161,7 @@ const PostManagementPage = () => {
       resetForm();
       fetchAcademyAndPosts();
     } catch (error) {
-      console.error("Error saving post:", error);
+      logError("save-post", error);
       toast.error("저장에 실패했습니다");
     } finally {
       setSubmitting(false);
@@ -169,7 +181,7 @@ const PostManagementPage = () => {
       toast.success("소식이 삭제되었습니다");
       fetchAcademyAndPosts();
     } catch (error) {
-      console.error("Error deleting post:", error);
+      logError("delete-post", error);
       toast.error("삭제에 실패했습니다");
     }
   };
