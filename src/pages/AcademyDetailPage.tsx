@@ -34,6 +34,7 @@ import {
   Calendar,
   Clock,
   Heart,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logError } from "@/lib/errorLogger";
@@ -457,15 +458,24 @@ const AcademyDetailPage = () => {
         </Tabs>
       </main>
 
-      {/* Fixed Bottom Button */}
+      {/* Fixed Bottom Buttons */}
       <div className="fixed bottom-16 left-0 right-0 bg-card border-t border-border p-4 z-50">
-        <div className="max-w-lg mx-auto">
+        <div className="max-w-lg mx-auto flex gap-3">
           <Button
-            className="w-full h-14 text-base"
+            variant="outline"
+            className="flex-1 h-14 text-base gap-2"
+            size="xl"
+            onClick={() => navigate(`/chats/${id}`)}
+          >
+            <MessageCircle className="w-5 h-5" />
+            채팅 상담
+          </Button>
+          <Button
+            className="flex-1 h-14 text-base"
             size="xl"
             onClick={() => setIsDialogOpen(true)}
           >
-            방문 상담 신청하기
+            방문 상담 신청
           </Button>
         </div>
       </div>

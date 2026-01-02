@@ -12,6 +12,8 @@ import ExplorePage from "./pages/ExplorePage";
 import MyPage from "./pages/MyPage";
 import SeminarDetailPage from "./pages/SeminarDetailPage";
 import AcademyDetailPage from "./pages/AcademyDetailPage";
+import ChatListPage from "./pages/ChatListPage";
+import ChatRoomPage from "./pages/ChatRoomPage";
 import LearningStyleTest from "./pages/LearningStyleTest";
 import LearningStyleResult from "./pages/LearningStyleResult";
 import AdminHomePage from "./pages/admin/AdminHomePage";
@@ -42,6 +44,8 @@ const App = () => {
             <Route path="/home" element={<HomePage />} />
             <Route path="/explore" element={<ExplorePage />} />
             <Route path="/my" element={<MyPage />} />
+            <Route path="/chats" element={<ChatListPage />} />
+            <Route path="/chats/:id" element={<ChatRoomPage />} />
             <Route path="/seminar/:id" element={<SeminarDetailPage />} />
             <Route path="/academy/:id" element={<AcademyDetailPage />} />
             <Route path="/learning-style-test" element={<LearningStyleTest />} />

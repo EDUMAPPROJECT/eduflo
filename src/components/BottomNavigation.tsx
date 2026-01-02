@@ -1,4 +1,4 @@
-import { Home, Search, User } from "lucide-react";
+import { Home, Search, MessageCircle, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: Home, label: "홈", path: "/home" },
   { icon: Search, label: "탐색", path: "/explore" },
+  { icon: MessageCircle, label: "채팅", path: "/chats" },
   { icon: User, label: "마이", path: "/my" },
 ];
 
