@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import Logo from "@/components/Logo";
@@ -65,6 +66,7 @@ interface Class {
 }
 
 const ProfileManagementPage = () => {
+  const navigate = useNavigate();
   const [academy, setAcademy] = useState<Academy | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -376,7 +378,14 @@ const ProfileManagementPage = () => {
           <Card className="shadow-card">
             <CardContent className="p-8 text-center">
               <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground">등록된 학원이 없습니다.</p>
+              <h3 className="font-semibold text-foreground mb-2">등록된 학원이 없습니다</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                학원을 등록하고 에듀맵에서 홍보해보세요
+              </p>
+              <Button onClick={() => navigate("/academy/setup")} className="gap-2">
+                <Plus className="w-4 h-4" />
+                학원 등록하기
+              </Button>
             </CardContent>
           </Card>
         </main>
