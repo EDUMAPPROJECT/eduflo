@@ -19,6 +19,8 @@ import ConsultationManagementPage from "./pages/admin/ConsultationManagementPage
 import ProfileManagementPage from "./pages/admin/ProfileManagementPage";
 import SeminarManagementPage from "./pages/admin/SeminarManagementPage";
 import PostManagementPage from "./pages/admin/PostManagementPage";
+import AcademySetupPage from "./pages/academy/AcademySetupPage";
+import AcademyDashboardPage from "./pages/academy/AcademyDashboardPage";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import NotFound from "./pages/NotFound";
 
@@ -45,6 +47,8 @@ const App = () => {
             <Route path="/learning-style-test" element={<LearningStyleTest />} />
             <Route path="/learning-style-result" element={<LearningStyleResult />} />
             {/* Protected Admin Routes */}
+            <Route path="/academy/setup" element={<ProtectedAdminRoute><AcademySetupPage /></ProtectedAdminRoute>} />
+            <Route path="/academy/dashboard" element={<ProtectedAdminRoute><AcademyDashboardPage /></ProtectedAdminRoute>} />
             <Route path="/admin/home" element={<ProtectedAdminRoute><AdminHomePage /></ProtectedAdminRoute>} />
             <Route path="/admin/consultations" element={<ProtectedAdminRoute><ConsultationManagementPage /></ProtectedAdminRoute>} />
             <Route path="/admin/profile" element={<ProtectedAdminRoute><ProfileManagementPage /></ProtectedAdminRoute>} />

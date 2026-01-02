@@ -11,6 +11,7 @@ import CompactAcademyList from "@/components/CompactAcademyList";
 import EmptyRegionState from "@/components/EmptyRegionState";
 import AcademyNewsFeed from "@/components/AcademyNewsFeed";
 import PostDetailDialog from "@/components/PostDetailDialog";
+import AdminHeader from "@/components/AdminHeader";
 
 interface Seminar {
   id: string;
@@ -234,7 +235,10 @@ const HomePage = () => {
             selectedRegion={selectedRegion} 
             onRegionChange={handleRegionChange} 
           />
-          <Logo size="sm" showText={false} />
+          <div className="flex items-center gap-2">
+            <AdminHeader />
+            <Logo size="sm" showText={false} />
+          </div>
         </div>
       </header>
 

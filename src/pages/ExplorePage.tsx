@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNavigation from "@/components/BottomNavigation";
 import Logo from "@/components/Logo";
+import AdminHeader from "@/components/AdminHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -189,8 +190,9 @@ const ExplorePage = () => {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-center">
+        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <Logo size="sm" showText={false} />
+          <AdminHeader />
         </div>
       </header>
 
