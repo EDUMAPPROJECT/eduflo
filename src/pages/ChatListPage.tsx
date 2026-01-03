@@ -36,8 +36,8 @@ const ChatListPage = () => {
     return (
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
-          <div className="max-w-lg mx-auto px-4 h-14 flex items-center">
-            <Logo size="sm" />
+          <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-center">
+            <Logo size="sm" showText={false} />
           </div>
         </header>
         <main className="max-w-lg mx-auto px-4 py-6">
@@ -66,8 +66,8 @@ const ChatListPage = () => {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center">
-          <Logo size="sm" />
+        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-center">
+          <Logo size="sm" showText={false} />
         </div>
       </header>
 
