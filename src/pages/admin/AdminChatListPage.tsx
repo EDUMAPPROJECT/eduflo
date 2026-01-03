@@ -36,9 +36,8 @@ const AdminChatListPage = () => {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <Logo size="sm" />
-          <Badge variant="secondary" className="text-xs">관리자 모드</Badge>
+        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-center">
+          <Logo size="sm" showText={false} />
         </div>
       </header>
 
