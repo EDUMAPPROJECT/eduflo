@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useBusinessVerification } from "@/hooks/useBusinessVerification";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import Logo from "@/components/Logo";
 import ImageUpload from "@/components/ImageUpload";
-import { ArrowLeft, Building2, MapPin, BookOpen, GraduationCap } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, BookOpen, GraduationCap, FileCheck, ShieldAlert } from "lucide-react";
 
 const REGIONS = {
   "동탄1신도시": ["동탄1동", "동탄2동", "동탄3동"],
@@ -29,6 +30,7 @@ const TARGET_GRADES = [
 
 const AcademySetupPage = () => {
   const navigate = useNavigate();
+  const { isVerified, loading: verificationLoading } = useBusinessVerification();
   const [loading, setLoading] = useState(false);
   const [checkingAcademy, setCheckingAcademy] = useState(true);
   const [user, setUser] = useState<any>(null);
@@ -138,10 +140,49 @@ const AcademySetupPage = () => {
     }
   };
 
-  if (checkingAcademy) {
+  if (checkingAcademy || verificationLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">확인 중...</div>
+      </div>
+    );
+  }
+
+  // Show verification required message if not verified
+  if (!isVerified) {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
+          <div className="max-w-lg mx-auto px-4 h-14 flex items-center gap-3">
+            <button onClick={() => navigate(-1)} className="p-2 -ml-2 hover:bg-muted rounded-lg transition-colors">
+              <ArrowLeft className="w-5 h-5 text-foreground" />
+            </button>
+            <h1 className="font-semibold text-foreground">내 학원 등록</h1>
+          </div>
+        </header>
+
+        <main className="max-w-lg mx-auto px-4 py-6">
+          <Card className="shadow-card border-border">
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-warning/10 flex items-center justify-center mx-auto mb-4">
+                <ShieldAlert className="w-8 h-8 text-warning" />
+              </div>
+              <h2 className="text-xl font-bold text-foreground mb-2">사업자 인증이 필요합니다</h2>
+              <p className="text-muted-foreground mb-6">
+                학원 프로필을 등록하려면 먼저 사업자등록증 인증을 완료해야 합니다.
+              </p>
+              <Button 
+                onClick={() => navigate('/admin/verification')}
+                className="w-full"
+                size="lg"
+              >
+                <FileCheck className="w-5 h-5 mr-2" />
+                사업자 인증하러 가기
+              </Button>
+            </CardContent>
+          </Card>
+        </main>
       </div>
     );
   }

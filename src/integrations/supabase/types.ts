@@ -88,6 +88,45 @@ export type Database = {
           },
         ]
       }
+      business_verifications: {
+        Row: {
+          business_name: string | null
+          business_number: string | null
+          created_at: string
+          document_url: string
+          id: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          status: Database["public"]["Enums"]["verification_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_name?: string | null
+          business_number?: string | null
+          created_at?: string
+          document_url: string
+          id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          status?: Database["public"]["Enums"]["verification_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_name?: string | null
+          business_number?: string | null
+          created_at?: string
+          document_url?: string
+          id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          status?: Database["public"]["Enums"]["verification_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_rooms: {
         Row: {
           academy_id: string
@@ -501,6 +540,7 @@ export type Database = {
       app_role: "parent" | "admin"
       consultation_status: "pending" | "completed"
       seminar_status: "recruiting" | "closed"
+      verification_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -631,6 +671,7 @@ export const Constants = {
       app_role: ["parent", "admin"],
       consultation_status: ["pending", "completed"],
       seminar_status: ["recruiting", "closed"],
+      verification_status: ["pending", "approved", "rejected"],
     },
   },
 } as const
