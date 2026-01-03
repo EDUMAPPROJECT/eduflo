@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useBusinessVerification } from "@/hooks/useBusinessVerification";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import Logo from "@/components/Logo";
 import ImageUpload from "@/components/ImageUpload";
@@ -39,6 +40,10 @@ import {
   Pencil,
   Trash2,
   GraduationCap,
+  ShieldCheck,
+  Clock,
+  ShieldAlert,
+  ChevronRight,
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { logError } from "@/lib/errorLogger";
@@ -67,6 +72,7 @@ interface Class {
 
 const ProfileManagementPage = () => {
   const navigate = useNavigate();
+  const { isVerified, isPending, isRejected, loading: verificationLoading } = useBusinessVerification();
   const [academy, setAcademy] = useState<Academy | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -358,13 +364,70 @@ const ProfileManagementPage = () => {
     toast({ title: "삭제 완료" });
   };
 
-  if (loading) {
+  if (loading || verificationLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
+
+  // Verification Status Card Component
+  const VerificationStatusCard = () => {
+    if (isVerified) {
+      return (
+        <Card className="shadow-card border-primary/20 bg-primary/5 mb-4">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium text-foreground text-sm">사업자 인증 완료</h3>
+                <p className="text-xs text-muted-foreground">학원 프로필 등록 및 운영이 가능합니다</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (isPending) {
+      return (
+        <Card className="shadow-card border-warning/20 bg-warning/5 mb-4 cursor-pointer" onClick={() => navigate('/admin/verification')}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-warning" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium text-foreground text-sm">사업자 인증 심사 중</h3>
+                <p className="text-xs text-muted-foreground">영업일 1-2일 내 심사가 완료됩니다</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <Card className="shadow-card border-destructive/20 bg-destructive/5 mb-4 cursor-pointer" onClick={() => navigate('/admin/verification')}>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
+              <ShieldAlert className="w-5 h-5 text-destructive" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium text-foreground text-sm">사업자 인증 필요</h3>
+              <p className="text-xs text-muted-foreground">학원 등록을 위해 인증을 완료해주세요</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (!academy) {
     return (
@@ -375,17 +438,28 @@ const ProfileManagementPage = () => {
           </div>
         </header>
         <main className="max-w-lg mx-auto px-4 py-6">
+          <VerificationStatusCard />
+          
           <Card className="shadow-card">
             <CardContent className="p-8 text-center">
               <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
               <h3 className="font-semibold text-foreground mb-2">등록된 학원이 없습니다</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                학원을 등록하고 에듀맵에서 홍보해보세요
+                {isVerified 
+                  ? "학원을 등록하고 에듀맵에서 홍보해보세요"
+                  : "사업자 인증 완료 후 학원을 등록할 수 있습니다"}
               </p>
-              <Button onClick={() => navigate("/academy/setup")} className="gap-2">
-                <Plus className="w-4 h-4" />
-                학원 등록하기
-              </Button>
+              {isVerified ? (
+                <Button onClick={() => navigate("/academy/setup")} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  학원 등록하기
+                </Button>
+              ) : (
+                <Button onClick={() => navigate("/admin/verification")} variant="outline" className="gap-2">
+                  <ShieldCheck className="w-4 h-4" />
+                  사업자 인증하기
+                </Button>
+              )}
             </CardContent>
           </Card>
         </main>

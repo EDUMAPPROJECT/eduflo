@@ -23,6 +23,7 @@ import SeminarManagementPage from "./pages/admin/SeminarManagementPage";
 import PostManagementPage from "./pages/admin/PostManagementPage";
 import AdminChatListPage from "./pages/admin/AdminChatListPage";
 import AdminChatRoomPage from "./pages/admin/AdminChatRoomPage";
+import BusinessVerificationPage from "./pages/admin/BusinessVerificationPage";
 import AcademySetupPage from "./pages/academy/AcademySetupPage";
 import AcademyDashboardPage from "./pages/academy/AcademyDashboardPage";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
@@ -62,6 +63,7 @@ const App = () => {
             <Route path="/admin/posts" element={<ProtectedAdminRoute><PostManagementPage /></ProtectedAdminRoute>} />
             <Route path="/admin/chats" element={<ProtectedAdminRoute><AdminChatListPage /></ProtectedAdminRoute>} />
             <Route path="/admin/chats/:id" element={<ProtectedAdminRoute><AdminChatRoomPage /></ProtectedAdminRoute>} />
+            <Route path="/admin/verification" element={<ProtectedAdminRoute><BusinessVerificationPage /></ProtectedAdminRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
