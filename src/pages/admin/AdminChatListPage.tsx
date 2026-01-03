@@ -74,7 +74,7 @@ const AdminChatListPage = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <h3 className="font-semibold text-foreground truncate">
-                          학부모 상담
+                          {room.parent_profile?.user_name || '학부모'}
                         </h3>
                         {room.lastMessageAt && (
                           <span className="text-xs text-muted-foreground shrink-0 ml-2">

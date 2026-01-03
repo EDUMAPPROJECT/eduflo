@@ -60,6 +60,9 @@ const AdminChatRoomPage = () => {
     );
   }
 
+  const parentName = roomInfo.parent_profile?.user_name || '학부모';
+  const parentPhone = roomInfo.parent_profile?.phone;
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -71,8 +74,13 @@ const AdminChatRoomPage = () => {
           <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
             <User className="w-4 h-4 text-primary" />
           </div>
-          <h1 className="font-semibold text-foreground truncate flex-1">학부모 상담</h1>
-          <Badge variant="secondary" className="text-xs">관리자</Badge>
+          <div className="flex-1 min-w-0">
+            <h1 className="font-semibold text-foreground truncate">{parentName}</h1>
+            {parentPhone && (
+              <p className="text-xs text-muted-foreground truncate">{parentPhone}</p>
+            )}
+          </div>
+          <Badge variant="secondary" className="text-xs shrink-0">관리자</Badge>
         </div>
       </header>
 

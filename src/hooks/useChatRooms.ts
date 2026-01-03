@@ -10,6 +10,10 @@ interface ChatRoom {
     name: string;
     profile_image: string | null;
   };
+  parent_profile?: {
+    user_name: string | null;
+    phone: string | null;
+  } | null;
   lastMessage: string | null;
   lastMessageAt: Date | null;
   unreadCount: number;
@@ -75,6 +79,17 @@ export const useChatRooms = (isAdmin: boolean = false) => {
 
             const academy = room.academies as unknown as { id: string; name: string; profile_image: string | null };
 
+            // Fetch parent profile if admin
+            let parentProfile = null;
+            if (isAdmin) {
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('user_name, phone')
+                .eq('id', room.parent_id)
+                .maybeSingle();
+              parentProfile = profileData;
+            }
+
             return {
               id: room.id,
               academy_id: room.academy_id,
@@ -84,6 +99,7 @@ export const useChatRooms = (isAdmin: boolean = false) => {
                 name: academy.name,
                 profile_image: academy.profile_image,
               },
+              parent_profile: parentProfile,
               lastMessage: lastMessageData?.content || null,
               lastMessageAt: lastMessageData?.created_at ? new Date(lastMessageData.created_at) : null,
               unreadCount: unreadCount || 0,

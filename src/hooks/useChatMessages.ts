@@ -18,6 +18,11 @@ interface ChatRoomInfo {
     owner_id: string | null;
   };
   parent_id: string;
+  parent_profile?: {
+    user_name: string | null;
+    phone: string | null;
+    email: string | null;
+  } | null;
 }
 
 export const useChatMessages = (chatRoomId: string | undefined) => {
@@ -75,6 +80,18 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
         }
 
         const academy = roomData.academies as unknown as { id: string; name: string; profile_image: string | null; owner_id: string | null };
+        
+        // Fetch parent profile if user is admin
+        let parentProfile = null;
+        if (roleData?.role === 'admin') {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('user_name, phone, email')
+            .eq('id', roomData.parent_id)
+            .maybeSingle();
+          parentProfile = profileData;
+        }
+
         setRoomInfo({
           id: roomData.id,
           parent_id: roomData.parent_id,
@@ -84,6 +101,7 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
             profile_image: academy.profile_image,
             owner_id: academy.owner_id,
           },
+          parent_profile: parentProfile,
         });
 
         // Fetch messages
