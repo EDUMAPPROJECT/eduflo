@@ -1,5 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
+
+// Message validation schema
+const messageSchema = z.object({
+  content: z.string()
+    .trim()
+    .min(1, { message: "메시지를 입력해주세요" })
+    .max(5000, { message: "메시지는 5000자 이하여야 합니다" })
+});
 
 interface Message {
   id: string;
@@ -174,8 +183,20 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
     };
   }, [chatRoomId, userId]);
 
-  const sendMessage = useCallback(async (content: string) => {
-    if (!chatRoomId || !userId || !content.trim()) return false;
+  const sendMessage = useCallback(async (content: string): Promise<{ success: boolean; error?: string }> => {
+    if (!chatRoomId || !userId) {
+      return { success: false, error: "채팅방 정보가 없습니다" };
+    }
+
+    // Validate message content
+    const validation = messageSchema.safeParse({ content });
+    if (!validation.success) {
+      const errorMessage = validation.error.errors[0]?.message || "유효하지 않은 메시지입니다";
+      console.error('Message validation failed:', errorMessage);
+      return { success: false, error: errorMessage };
+    }
+
+    const validatedContent = validation.data.content;
 
     try {
       const { error } = await supabase
@@ -183,12 +204,12 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
         .insert({
           chat_room_id: chatRoomId,
           sender_id: userId,
-          content: content.trim(),
+          content: validatedContent,
         });
 
       if (error) {
         console.error('Error sending message:', error);
-        return false;
+        return { success: false, error: "메시지 전송에 실패했습니다" };
       }
 
       // Update chat room timestamp
@@ -197,10 +218,10 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
         .update({ updated_at: new Date().toISOString() })
         .eq('id', chatRoomId);
 
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Error:', error);
-      return false;
+      return { success: false, error: "오류가 발생했습니다" };
     }
   }, [chatRoomId, userId]);
 
