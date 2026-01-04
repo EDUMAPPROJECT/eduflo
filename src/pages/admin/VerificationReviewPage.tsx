@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import Logo from "@/components/Logo";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import VerificationChart from "@/components/VerificationChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,8 @@ import {
   Building2,
   FileText,
   Shield,
-  AlertTriangle
+  AlertTriangle,
+  BarChart3
 } from "lucide-react";
 
 interface BusinessVerification {
@@ -278,6 +280,25 @@ const VerificationReviewPage = () => {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
+        {/* Chart */}
+        <Card className="shadow-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary" />
+              인증 현황
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <VerificationChart
+              stats={{
+                pending: verifications.filter(v => v.status === 'pending').length,
+                approved: verifications.filter(v => v.status === 'approved').length,
+                rejected: verifications.filter(v => v.status === 'rejected').length,
+              }}
+            />
+          </CardContent>
+        </Card>
+
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
           <Card className="shadow-card">

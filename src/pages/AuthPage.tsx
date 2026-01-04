@@ -4,11 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Logo from "@/components/Logo";
-import { Mail, Lock, ArrowRight, CheckCircle, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, ArrowRight, CheckCircle, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { logError, getUserFriendlyMessage } from "@/lib/errorLogger";
 
-type AuthStep = "login" | "signup" | "welcome";
+type AuthStep = "login" | "signup" | "verify-email" | "welcome";
 
 const AuthPage = () => {
   const navigate = useNavigate();
@@ -18,6 +18,8 @@ const AuthPage = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [isNewUser, setIsNewUser] = useState(false);
   const [selectedRole, setSelectedRole] = useState<"parent" | "admin">(
     (searchParams.get("role") as "parent" | "admin") || "parent"
@@ -60,7 +62,7 @@ const AuthPage = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user && step !== "welcome") {
+        if (session?.user && step !== "welcome" && step !== "verify-email") {
           if (event === "SIGNED_IN" && isNewUser) {
             setStep("welcome");
           } else if (event === "SIGNED_IN") {
@@ -79,6 +81,14 @@ const AuthPage = () => {
     return () => subscription.unsubscribe();
   }, [navigate, step, isNewUser]);
 
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
   const handleLogin = async () => {
     if (!email || !password) {
       toast.error("이메일과 비밀번호를 입력해주세요");
@@ -93,6 +103,11 @@ const AuthPage = () => {
       });
 
       if (error) {
+        if (error.message.includes("Email not confirmed")) {
+          setStep("verify-email");
+          toast.error("이메일 인증이 필요합니다");
+          return;
+        }
         toast.error(getUserFriendlyMessage(error, "로그인에 실패했습니다"));
         return;
       }
@@ -134,7 +149,7 @@ const AuthPage = () => {
           data: {
             role: selectedRole,
           },
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/auth`,
         },
       });
 
@@ -147,14 +162,50 @@ const AuthPage = () => {
         return;
       }
 
-      setIsNewUser(true);
-      setStep("welcome");
-      toast.success("회원가입이 완료되었습니다");
+      // Check if email confirmation is required
+      if (data.user && !data.session) {
+        // Email confirmation is required
+        setStep("verify-email");
+        toast.success("인증 이메일이 발송되었습니다");
+      } else if (data.session) {
+        // Auto-confirmed, go to welcome
+        setIsNewUser(true);
+        setStep("welcome");
+        toast.success("회원가입이 완료되었습니다");
+      }
     } catch (error: unknown) {
       logError('signup', error);
       toast.error("회원가입에 실패했습니다");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    if (resendCooldown > 0) return;
+
+    setResendLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth`,
+        },
+      });
+
+      if (error) {
+        toast.error("이메일 발송에 실패했습니다");
+        return;
+      }
+
+      toast.success("인증 이메일이 재발송되었습니다");
+      setResendCooldown(60); // 60 seconds cooldown
+    } catch (error) {
+      logError('resend-email', error);
+      toast.error("이메일 발송에 실패했습니다");
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -288,6 +339,63 @@ const AuthPage = () => {
                   </button>
                 </p>
               )}
+            </div>
+          </div>
+        )}
+
+        {step === "verify-email" && (
+          <div className="w-full max-w-sm animate-fade-up text-center">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+              <Mail className="w-10 h-10 text-primary" />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              이메일 인증이 필요합니다
+            </h2>
+            <p className="text-muted-foreground mb-2">
+              아래 이메일로 인증 링크를 발송했습니다
+            </p>
+            <p className="text-primary font-medium mb-6">
+              {email}
+            </p>
+            
+            <div className="bg-secondary/50 rounded-lg p-4 mb-6 text-left">
+              <h4 className="font-medium text-foreground text-sm mb-2">안내사항</h4>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>• 이메일의 인증 링크를 클릭해주세요</li>
+                <li>• 스팸함도 확인해주세요</li>
+                <li>• 인증 완료 후 이 페이지로 돌아와 로그인하세요</li>
+              </ul>
+            </div>
+
+            <div className="space-y-3">
+              <Button
+                onClick={handleResendEmail}
+                disabled={resendLoading || resendCooldown > 0}
+                variant="outline"
+                className="w-full h-12"
+              >
+                {resendLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    발송 중...
+                  </>
+                ) : resendCooldown > 0 ? (
+                  `${resendCooldown}초 후 재발송 가능`
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    인증 이메일 재발송
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                onClick={() => setStep("login")}
+                className="w-full h-12"
+              >
+                로그인 페이지로 돌아가기
+              </Button>
             </div>
           </div>
         )}
