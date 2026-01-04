@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
@@ -47,6 +47,7 @@ const VerificationReviewPage = () => {
   const [rejectionReason, setRejectionReason] = useState("");
   const [processing, setProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState("pending");
+  const [loadingDocument, setLoadingDocument] = useState<string | null>(null);
 
   const fetchVerifications = async () => {
     try {
@@ -396,10 +397,32 @@ const VerificationReviewPage = () => {
                         variant="outline"
                         size="sm"
                         className="flex-1"
-                        onClick={() => window.open(verification.document_url, '_blank')}
+                        disabled={loadingDocument === verification.id}
+                        onClick={async () => {
+                          setLoadingDocument(verification.id);
+                          try {
+                            // Generate signed URL for secure document access (1 hour expiry)
+                            const { data, error } = await supabase.storage
+                              .from('verification-documents')
+                              .createSignedUrl(verification.document_url, 3600);
+                            
+                            if (error || !data?.signedUrl) {
+                              console.error('Error creating signed URL:', error);
+                              toast.error("서류를 불러오는데 실패했습니다");
+                              return;
+                            }
+                            
+                            window.open(data.signedUrl, '_blank');
+                          } catch (error) {
+                            console.error('Error:', error);
+                            toast.error("서류를 불러오는데 실패했습니다");
+                          } finally {
+                            setLoadingDocument(null);
+                          }
+                        }}
                       >
                         <FileText className="w-4 h-4 mr-1" />
-                        서류 보기
+                        {loadingDocument === verification.id ? "로딩..." : "서류 보기"}
                       </Button>
                       
                       {verification.status === 'pending' && (

@@ -107,12 +107,10 @@ const BusinessVerificationPage = () => {
         return;
       }
 
-      const { data: urlData } = supabase.storage
-        .from('verification-documents')
-        .getPublicUrl(fileName);
-
+      // Store file path instead of public URL for security
+      // Signed URLs will be generated on-demand when viewing documents
       const result = await submitVerification(
-        urlData.publicUrl,
+        fileName,
         businessName.trim(),
         businessNumber.trim()
       );

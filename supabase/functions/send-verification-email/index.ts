@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,11 +25,86 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Verify JWT authentication
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      console.error('No authorization header provided');
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: No authorization header" }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const jwt = authHeader.replace('Bearer ', '');
+    
+    // Create Supabase client to verify user and check permissions
+    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+    
+    // Verify the JWT and get user
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+    
+    if (authError || !user) {
+      console.error('JWT verification failed:', authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Invalid token" }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Check if user is a super admin
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('is_super_admin')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (roleError || !roleData?.is_super_admin) {
+      console.error('User is not a super admin:', user.id);
+      return new Response(
+        JSON.stringify({ error: "Forbidden: Super admin access required" }),
+        {
+          status: 403,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    console.log('Super admin verified:', user.id);
+
     const { email, businessName, status, rejectionReason }: VerificationEmailRequest = await req.json();
 
     if (!email || !businessName || !status) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid email format" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Validate status
+    if (status !== 'approved' && status !== 'rejected') {
+      return new Response(
+        JSON.stringify({ error: "Invalid status value" }),
         {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Send, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const formatTime = (dateStr: string) => {
   return new Date(dateStr).toLocaleTimeString("ko-KR", {
@@ -29,9 +30,11 @@ const ChatRoomPage = () => {
     if (!newMessage.trim() || sending) return;
 
     setSending(true);
-    const success = await sendMessage(newMessage);
-    if (success) {
+    const result = await sendMessage(newMessage);
+    if (result.success) {
       setNewMessage("");
+    } else if (result.error) {
+      toast.error(result.error);
     }
     setSending(false);
   };
