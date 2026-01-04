@@ -20,6 +20,11 @@ import {
   Building2,
   FileText
 } from "lucide-react";
+import { 
+  formatBusinessNumber, 
+  validateBusinessNumber, 
+  handleBusinessNumberInput 
+} from "@/lib/businessNumber";
 
 const BusinessVerificationPage = () => {
   const navigate = useNavigate();
@@ -27,8 +32,22 @@ const BusinessVerificationPage = () => {
   
   const [businessName, setBusinessName] = useState("");
   const [businessNumber, setBusinessNumber] = useState("");
+  const [businessNumberError, setBusinessNumberError] = useState<string | null>(null);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  const handleBusinessNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleBusinessNumberInput(e.target.value, (formatted) => {
+      setBusinessNumber(formatted);
+      // 10자리가 되었을 때만 검증
+      if (formatted.replace(/[^0-9]/g, '').length === 10) {
+        const validation = validateBusinessNumber(formatted);
+        setBusinessNumberError(validation.isValid ? null : validation.error || null);
+      } else {
+        setBusinessNumberError(null);
+      }
+    });
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -52,6 +71,14 @@ const BusinessVerificationPage = () => {
       toast.error("사업자등록번호를 입력해주세요");
       return;
     }
+
+    // 사업자등록번호 유효성 검증
+    const validation = validateBusinessNumber(businessNumber);
+    if (!validation.isValid) {
+      toast.error(validation.error || "유효하지 않은 사업자등록번호입니다");
+      return;
+    }
+
     if (!documentFile) {
       toast.error("사업자등록증 파일을 업로드해주세요");
       return;
@@ -250,9 +277,13 @@ const BusinessVerificationPage = () => {
                     id="businessNumber"
                     placeholder="예: 123-45-67890"
                     value={businessNumber}
-                    onChange={(e) => setBusinessNumber(e.target.value)}
-                    maxLength={20}
+                    onChange={handleBusinessNumberChange}
+                    maxLength={12}
+                    className={businessNumberError ? "border-destructive" : ""}
                   />
+                  {businessNumberError && (
+                    <p className="text-xs text-destructive">{businessNumberError}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
