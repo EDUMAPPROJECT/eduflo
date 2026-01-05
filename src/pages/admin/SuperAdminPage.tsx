@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import Logo from "@/components/Logo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,12 +11,79 @@ import {
   FileCheck, 
   Users, 
   Settings,
-  Loader2
+  Loader2,
+  Building2,
+  MessageSquare,
+  Calendar
 } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+
+interface PlatformStats {
+  totalUsers: number;
+  parentUsers: number;
+  adminUsers: number;
+  totalAcademies: number;
+  totalConsultations: number;
+  pendingConsultations: number;
+  totalSeminars: number;
+}
 
 const SuperAdminPage = () => {
   const navigate = useNavigate();
   const { isSuperAdmin, loading } = useSuperAdmin();
+  const [stats, setStats] = useState<PlatformStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!loading && isSuperAdmin) {
+      fetchStats();
+    }
+  }, [loading, isSuperAdmin]);
+
+  const fetchStats = async () => {
+    try {
+      // Fetch user counts
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('role');
+
+      const totalUsers = rolesData?.length || 0;
+      const parentUsers = rolesData?.filter(r => r.role === 'parent').length || 0;
+      const adminUsers = rolesData?.filter(r => r.role === 'admin').length || 0;
+
+      // Fetch academy count
+      const { count: academyCount } = await supabase
+        .from('academies')
+        .select('*', { count: 'exact', head: true });
+
+      // Fetch consultation counts
+      const { data: consultationsData } = await supabase
+        .from('consultations')
+        .select('status');
+
+      const totalConsultations = consultationsData?.length || 0;
+      const pendingConsultations = consultationsData?.filter(c => c.status === 'pending').length || 0;
+
+      // Fetch seminar count
+      const { count: seminarCount } = await supabase
+        .from('seminars')
+        .select('*', { count: 'exact', head: true });
+
+      setStats({
+        totalUsers,
+        parentUsers,
+        adminUsers,
+        totalAcademies: academyCount || 0,
+        totalConsultations,
+        pendingConsultations,
+        totalSeminars: seminarCount || 0
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -63,6 +132,17 @@ const SuperAdminPage = () => {
     }
   ];
 
+  const userChartData = stats ? [
+    { name: '학부모', value: stats.parentUsers, color: 'hsl(var(--chart-2))' },
+    { name: '관리자', value: stats.adminUsers, color: 'hsl(var(--primary))' }
+  ] : [];
+
+  const statsBarData = stats ? [
+    { name: '학원', value: stats.totalAcademies, fill: 'hsl(var(--primary))' },
+    { name: '상담', value: stats.totalConsultations, fill: 'hsl(var(--chart-2))' },
+    { name: '설명회', value: stats.totalSeminars, fill: 'hsl(var(--chart-3))' }
+  ] : [];
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
@@ -93,6 +173,130 @@ const SuperAdminPage = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Platform Statistics */}
+        {statsLoading ? (
+          <Card className="shadow-card">
+            <CardContent className="p-6 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </CardContent>
+          </Card>
+        ) : stats && (
+          <>
+            {/* Quick Stats */}
+            <div className="grid grid-cols-4 gap-2">
+              <Card className="shadow-card">
+                <CardContent className="p-3 text-center">
+                  <Users className="w-5 h-5 text-primary mx-auto mb-1" />
+                  <p className="text-xl font-bold text-foreground">{stats.totalUsers}</p>
+                  <p className="text-[10px] text-muted-foreground">전체 사용자</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-card">
+                <CardContent className="p-3 text-center">
+                  <Building2 className="w-5 h-5 text-chart-2 mx-auto mb-1" />
+                  <p className="text-xl font-bold text-foreground">{stats.totalAcademies}</p>
+                  <p className="text-[10px] text-muted-foreground">등록 학원</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-card">
+                <CardContent className="p-3 text-center">
+                  <MessageSquare className="w-5 h-5 text-chart-3 mx-auto mb-1" />
+                  <p className="text-xl font-bold text-foreground">{stats.totalConsultations}</p>
+                  <p className="text-[10px] text-muted-foreground">총 상담</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-card">
+                <CardContent className="p-3 text-center">
+                  <Calendar className="w-5 h-5 text-chart-4 mx-auto mb-1" />
+                  <p className="text-xl font-bold text-foreground">{stats.totalSeminars}</p>
+                  <p className="text-[10px] text-muted-foreground">총 설명회</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Charts */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* User Distribution Pie Chart */}
+              <Card className="shadow-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">사용자 분포</CardTitle>
+                </CardHeader>
+                <CardContent className="p-2">
+                  <div className="h-32">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={userChartData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={25}
+                          outerRadius={45}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {userChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: number) => [`${value}명`, '']}
+                          contentStyle={{ 
+                            background: 'hsl(var(--card))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px'
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex justify-center gap-3 mt-2">
+                    {userChartData.map((entry) => (
+                      <div key={entry.name} className="flex items-center gap-1">
+                        <div 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: entry.color }}
+                        />
+                        <span className="text-xs text-muted-foreground">{entry.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Stats Bar Chart */}
+              <Card className="shadow-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">플랫폼 현황</CardTitle>
+                </CardHeader>
+                <CardContent className="p-2">
+                  <div className="h-32">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={statsBarData} layout="vertical">
+                        <XAxis type="number" hide />
+                        <YAxis 
+                          type="category" 
+                          dataKey="name" 
+                          width={35}
+                          tick={{ fontSize: 10 }}
+                        />
+                        <Tooltip 
+                          formatter={(value: number) => [`${value}개`, '']}
+                          contentStyle={{ 
+                            background: 'hsl(var(--card))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px'
+                          }}
+                        />
+                        <Bar dataKey="value" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
 
         {/* Menu Items */}
         <div className="space-y-3">

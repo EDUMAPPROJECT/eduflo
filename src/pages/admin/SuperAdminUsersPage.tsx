@@ -15,7 +15,13 @@ import {
   Loader2,
   Shield,
   UserCheck,
-  UserX
+  UserX,
+  Trash2,
+  Eye,
+  X,
+  Phone,
+  Mail,
+  Calendar
 } from "lucide-react";
 import {
   Select,
@@ -24,6 +30,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface UserWithRole {
   id: string;
@@ -33,7 +45,10 @@ interface UserWithRole {
   profile: {
     user_name: string | null;
     email: string | null;
+    phone: string | null;
+    learning_style: string | null;
     created_at: string;
+    updated_at: string;
   } | null;
 }
 
@@ -44,6 +59,8 @@ const SuperAdminUsersPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRole, setFilterRole] = useState<string>("all");
+  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && isSuperAdmin) {
@@ -63,7 +80,7 @@ const SuperAdminUsersPage = () => {
       // Fetch all profiles
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, user_name, email, created_at');
+        .select('id, user_name, email, phone, learning_style, created_at, updated_at');
 
       if (profilesError) throw profilesError;
 
@@ -125,6 +142,41 @@ const SuperAdminUsersPage = () => {
       console.error('Error toggling super admin:', error);
       toast.error("권한 변경에 실패했습니다");
     }
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string | null) => {
+    if (!confirm(`정말 "${userName || '이름 없음'}" 사용자를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+      return;
+    }
+
+    try {
+      // Delete from user_roles first (this will cascade delete related data)
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+
+      if (roleError) throw roleError;
+
+      // Delete from profiles
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+
+      if (profileError) throw profileError;
+      
+      toast.success("사용자가 삭제되었습니다");
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error("사용자 삭제에 실패했습니다");
+    }
+  };
+
+  const handleViewDetail = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setDetailDialogOpen(true);
   };
 
   const filteredUsers = users.filter(user => {
@@ -240,7 +292,7 @@ const SuperAdminUsersPage = () => {
                   className="p-4 border border-border rounded-lg space-y-3"
                 >
                   <div className="flex items-start justify-between">
-                    <div>
+                    <div className="flex-1 cursor-pointer" onClick={() => handleViewDetail(user)}>
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-medium text-foreground">
                           {user.profile?.user_name || "이름 없음"}
@@ -263,6 +315,22 @@ const SuperAdminUsersPage = () => {
                           ? new Date(user.profile.created_at).toLocaleDateString('ko-KR')
                           : "알 수 없음"}
                       </p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleViewDetail(user)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteUser(user.user_id, user.profile?.user_name)}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
                     </div>
                   </div>
                   
@@ -304,6 +372,105 @@ const SuperAdminUsersPage = () => {
           </CardContent>
         </Card>
       </main>
+
+      {/* User Detail Dialog */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              사용자 상세 정보
+            </DialogTitle>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant={selectedUser.role === 'admin' ? "default" : "secondary"}>
+                  {selectedUser.role === 'admin' ? '관리자' : '학부모'}
+                </Badge>
+                {selectedUser.is_super_admin && (
+                  <Badge className="bg-chart-1 text-white">
+                    <Shield className="w-3 h-3 mr-1" />
+                    슈퍼관리자
+                  </Badge>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
+                  <Users className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">이름</p>
+                    <p className="font-medium">{selectedUser.profile?.user_name || "이름 없음"}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
+                  <Mail className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">이메일</p>
+                    <p className="font-medium">{selectedUser.profile?.email || "이메일 없음"}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
+                  <Phone className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">전화번호</p>
+                    <p className="font-medium">{selectedUser.profile?.phone || "미등록"}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
+                  <Calendar className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">가입일</p>
+                    <p className="font-medium">
+                      {selectedUser.profile?.created_at 
+                        ? new Date(selectedUser.profile.created_at).toLocaleDateString('ko-KR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })
+                        : "알 수 없음"}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedUser.profile?.learning_style && (
+                  <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
+                    <div className="w-5 h-5 text-muted-foreground text-center">🎯</div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">학습 성향</p>
+                      <p className="font-medium">{selectedUser.profile.learning_style}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setDetailDialogOpen(false)}
+                >
+                  닫기
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setDetailDialogOpen(false);
+                    handleDeleteUser(selectedUser.user_id, selectedUser.profile?.user_name);
+                  }}
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  삭제
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

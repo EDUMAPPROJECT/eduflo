@@ -12,6 +12,7 @@ import EmptyRegionState from "@/components/EmptyRegionState";
 import AcademyNewsFeed from "@/components/AcademyNewsFeed";
 import PostDetailDialog from "@/components/PostDetailDialog";
 import AdminHeader from "@/components/AdminHeader";
+import AnnouncementBanner from "@/components/AnnouncementBanner";
 
 interface Seminar {
   id: string;
@@ -244,6 +245,11 @@ const HomePage = () => {
 
       {/* Main Content */}
       <main className="max-w-lg mx-auto py-6">
+        {/* Announcement Banner */}
+        <section className="mb-4 px-4">
+          <AnnouncementBanner />
+        </section>
+
         {/* Learning Style Banner (only if not completed) */}
         {!checkingProfile && !learningStyle && (
           <section className="mb-6 px-4">
