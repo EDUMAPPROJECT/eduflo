@@ -11,19 +11,24 @@ export function useInfiniteScroll<T>({ fetchFn, pageSize = 20 }: UseInfiniteScro
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
+  const [shouldFetch, setShouldFetch] = useState(true);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const isFetchingRef = useRef(false);
 
   const reset = useCallback(() => {
     setItems([]);
     setPage(0);
     setHasMore(true);
     setLoading(true);
+    setShouldFetch(true);
+    isFetchingRef.current = false;
   }, []);
 
   const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore) return;
+    if (isFetchingRef.current || !hasMore) return;
 
+    isFetchingRef.current = true;
     setLoadingMore(true);
     try {
       const result = await fetchFn(page);
@@ -35,8 +40,17 @@ export function useInfiniteScroll<T>({ fetchFn, pageSize = 20 }: UseInfiniteScro
     } finally {
       setLoadingMore(false);
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  }, [fetchFn, page, hasMore, loadingMore]);
+  }, [fetchFn, page, hasMore]);
+
+  // Initial fetch
+  useEffect(() => {
+    if (shouldFetch && loading && !isFetchingRef.current) {
+      setShouldFetch(false);
+      loadMore();
+    }
+  }, [shouldFetch, loading, loadMore]);
 
   const setLoadMoreElement = useCallback((element: HTMLDivElement | null) => {
     loadMoreRef.current = element;
@@ -48,7 +62,7 @@ export function useInfiniteScroll<T>({ fetchFn, pageSize = 20 }: UseInfiniteScro
     if (element) {
       observerRef.current = new IntersectionObserver(
         (entries) => {
-          if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+          if (entries[0].isIntersecting && hasMore && !isFetchingRef.current && !loading) {
             loadMore();
           }
         },
@@ -56,7 +70,7 @@ export function useInfiniteScroll<T>({ fetchFn, pageSize = 20 }: UseInfiniteScro
       );
       observerRef.current.observe(element);
     }
-  }, [hasMore, loadingMore, loading, loadMore]);
+  }, [hasMore, loading, loadMore]);
 
   useEffect(() => {
     return () => {

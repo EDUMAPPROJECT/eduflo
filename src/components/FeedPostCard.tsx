@@ -29,6 +29,7 @@ interface FeedPostCardProps {
   post: FeedPost;
   onLikeToggle: (postId: string, isLiked: boolean) => void;
   onAcademyClick: (academyId: string) => void;
+  onSeminarClick?: () => void;
 }
 
 const typeConfig = {
@@ -37,7 +38,7 @@ const typeConfig = {
   event: { label: '이벤트', icon: PartyPopper, color: 'bg-purple-500 text-white' },
 };
 
-const FeedPostCard = ({ post, onLikeToggle, onAcademyClick }: FeedPostCardProps) => {
+const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onSeminarClick }: FeedPostCardProps) => {
   const config = typeConfig[post.type];
   const TypeIcon = config.icon;
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -206,10 +207,10 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick }: FeedPostCardProps)
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onAcademyClick(post.academy.id)}
+            onClick={() => onSeminarClick ? onSeminarClick() : onAcademyClick(post.academy.id)}
             className="gap-1"
           >
-            자세히 보기
+            {post.type === 'seminar' ? '설명회 보기' : '자세히 보기'}
             <ChevronRight className="w-4 h-4" />
           </Button>
         )}

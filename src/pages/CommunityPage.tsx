@@ -272,6 +272,7 @@ const CommunityPage = () => {
                 post={post}
                 onLikeToggle={handleLikeToggle}
                 onAcademyClick={(id) => navigate(`/academy/${id}`)}
+                onSeminarClick={post.type === 'seminar' ? () => navigate('/explore?tab=seminars') : undefined}
               />
             ))}
             
