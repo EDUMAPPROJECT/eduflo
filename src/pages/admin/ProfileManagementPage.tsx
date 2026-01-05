@@ -5,6 +5,7 @@ import { useBusinessVerification } from "@/hooks/useBusinessVerification";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import Logo from "@/components/Logo";
 import ImageUpload from "@/components/ImageUpload";
+import NicknameSettingsDialog from "@/components/NicknameSettingsDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ import {
   Clock,
   ShieldAlert,
   ChevronRight,
+  User,
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { logError } from "@/lib/errorLogger";
@@ -92,8 +94,10 @@ const ProfileManagementPage = () => {
   // Dialog state
   const [isTeacherDialogOpen, setIsTeacherDialogOpen] = useState(false);
   const [isClassDialogOpen, setIsClassDialogOpen] = useState(false);
+  const [isNicknameDialogOpen, setIsNicknameDialogOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [editingClass, setEditingClass] = useState<Class | null>(null);
+  const [userProfile, setUserProfile] = useState<{ user_name: string | null } | null>(null);
 
   // Teacher form
   const [teacherName, setTeacherName] = useState("");
@@ -122,8 +126,19 @@ const ProfileManagementPage = () => {
   useEffect(() => {
     if (user) {
       fetchAcademy();
+      fetchUserProfile();
     }
   }, [user]);
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("profiles")
+      .select("user_name")
+      .eq("id", user.id)
+      .maybeSingle();
+    setUserProfile(data);
+  };
 
   const fetchAcademy = async () => {
     if (!user) return;
@@ -496,6 +511,32 @@ const ProfileManagementPage = () => {
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-4">
+            {/* Nickname Settings */}
+            <Card className="shadow-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <User className="w-4 h-4 text-primary" />
+                  내 닉네임
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-foreground">
+                    {userProfile?.user_name || "닉네임 미설정"}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsNicknameDialogOpen(true)}
+                    className="gap-1"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    변경
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card className="shadow-card">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -763,6 +804,16 @@ const ProfileManagementPage = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      {user && (
+        <NicknameSettingsDialog
+          open={isNicknameDialogOpen}
+          onOpenChange={setIsNicknameDialogOpen}
+          currentNickname={userProfile?.user_name || ""}
+          userId={user.id}
+          onSuccess={(newNickname) => setUserProfile({ user_name: newNickname })}
+        />
+      )}
 
       <AdminBottomNavigation />
     </div>

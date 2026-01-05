@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNavigation from "@/components/BottomNavigation";
 import Logo from "@/components/Logo";
+import NicknameSettingsDialog from "@/components/NicknameSettingsDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,8 @@ import {
   Clock,
   GraduationCap,
   Building2,
-  Calendar
+  Calendar,
+  Pencil
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
@@ -56,6 +58,7 @@ const MyPage = () => {
   const [bookmarks, setBookmarks] = useState<BookmarkWithAcademy[]>([]);
   const [seminarApplications, setSeminarApplications] = useState<SeminarApplication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isNicknameDialogOpen, setIsNicknameDialogOpen] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -241,9 +244,21 @@ const MyPage = () => {
               </span>
             </div>
             <div className="flex-1">
-              <h2 className="text-lg font-semibold text-primary-foreground">
-                {profile?.user_name || user?.email?.split("@")[0] || "사용자"}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-primary-foreground">
+                  {profile?.user_name || user?.email?.split("@")[0] || "사용자"}
+                </h2>
+                {user && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-6 h-6 text-primary-foreground/80 hover:text-primary-foreground hover:bg-card/20"
+                    onClick={() => setIsNicknameDialogOpen(true)}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
               <p className="text-sm text-primary-foreground/80">
                 {userRole === "parent" ? "학부모 회원" : "학원 원장님"}
               </p>
@@ -497,6 +512,16 @@ const MyPage = () => {
             />
           )}
         </div>
+
+        {user && (
+          <NicknameSettingsDialog
+            open={isNicknameDialogOpen}
+            onOpenChange={setIsNicknameDialogOpen}
+            currentNickname={profile?.user_name || ""}
+            userId={user.id}
+            onSuccess={(newNickname) => setProfile((prev: any) => ({ ...prev, user_name: newNickname }))}
+          />
+        )}
       </main>
 
       <BottomNavigation />

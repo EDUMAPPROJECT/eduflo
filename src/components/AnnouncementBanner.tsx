@@ -2,6 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Megaphone, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Announcement {
   id: string;
@@ -14,6 +20,7 @@ const AnnouncementBanner = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
 
   useEffect(() => {
     const fetchAnnouncements = async () => {
@@ -45,73 +52,97 @@ const AnnouncementBanner = () => {
 
   const currentAnnouncement = visibleAnnouncements[currentIndex % visibleAnnouncements.length];
 
-  const handleDismiss = (id: string) => {
+  const handleDismiss = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
     setDismissed(prev => new Set([...prev, id]));
     if (currentIndex >= visibleAnnouncements.length - 1) {
       setCurrentIndex(0);
     }
   };
 
-  const handlePrev = () => {
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setCurrentIndex(prev => 
       prev === 0 ? visibleAnnouncements.length - 1 : prev - 1
     );
   };
 
-  const handleNext = () => {
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setCurrentIndex(prev => 
       (prev + 1) % visibleAnnouncements.length
     );
   };
 
   return (
-    <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 relative">
-      <div className="flex items-start gap-3">
-        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-          <Megaphone className="w-4 h-4 text-primary" />
+    <>
+      <div 
+        className="bg-primary/10 border border-primary/20 rounded-xl p-3 relative cursor-pointer hover:bg-primary/15 transition-colors"
+        onClick={() => setSelectedAnnouncement(currentAnnouncement)}
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+            <Megaphone className="w-4 h-4 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-medium text-foreground text-sm mb-0.5">
+              {currentAnnouncement.title}
+            </h4>
+            <p className="text-xs text-muted-foreground line-clamp-2">
+              {currentAnnouncement.content}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="w-6 h-6 flex-shrink-0"
+            onClick={(e) => handleDismiss(e, currentAnnouncement.id)}
+          >
+            <X className="w-4 h-4" />
+          </Button>
         </div>
-        <div className="flex-1 min-w-0">
-          <h4 className="font-medium text-foreground text-sm mb-0.5">
-            {currentAnnouncement.title}
-          </h4>
-          <p className="text-xs text-muted-foreground line-clamp-2">
-            {currentAnnouncement.content}
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="w-6 h-6 flex-shrink-0"
-          onClick={() => handleDismiss(currentAnnouncement.id)}
-        >
-          <X className="w-4 h-4" />
-        </Button>
+        
+        {visibleAnnouncements.length > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-6 h-6"
+              onClick={handlePrev}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              {(currentIndex % visibleAnnouncements.length) + 1} / {visibleAnnouncements.length}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-6 h-6"
+              onClick={handleNext}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
       </div>
-      
-      {visibleAnnouncements.length > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-6 h-6"
-            onClick={handlePrev}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            {(currentIndex % visibleAnnouncements.length) + 1} / {visibleAnnouncements.length}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-6 h-6"
-            onClick={handleNext}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
-    </div>
+
+      <Dialog open={!!selectedAnnouncement} onOpenChange={() => setSelectedAnnouncement(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Megaphone className="w-5 h-5 text-primary" />
+              {selectedAnnouncement?.title}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-2">
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+              {selectedAnnouncement?.content}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
