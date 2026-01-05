@@ -34,12 +34,14 @@ interface BookmarkWithAcademy extends Bookmark {
 
 interface SeminarApplication {
   id: string;
+  seminar_id: string;
   student_name: string;
   student_grade: string | null;
   attendee_count: number | null;
   message: string | null;
   created_at: string;
   seminar?: {
+    id: string;
     title: string;
     date: string;
     status: "recruiting" | "closed";
@@ -49,12 +51,16 @@ interface SeminarApplication {
   };
 }
 
+interface ConsultationWithAcademy extends Consultation {
+  academy?: Academy;
+}
+
 const MyPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>("parent");
-  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [consultations, setConsultations] = useState<ConsultationWithAcademy[]>([]);
   const [bookmarks, setBookmarks] = useState<BookmarkWithAcademy[]>([]);
   const [seminarApplications, setSeminarApplications] = useState<SeminarApplication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,7 +125,24 @@ const MyPage = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setConsultations(data || []);
+
+      // Fetch academy details for each consultation
+      if (data && data.length > 0) {
+        const academyIds = [...new Set(data.map(c => c.academy_id))];
+        const { data: academyData } = await supabase
+          .from("academies")
+          .select("*")
+          .in("id", academyIds);
+
+        const consultationsWithAcademies = data.map(consultation => ({
+          ...consultation,
+          academy: academyData?.find(a => a.id === consultation.academy_id)
+        }));
+
+        setConsultations(consultationsWithAcademies);
+      } else {
+        setConsultations([]);
+      }
     } catch (error) {
       console.error("Error fetching consultations:", error);
     }
@@ -164,6 +187,7 @@ const MyPage = () => {
         .select(`
           *,
           seminar:seminars (
+            id,
             title,
             date,
             status,
@@ -340,7 +364,7 @@ const MyPage = () => {
                     <Card 
                       key={app.id} 
                       className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
-                      onClick={() => app.seminar && navigate(`/seminar/${app.id}`)}
+                      onClick={() => app.seminar?.id && navigate(`/seminar/${app.seminar.id}`)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-2">
@@ -395,7 +419,11 @@ const MyPage = () => {
               ) : (
                 <div className="space-y-3">
                   {consultations.map((consultation) => (
-                    <Card key={consultation.id} className="shadow-card border-border">
+                    <Card 
+                      key={consultation.id} 
+                      className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
+                      onClick={() => navigate(`/academy/${consultation.academy_id}`)}
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
@@ -404,10 +432,10 @@ const MyPage = () => {
                             </div>
                             <div>
                               <h4 className="font-medium text-foreground text-sm">
-                                {consultation.student_name}
+                                {consultation.academy?.name || "학원"}
                               </h4>
                               <p className="text-xs text-muted-foreground">
-                                {consultation.student_grade || "학년 미정"}
+                                {consultation.student_name} · {consultation.student_grade || "학년 미정"}
                               </p>
                             </div>
                           </div>
@@ -452,7 +480,11 @@ const MyPage = () => {
               ) : (
                 <div className="space-y-3">
                   {bookmarks.map((bookmark) => (
-                    <Card key={bookmark.id} className="shadow-card border-border">
+                    <Card 
+                      key={bookmark.id} 
+                      className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
+                      onClick={() => navigate(`/academy/${bookmark.academy_id}`)}
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center shrink-0">
@@ -484,7 +516,10 @@ const MyPage = () => {
                             )}
                           </div>
                           <button
-                            onClick={() => removeBookmark(bookmark.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeBookmark(bookmark.id);
+                            }}
                             className="p-2 hover:bg-muted rounded-full transition-colors"
                           >
                             <Heart className="w-5 h-5 fill-red-500 text-red-500" />
