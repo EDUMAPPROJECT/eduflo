@@ -7,6 +7,7 @@ import Logo from "@/components/Logo";
 import ImageUpload from "@/components/ImageUpload";
 import NicknameSettingsDialog from "@/components/NicknameSettingsDialog";
 import TargetRegionSelector from "@/components/TargetRegionSelector";
+import AcademyTargetTagsEditor from "@/components/AcademyTargetTagsEditor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,7 @@ import {
   ChevronRight,
   User,
   MapPin,
+  Target,
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { logError } from "@/lib/errorLogger";
@@ -88,6 +90,7 @@ const ProfileManagementPage = () => {
   const [profileImage, setProfileImage] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [targetRegions, setTargetRegions] = useState<string[]>([]);
+  const [targetTags, setTargetTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
 
   // Teachers & Classes state
@@ -162,6 +165,7 @@ const ProfileManagementPage = () => {
         setProfileImage(data.profile_image || "");
         setTags(data.tags || []);
         setTargetRegions((data as any).target_regions || []);
+        setTargetTags((data as any).target_tags || []);
         fetchTeachers(data.id);
         fetchClasses(data.id);
       }
@@ -229,6 +233,7 @@ const ProfileManagementPage = () => {
           profile_image: validatedData.profile_image,
           tags: validatedData.tags,
           target_regions: targetRegions,
+          target_tags: targetTags,
           updated_at: new Date().toISOString(),
         })
         .eq("id", academy.id);
@@ -622,6 +627,12 @@ const ProfileManagementPage = () => {
             <TargetRegionSelector
               selectedRegions={targetRegions}
               onChange={setTargetRegions}
+            />
+
+            {/* Target Tags Editor for Recommendation */}
+            <AcademyTargetTagsEditor
+              selectedTags={targetTags}
+              onChange={setTargetTags}
             />
 
             <Button className="w-full gap-2" onClick={handleSaveProfile} disabled={saving}>

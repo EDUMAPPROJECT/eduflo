@@ -8,7 +8,7 @@ const LearningStyleBanner = () => {
   return (
     <div 
       className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-5 shadow-lg cursor-pointer group"
-      onClick={() => navigate("/learning-style-test")}
+      onClick={() => navigate("/preference-test")}
     >
       {/* Background decoration */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
@@ -20,7 +20,7 @@ const LearningStyleBanner = () => {
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-primary-foreground text-sm mb-1">
-            30초 만에 끝내는 학습 성향 테스트
+            1분 만에 끝내는 맞춤 추천 테스트
           </h3>
           <p className="text-primary-foreground/80 text-xs">
             우리 아이에게 딱 맞는 학원을 찾아보세요

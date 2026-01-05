@@ -20,6 +20,8 @@ import ChatListPage from "./pages/ChatListPage";
 import ChatRoomPage from "./pages/ChatRoomPage";
 import LearningStyleTest from "./pages/LearningStyleTest";
 import LearningStyleResult from "./pages/LearningStyleResult";
+import PreferenceTest from "./pages/PreferenceTest";
+import PreferenceResult from "./pages/PreferenceResult";
 import AdminHomePage from "./pages/admin/AdminHomePage";
 import ConsultationManagementPage from "./pages/admin/ConsultationManagementPage";
 import ProfileManagementPage from "./pages/admin/ProfileManagementPage";
@@ -68,6 +70,8 @@ const App = () => {
               <Route path="/academy/:id" element={<AcademyDetailPage />} />
               <Route path="/learning-style-test" element={<LearningStyleTest />} />
               <Route path="/learning-style-result" element={<LearningStyleResult />} />
+              <Route path="/preference-test" element={<PreferenceTest />} />
+              <Route path="/preference-result" element={<PreferenceResult />} />
               {/* Protected Admin Routes */}
               <Route path="/academy/setup" element={<ProtectedAdminRoute><AcademySetupPage /></ProtectedAdminRoute>} />
               <Route path="/academy/dashboard" element={<ProtectedAdminRoute><AcademyDashboardPage /></ProtectedAdminRoute>} />

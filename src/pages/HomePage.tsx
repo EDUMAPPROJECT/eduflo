@@ -14,6 +14,7 @@ import AcademyNewsFeed from "@/components/AcademyNewsFeed";
 import PostDetailDialog from "@/components/PostDetailDialog";
 import AdminHeader from "@/components/AdminHeader";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
+import RecommendedAcademies from "@/components/RecommendedAcademies";
 
 interface Seminar {
   id: string;
@@ -59,6 +60,7 @@ const HomePage = () => {
   const [loadingAcademies, setLoadingAcademies] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [learningStyle, setLearningStyle] = useState<string | null>(null);
+  const [profileTags, setProfileTags] = useState<string[]>([]);
   const [userName, setUserName] = useState<string | null>(null);
   const [checkingProfile, setCheckingProfile] = useState(true);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -185,12 +187,18 @@ const HomePage = () => {
         if (user) {
           const { data: profile } = await supabase
             .from("profiles")
-            .select("learning_style, user_name")
+            .select("learning_style, user_name, profile_tags")
             .eq("id", user.id)
             .maybeSingle();
           
           if (profile?.learning_style) {
             setLearningStyle(profile.learning_style);
+          }
+          if (profile?.user_name) {
+            setUserName(profile.user_name);
+          }
+          if (profile?.profile_tags && profile.profile_tags.length > 0) {
+            setProfileTags(profile.profile_tags);
           }
           if (profile?.user_name) {
             setUserName(profile.user_name);
@@ -245,8 +253,8 @@ const HomePage = () => {
           <AnnouncementBanner />
         </section>
 
-        {/* Learning Style Banner (only if not completed) */}
-        {!checkingProfile && !learningStyle && (
+        {/* Learning Style Banner (only if no profile tags and no learning style) */}
+        {!checkingProfile && !learningStyle && profileTags.length === 0 && (
           <section className="mb-6 px-4">
             <LearningStyleBanner />
           </section>
@@ -255,6 +263,14 @@ const HomePage = () => {
         {/* Quick Category Menu */}
         <section className="mb-6 px-4">
           <QuickCategoryMenu />
+        </section>
+
+        {/* Tag-based Recommended Academies Section */}
+        <section className="mb-6 px-4">
+          <RecommendedAcademies 
+            profileTags={profileTags}
+            childName={userName || undefined}
+          />
         </section>
 
         {/* Empty State for Region */}

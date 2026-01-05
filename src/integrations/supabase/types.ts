@@ -28,6 +28,7 @@ export type Database = {
           tags: string[] | null
           target_grade: string | null
           target_regions: string[] | null
+          target_tags: string[] | null
           updated_at: string
         }
         Insert: {
@@ -43,6 +44,7 @@ export type Database = {
           tags?: string[] | null
           target_grade?: string | null
           target_regions?: string[] | null
+          target_tags?: string[] | null
           updated_at?: string
         }
         Update: {
@@ -58,6 +60,7 @@ export type Database = {
           tags?: string[] | null
           target_grade?: string | null
           target_regions?: string[] | null
+          target_tags?: string[] | null
           updated_at?: string
         }
         Relationships: []
@@ -479,6 +482,7 @@ export type Database = {
           id: string
           learning_style: string | null
           phone: string | null
+          profile_tags: string[] | null
           updated_at: string
           user_name: string | null
         }
@@ -488,6 +492,7 @@ export type Database = {
           id: string
           learning_style?: string | null
           phone?: string | null
+          profile_tags?: string[] | null
           updated_at?: string
           user_name?: string | null
         }
@@ -497,6 +502,7 @@ export type Database = {
           id?: string
           learning_style?: string | null
           phone?: string | null
+          profile_tags?: string[] | null
           updated_at?: string
           user_name?: string | null
         }
