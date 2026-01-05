@@ -26,6 +26,8 @@ import AdminChatRoomPage from "./pages/admin/AdminChatRoomPage";
 import BusinessVerificationPage from "./pages/admin/BusinessVerificationPage";
 import VerificationReviewPage from "./pages/admin/VerificationReviewPage";
 import SuperAdminPage from "./pages/admin/SuperAdminPage";
+import SuperAdminSettingsPage from "./pages/admin/SuperAdminSettingsPage";
+import SuperAdminUsersPage from "./pages/admin/SuperAdminUsersPage";
 import AcademySetupPage from "./pages/academy/AcademySetupPage";
 import AcademyDashboardPage from "./pages/academy/AcademyDashboardPage";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
@@ -68,6 +70,8 @@ const App = () => {
             <Route path="/admin/verification" element={<ProtectedAdminRoute><BusinessVerificationPage /></ProtectedAdminRoute>} />
             <Route path="/admin/verification-review" element={<ProtectedAdminRoute><VerificationReviewPage /></ProtectedAdminRoute>} />
             <Route path="/admin/super" element={<ProtectedAdminRoute><SuperAdminPage /></ProtectedAdminRoute>} />
+            <Route path="/admin/super/settings" element={<ProtectedAdminRoute><SuperAdminSettingsPage /></ProtectedAdminRoute>} />
+            <Route path="/admin/super/users" element={<ProtectedAdminRoute><SuperAdminUsersPage /></ProtectedAdminRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

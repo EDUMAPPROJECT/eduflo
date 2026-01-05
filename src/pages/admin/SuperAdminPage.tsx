@@ -52,16 +52,14 @@ const SuperAdminPage = () => {
       description: "등록된 사용자 및 역할을 관리합니다",
       icon: Users,
       path: "/admin/super/users",
-      color: "text-chart-2",
-      disabled: true
+      color: "text-chart-2"
     },
     {
       title: "시스템 설정",
-      description: "플랫폼 전체 설정을 관리합니다",
+      description: "플랫폼 공지사항 및 설정을 관리합니다",
       icon: Settings,
       path: "/admin/super/settings",
-      color: "text-chart-3",
-      disabled: true
+      color: "text-chart-3"
     }
   ];
 
@@ -101,12 +99,8 @@ const SuperAdminPage = () => {
           {menuItems.map((item) => (
             <Card 
               key={item.path}
-              className={`shadow-card transition-all duration-200 ${
-                item.disabled 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : 'hover:shadow-lg cursor-pointer hover:-translate-y-0.5'
-              }`}
-              onClick={() => !item.disabled && navigate(item.path)}
+              className="shadow-card transition-all duration-200 hover:shadow-lg cursor-pointer hover:-translate-y-0.5"
+              onClick={() => navigate(item.path)}
             >
               <CardContent className="p-4 flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-xl bg-secondary flex items-center justify-center`}>
@@ -116,11 +110,6 @@ const SuperAdminPage = () => {
                   <h3 className="font-semibold text-foreground">{item.title}</h3>
                   <p className="text-sm text-muted-foreground">{item.description}</p>
                 </div>
-                {item.disabled && (
-                  <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded">
-                    준비중
-                  </span>
-                )}
               </CardContent>
             </Card>
           ))}

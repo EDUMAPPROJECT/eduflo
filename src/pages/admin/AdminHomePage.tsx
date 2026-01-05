@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import Logo from "@/components/Logo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Eye, TrendingUp, Calendar } from "lucide-react";
-
+import { MessageSquare, Eye, TrendingUp, Calendar, Shield } from "lucide-react";
 const AdminHomePage = () => {
   const navigate = useNavigate();
+  const { isSuperAdmin } = useSuperAdmin();
   const [todayConsultations, setTodayConsultations] = useState(0);
   const [profileViews, setProfileViews] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -168,6 +169,26 @@ const AdminHomePage = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Super Admin Button - Only visible to super admins */}
+            {isSuperAdmin && (
+              <Card 
+                className="shadow-card border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 cursor-pointer hover:shadow-soft transition-all duration-200"
+                onClick={() => navigate("/admin/super")}
+              >
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                    <Shield className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-foreground">슈퍼관리자 센터</h4>
+                    <p className="text-sm text-muted-foreground">
+                      플랫폼 전체를 관리합니다
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </section>
       </main>
