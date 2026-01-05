@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRegion } from "@/contexts/RegionContext";
 import BottomNavigation from "@/components/BottomNavigation";
 import Logo from "@/components/Logo";
 import QuickCategoryMenu from "@/components/QuickCategoryMenu";
 import LearningStyleBanner from "@/components/LearningStyleBanner";
-import RegionSelector from "@/components/RegionSelector";
+import GlobalRegionSelector from "@/components/GlobalRegionSelector";
 import SeminarCarousel from "@/components/SeminarCarousel";
 import CompactAcademyList from "@/components/CompactAcademyList";
 import EmptyRegionState from "@/components/EmptyRegionState";
@@ -31,6 +32,7 @@ interface Academy {
   tags: string[] | null;
   subject: string;
   address: string | null;
+  target_regions?: string[] | null;
 }
 
 interface Post {
@@ -49,6 +51,7 @@ interface Post {
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const { selectedRegion, selectedRegionName } = useRegion();
   const [seminars, setSeminars] = useState<Seminar[]>([]);
   const [academies, setAcademies] = useState<Academy[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -58,11 +61,10 @@ const HomePage = () => {
   const [learningStyle, setLearningStyle] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [checkingProfile, setCheckingProfile] = useState(true);
-  const [selectedRegion, setSelectedRegion] = useState("동탄4동");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [postDialogOpen, setPostDialogOpen] = useState(false);
 
-  const fetchSeminars = useCallback(async (region: string) => {
+  const fetchSeminars = useCallback(async (regionId: string) => {
     try {
       setLoadingSeminars(true);
 
@@ -74,9 +76,9 @@ const HomePage = () => {
           date,
           image_url,
           location,
-          academy:academies (
+          academy:academies!inner (
             name,
-            address
+            target_regions
           )
         `)
         .eq("status", "recruiting")
@@ -86,11 +88,10 @@ const HomePage = () => {
 
       if (error) throw error;
 
-      // Filter by region (check location or academy address)
+      // Filter by target_regions
       const filtered = (data || []).filter((seminar: any) => {
-        const locationMatch = seminar.location?.includes(region);
-        const addressMatch = seminar.academy?.address?.includes(region);
-        return locationMatch || addressMatch;
+        const regions = seminar.academy?.target_regions || [];
+        return regions.includes(regionId);
       });
 
       setSeminars(filtered.map((s: any) => ({
@@ -107,14 +108,14 @@ const HomePage = () => {
     }
   }, []);
 
-  const fetchAcademies = useCallback(async (region: string) => {
+  const fetchAcademies = useCallback(async (regionId: string) => {
     try {
       setLoadingAcademies(true);
 
       const { data, error } = await supabase
         .from("academies")
-        .select("id, name, profile_image, tags, subject, address")
-        .ilike("address", `%${region}%`)
+        .select("id, name, profile_image, tags, subject, address, target_regions")
+        .contains("target_regions", [regionId])
         .limit(4);
 
       if (error) throw error;
@@ -126,7 +127,7 @@ const HomePage = () => {
     }
   }, []);
 
-  const fetchPosts = useCallback(async (region: string) => {
+  const fetchPosts = useCallback(async (regionId: string) => {
     try {
       setLoadingPosts(true);
 
@@ -139,11 +140,11 @@ const HomePage = () => {
           category,
           image_url,
           created_at,
-          academy:academies (
+          academy:academies!inner (
             id,
             name,
             profile_image,
-            address
+            target_regions
           )
         `)
         .order("created_at", { ascending: false })
@@ -151,9 +152,10 @@ const HomePage = () => {
 
       if (error) throw error;
 
-      // Filter by region
+      // Filter by target_regions
       const filtered = (data || []).filter((post: any) => {
-        return post.academy?.address?.includes(region);
+        const regions = post.academy?.target_regions || [];
+        return regions.includes(regionId);
       });
 
       setPosts(filtered.map((p: any) => ({
@@ -210,10 +212,6 @@ const HomePage = () => {
     fetchPosts(selectedRegion);
   }, [selectedRegion, fetchSeminars, fetchAcademies, fetchPosts]);
 
-  const handleRegionChange = (region: string) => {
-    setSelectedRegion(region);
-  };
-
   const handlePostClick = (post: Post) => {
     setSelectedPost(post);
     setPostDialogOpen(true);
@@ -232,10 +230,7 @@ const HomePage = () => {
       {/* Header */}
       <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <RegionSelector 
-            selectedRegion={selectedRegion} 
-            onRegionChange={handleRegionChange} 
-          />
+          <GlobalRegionSelector />
           <div className="flex items-center gap-2">
             <AdminHeader />
             <Logo size="sm" showText={false} />
@@ -264,10 +259,7 @@ const HomePage = () => {
 
         {/* Empty State for Region */}
         {hasNoData ? (
-          <EmptyRegionState 
-            region={selectedRegion} 
-            onRegionChange={handleRegionChange} 
-          />
+          <EmptyRegionState />
         ) : (
           <>
             {/* Seminar Carousel */}

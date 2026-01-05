@@ -6,6 +6,7 @@ import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import Logo from "@/components/Logo";
 import ImageUpload from "@/components/ImageUpload";
 import NicknameSettingsDialog from "@/components/NicknameSettingsDialog";
+import TargetRegionSelector from "@/components/TargetRegionSelector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ import {
   ShieldAlert,
   ChevronRight,
   User,
+  MapPin,
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { logError } from "@/lib/errorLogger";
@@ -85,6 +87,7 @@ const ProfileManagementPage = () => {
   const [description, setDescription] = useState("");
   const [profileImage, setProfileImage] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [targetRegions, setTargetRegions] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
 
   // Teachers & Classes state
@@ -158,6 +161,7 @@ const ProfileManagementPage = () => {
         setDescription(data.description || "");
         setProfileImage(data.profile_image || "");
         setTags(data.tags || []);
+        setTargetRegions((data as any).target_regions || []);
         fetchTeachers(data.id);
         fetchClasses(data.id);
       }
@@ -224,6 +228,7 @@ const ProfileManagementPage = () => {
           description: validatedData.description,
           profile_image: validatedData.profile_image,
           tags: validatedData.tags,
+          target_regions: targetRegions,
           updated_at: new Date().toISOString(),
         })
         .eq("id", academy.id);
@@ -612,6 +617,12 @@ const ProfileManagementPage = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Target Region Selector */}
+            <TargetRegionSelector
+              selectedRegions={targetRegions}
+              onChange={setTargetRegions}
+            />
 
             <Button className="w-full gap-2" onClick={handleSaveProfile} disabled={saving}>
               <Save className="w-4 h-4" />

@@ -4,11 +4,13 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { RegionProvider } from "@/contexts/RegionContext";
 import SplashScreen from "./components/SplashScreen";
 import RoleSelection from "./pages/RoleSelection";
 import AuthPage from "./pages/AuthPage";
 import HomePage from "./pages/HomePage";
 import ExplorePage from "./pages/ExplorePage";
+import CommunityPage from "./pages/CommunityPage";
 import MyPage from "./pages/MyPage";
 import SeminarDetailPage from "./pages/SeminarDetailPage";
 import AcademyDetailPage from "./pages/AcademyDetailPage";
@@ -23,6 +25,7 @@ import SeminarManagementPage from "./pages/admin/SeminarManagementPage";
 import PostManagementPage from "./pages/admin/PostManagementPage";
 import AdminChatListPage from "./pages/admin/AdminChatListPage";
 import AdminChatRoomPage from "./pages/admin/AdminChatRoomPage";
+import AdminCommunityPage from "./pages/admin/AdminCommunityPage";
 import BusinessVerificationPage from "./pages/admin/BusinessVerificationPage";
 import VerificationReviewPage from "./pages/admin/VerificationReviewPage";
 import SuperAdminPage from "./pages/admin/SuperAdminPage";
@@ -42,41 +45,45 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<RoleSelection />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/home" element={<HomePage />} />
-            <Route path="/explore" element={<ExplorePage />} />
-            <Route path="/my" element={<MyPage />} />
-            <Route path="/chats" element={<ChatListPage />} />
-            <Route path="/chats/:id" element={<ChatRoomPage />} />
-            <Route path="/seminar/:id" element={<SeminarDetailPage />} />
-            <Route path="/academy/:id" element={<AcademyDetailPage />} />
-            <Route path="/learning-style-test" element={<LearningStyleTest />} />
-            <Route path="/learning-style-result" element={<LearningStyleResult />} />
-            {/* Protected Admin Routes */}
-            <Route path="/academy/setup" element={<ProtectedAdminRoute><AcademySetupPage /></ProtectedAdminRoute>} />
-            <Route path="/academy/dashboard" element={<ProtectedAdminRoute><AcademyDashboardPage /></ProtectedAdminRoute>} />
-            <Route path="/admin/home" element={<ProtectedAdminRoute><AdminHomePage /></ProtectedAdminRoute>} />
-            <Route path="/admin/consultations" element={<ProtectedAdminRoute><ConsultationManagementPage /></ProtectedAdminRoute>} />
-            <Route path="/admin/profile" element={<ProtectedAdminRoute><ProfileManagementPage /></ProtectedAdminRoute>} />
-            <Route path="/admin/seminars" element={<ProtectedAdminRoute><SeminarManagementPage /></ProtectedAdminRoute>} />
-            <Route path="/admin/posts" element={<ProtectedAdminRoute><PostManagementPage /></ProtectedAdminRoute>} />
-            <Route path="/admin/chats" element={<ProtectedAdminRoute><AdminChatListPage /></ProtectedAdminRoute>} />
-            <Route path="/admin/chats/:id" element={<ProtectedAdminRoute><AdminChatRoomPage /></ProtectedAdminRoute>} />
-            <Route path="/admin/verification" element={<ProtectedAdminRoute><BusinessVerificationPage /></ProtectedAdminRoute>} />
-            <Route path="/admin/verification-review" element={<ProtectedAdminRoute><VerificationReviewPage /></ProtectedAdminRoute>} />
-            <Route path="/admin/super" element={<ProtectedAdminRoute><SuperAdminPage /></ProtectedAdminRoute>} />
-            <Route path="/admin/super/settings" element={<ProtectedAdminRoute><SuperAdminSettingsPage /></ProtectedAdminRoute>} />
-            <Route path="/admin/super/users" element={<ProtectedAdminRoute><SuperAdminUsersPage /></ProtectedAdminRoute>} />
-            <Route path="/admin/my" element={<ProtectedAdminRoute><AdminMyPage /></ProtectedAdminRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <RegionProvider>
+          <Toaster />
+          <Sonner />
+          {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<RoleSelection />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/home" element={<HomePage />} />
+              <Route path="/explore" element={<ExplorePage />} />
+              <Route path="/community" element={<CommunityPage />} />
+              <Route path="/my" element={<MyPage />} />
+              <Route path="/chats" element={<ChatListPage />} />
+              <Route path="/chats/:id" element={<ChatRoomPage />} />
+              <Route path="/seminar/:id" element={<SeminarDetailPage />} />
+              <Route path="/academy/:id" element={<AcademyDetailPage />} />
+              <Route path="/learning-style-test" element={<LearningStyleTest />} />
+              <Route path="/learning-style-result" element={<LearningStyleResult />} />
+              {/* Protected Admin Routes */}
+              <Route path="/academy/setup" element={<ProtectedAdminRoute><AcademySetupPage /></ProtectedAdminRoute>} />
+              <Route path="/academy/dashboard" element={<ProtectedAdminRoute><AcademyDashboardPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/home" element={<ProtectedAdminRoute><AdminHomePage /></ProtectedAdminRoute>} />
+              <Route path="/admin/consultations" element={<ProtectedAdminRoute><ConsultationManagementPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/profile" element={<ProtectedAdminRoute><ProfileManagementPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/seminars" element={<ProtectedAdminRoute><SeminarManagementPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/posts" element={<ProtectedAdminRoute><PostManagementPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/chats" element={<ProtectedAdminRoute><AdminChatListPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/chats/:id" element={<ProtectedAdminRoute><AdminChatRoomPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/community" element={<ProtectedAdminRoute><AdminCommunityPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/verification" element={<ProtectedAdminRoute><BusinessVerificationPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/verification-review" element={<ProtectedAdminRoute><VerificationReviewPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/super" element={<ProtectedAdminRoute><SuperAdminPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/super/settings" element={<ProtectedAdminRoute><SuperAdminSettingsPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/super/users" element={<ProtectedAdminRoute><SuperAdminUsersPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/my" element={<ProtectedAdminRoute><AdminMyPage /></ProtectedAdminRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </RegionProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

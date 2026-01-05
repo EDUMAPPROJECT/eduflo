@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRegion } from "@/contexts/RegionContext";
 import BottomNavigation from "@/components/BottomNavigation";
 import Logo from "@/components/Logo";
 import AdminHeader from "@/components/AdminHeader";
+import GlobalRegionSelector from "@/components/GlobalRegionSelector";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,7 +13,9 @@ import { Search, MapPin, Filter, Heart, Calendar, Clock, Users, Building2 } from
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 
-type Academy = Database["public"]["Tables"]["academies"]["Row"];
+type Academy = Database["public"]["Tables"]["academies"]["Row"] & {
+  target_regions?: string[];
+};
 
 interface Seminar {
   id: string;
@@ -25,12 +29,14 @@ interface Seminar {
   target_grade: string | null;
   academy?: {
     name: string;
+    target_regions?: string[];
   };
 }
 
 const ExplorePage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { selectedRegion, selectedRegionName } = useRegion();
   const initialTab = searchParams.get("tab") === "seminars" ? "seminars" : "academies";
   
   const [academies, setAcademies] = useState<Academy[]>([]);
@@ -52,21 +58,25 @@ const ExplorePage = () => {
         fetchBookmarks(session.user.id);
       }
     });
+  }, []);
 
+  useEffect(() => {
     fetchAcademies();
     fetchSeminars();
-  }, []);
+  }, [selectedRegion]);
 
   const fetchAcademies = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from("academies")
         .select("*")
+        .contains("target_regions", [selectedRegion])
         .order("is_mou", { ascending: false })
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setAcademies(data || []);
+      setAcademies((data as Academy[]) || []);
     } catch (error) {
       console.error("Error fetching academies:", error);
     } finally {
@@ -80,15 +90,23 @@ const ExplorePage = () => {
         .from("seminars")
         .select(`
           *,
-          academy:academies (
-            name
+          academy:academies!inner (
+            name,
+            target_regions
           )
         `)
         .order("status", { ascending: true })
         .order("date", { ascending: true });
 
       if (error) throw error;
-      setSeminars((data as any) || []);
+      
+      // Filter by target_regions
+      const filtered = ((data as any) || []).filter((seminar: any) => {
+        const regions = seminar.academy?.target_regions || [];
+        return regions.includes(selectedRegion);
+      });
+      
+      setSeminars(filtered);
     } catch (error) {
       console.error("Error fetching seminars:", error);
     }
@@ -191,7 +209,10 @@ const ExplorePage = () => {
       {/* Header */}
       <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <Logo size="sm" showText={false} />
+          <div className="flex items-center gap-2">
+            <Logo size="sm" showText={false} />
+            <GlobalRegionSelector />
+          </div>
           <AdminHeader />
         </div>
       </header>

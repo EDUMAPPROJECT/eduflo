@@ -27,6 +27,7 @@ export type Database = {
           subject: string
           tags: string[] | null
           target_grade: string | null
+          target_regions: string[] | null
           updated_at: string
         }
         Insert: {
@@ -41,6 +42,7 @@ export type Database = {
           subject: string
           tags?: string[] | null
           target_grade?: string | null
+          target_regions?: string[] | null
           updated_at?: string
         }
         Update: {
@@ -55,6 +57,7 @@ export type Database = {
           subject?: string
           tags?: string[] | null
           target_grade?: string | null
+          target_regions?: string[] | null
           updated_at?: string
         }
         Relationships: []
@@ -290,6 +293,53 @@ export type Database = {
           },
         ]
       }
+      feed_posts: {
+        Row: {
+          academy_id: string
+          body: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          like_count: number
+          target_regions: string[] | null
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          academy_id: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          like_count?: number
+          target_regions?: string[] | null
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          academy_id?: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          like_count?: number
+          target_regions?: string[] | null
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_posts_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           chat_room_id: string
@@ -351,6 +401,35 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      post_likes: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       posts: {
         Row: {

@@ -1,15 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { MapPin } from "lucide-react";
+import { useRegion, AVAILABLE_REGIONS, ALL_REGIONS } from "@/contexts/RegionContext";
 
 interface EmptyRegionStateProps {
-  region: string;
-  onRegionChange: (region: string) => void;
+  region?: string;
 }
 
-const suggestedRegions = ["동탄4동", "동탄5동", "동탄1동", "동탄6동"];
-
-const EmptyRegionState = ({ region, onRegionChange }: EmptyRegionStateProps) => {
-  const otherRegions = suggestedRegions.filter(r => r !== region);
+const EmptyRegionState = ({ region }: EmptyRegionStateProps) => {
+  const { selectedRegion, selectedRegionName, setSelectedRegion } = useRegion();
+  const currentRegion = region || selectedRegion;
+  const currentRegionName = ALL_REGIONS.find(r => r.id === currentRegion)?.name || selectedRegionName;
+  
+  // Get other regions to suggest
+  const otherRegions = ALL_REGIONS.filter(r => r.id !== currentRegion).slice(0, 4);
 
   return (
     <div className="text-center py-12 px-4">
@@ -25,14 +28,14 @@ const EmptyRegionState = ({ region, onRegionChange }: EmptyRegionStateProps) => 
       <div className="flex flex-wrap justify-center gap-2">
         {otherRegions.map((r) => (
           <Button
-            key={r}
+            key={r.id}
             variant="outline"
             size="sm"
-            onClick={() => onRegionChange(r)}
+            onClick={() => setSelectedRegion(r.id)}
             className="gap-1"
           >
             <MapPin className="w-3 h-3" />
-            {r}
+            {r.name}
           </Button>
         ))}
       </div>
