@@ -63,13 +63,25 @@ const CommunityPage = () => {
   // Fetch function for infinite scroll
   const fetchPosts = useCallback(async (page: number): Promise<{ data: FeedPost[]; hasMore: boolean }> => {
     try {
+      // First, get academies that target the selected region
+      const { data: academiesInRegion } = await supabase
+        .from("academies")
+        .select("id")
+        .contains("target_regions", [selectedRegion]);
+
+      const academyIds = academiesInRegion?.map(a => a.id) || [];
+
+      if (academyIds.length === 0) {
+        return { data: [], hasMore: false };
+      }
+
       let query = supabase
         .from("feed_posts")
         .select(`
           *,
           academy:academies!inner(id, name, profile_image, target_regions)
         `)
-        .contains("target_regions", [selectedRegion])
+        .in("academy_id", academyIds)
         .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 

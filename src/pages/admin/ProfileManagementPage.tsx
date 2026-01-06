@@ -50,6 +50,7 @@ import {
   User,
   MapPin,
   Target,
+  Lock,
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { logError } from "@/lib/errorLogger";
@@ -83,6 +84,7 @@ const ProfileManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [isProfileLocked, setIsProfileLocked] = useState(false);
 
   // Profile state
   const [name, setName] = useState("");
@@ -166,6 +168,7 @@ const ProfileManagementPage = () => {
         setTags(data.tags || []);
         setTargetRegions((data as any).target_regions || []);
         setTargetTags((data as any).target_tags || []);
+        setIsProfileLocked((data as any).is_profile_locked || false);
         fetchTeachers(data.id);
         fetchClasses(data.id);
       }
@@ -624,16 +627,53 @@ const ProfileManagementPage = () => {
             </Card>
 
             {/* Target Region Selector */}
-            <TargetRegionSelector
-              selectedRegions={targetRegions}
-              onChange={setTargetRegions}
-            />
+            {isProfileLocked ? (
+              <Card className="shadow-card border-warning/30 bg-warning/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2 text-warning">
+                    <Lock className="w-4 h-4" />
+                    타겟 설정 잠금됨
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    슈퍼관리자에 의해 타겟 지역 및 타겟 태그 설정이 잠금되었습니다.
+                    변경이 필요하시면 슈퍼관리자에게 문의해주세요.
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-1">
+                      {targetRegions.map(region => (
+                        <Badge key={region} variant="secondary" className="text-xs">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {region}
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {targetTags.map(tag => (
+                        <Badge key={tag} variant="outline" className="text-xs">
+                          <Target className="w-3 h-3 mr-1" />
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                <TargetRegionSelector
+                  selectedRegions={targetRegions}
+                  onChange={setTargetRegions}
+                />
 
-            {/* Target Tags Editor for Recommendation */}
-            <AcademyTargetTagsEditor
-              selectedTags={targetTags}
-              onChange={setTargetTags}
-            />
+                {/* Target Tags Editor for Recommendation */}
+                <AcademyTargetTagsEditor
+                  selectedTags={targetTags}
+                  onChange={setTargetTags}
+                />
+              </>
+            )}
 
             <Button className="w-full gap-2" onClick={handleSaveProfile} disabled={saving}>
               <Save className="w-4 h-4" />

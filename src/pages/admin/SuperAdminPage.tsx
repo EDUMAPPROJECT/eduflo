@@ -124,6 +124,20 @@ const SuperAdminPage = () => {
       color: "text-chart-2"
     },
     {
+      title: "게시물 관리",
+      description: "모든 커뮤니티 게시물을 관리합니다",
+      icon: MessageSquare,
+      path: "/admin/super/posts",
+      color: "text-chart-4"
+    },
+    {
+      title: "학원 타겟 관리",
+      description: "학원 프로필 잠금 및 타겟 설정 관리",
+      icon: Building2,
+      path: "/admin/super/academies",
+      color: "text-chart-5"
+    },
+    {
       title: "시스템 설정",
       description: "플랫폼 공지사항 및 설정을 관리합니다",
       icon: Settings,

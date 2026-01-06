@@ -21,6 +21,9 @@ export type Database = {
           description: string | null
           id: string
           is_mou: boolean | null
+          is_profile_locked: boolean | null
+          locked_at: string | null
+          locked_by: string | null
           name: string
           owner_id: string | null
           profile_image: string | null
@@ -37,6 +40,9 @@ export type Database = {
           description?: string | null
           id?: string
           is_mou?: boolean | null
+          is_profile_locked?: boolean | null
+          locked_at?: string | null
+          locked_by?: string | null
           name: string
           owner_id?: string | null
           profile_image?: string | null
@@ -53,6 +59,9 @@ export type Database = {
           description?: string | null
           id?: string
           is_mou?: boolean | null
+          is_profile_locked?: boolean | null
+          locked_at?: string | null
+          locked_by?: string | null
           name?: string
           owner_id?: string | null
           profile_image?: string | null

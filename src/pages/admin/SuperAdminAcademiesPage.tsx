@@ -1,0 +1,351 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import Logo from "@/components/Logo";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { 
+  ArrowLeft, 
+  Shield, 
+  Loader2,
+  Search,
+  Building2,
+  MapPin,
+  Target,
+  Lock,
+  Unlock,
+  Eye
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { ALL_REGIONS } from "@/contexts/RegionContext";
+
+interface Academy {
+  id: string;
+  name: string;
+  subject: string;
+  profile_image: string | null;
+  target_regions: string[] | null;
+  target_tags: string[] | null;
+  is_profile_locked: boolean | null;
+  locked_by: string | null;
+  locked_at: string | null;
+}
+
+const SuperAdminAcademiesPage = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { isSuperAdmin, loading } = useSuperAdmin();
+  const [academies, setAcademies] = useState<Academy[]>([]);
+  const [academiesLoading, setAcademiesLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedAcademy, setSelectedAcademy] = useState<Academy | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUserId(session.user.id);
+      }
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    if (!loading && isSuperAdmin) {
+      fetchAcademies();
+    }
+  }, [loading, isSuperAdmin]);
+
+  const fetchAcademies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("academies")
+        .select("id, name, subject, profile_image, target_regions, target_tags, is_profile_locked, locked_by, locked_at")
+        .order("name");
+
+      if (error) throw error;
+      setAcademies((data as Academy[]) || []);
+    } catch (error) {
+      console.error("Error fetching academies:", error);
+    } finally {
+      setAcademiesLoading(false);
+    }
+  };
+
+  const handleToggleLock = async (academy: Academy) => {
+    const newLockState = !academy.is_profile_locked;
+
+    try {
+      const { error } = await supabase
+        .from("academies")
+        .update({
+          is_profile_locked: newLockState,
+          locked_by: newLockState ? userId : null,
+          locked_at: newLockState ? new Date().toISOString() : null,
+        })
+        .eq("id", academy.id);
+
+      if (error) throw error;
+
+      setAcademies(prev => prev.map(a => 
+        a.id === academy.id 
+          ? { ...a, is_profile_locked: newLockState, locked_by: newLockState ? userId : null, locked_at: newLockState ? new Date().toISOString() : null }
+          : a
+      ));
+
+      toast({ 
+        title: newLockState ? "프로필 잠금" : "프로필 잠금 해제", 
+        description: newLockState 
+          ? "이제 학원이 타겟 설정을 변경할 수 없습니다." 
+          : "학원이 타겟 설정을 변경할 수 있습니다."
+      });
+    } catch (error) {
+      console.error("Error toggling lock:", error);
+      toast({ title: "오류", description: "변경에 실패했습니다.", variant: "destructive" });
+    }
+  };
+
+  const getRegionName = (regionId: string) => {
+    return ALL_REGIONS.find(r => r.id === regionId)?.name || regionId;
+  };
+
+  const filteredAcademies = academies.filter(academy => 
+    academy.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    academy.subject.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isSuperAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <Shield className="w-16 h-16 text-muted-foreground mb-4" />
+        <h1 className="text-xl font-semibold text-foreground mb-2">접근 권한이 없습니다</h1>
+        <p className="text-muted-foreground text-center mb-6">
+          이 페이지는 슈퍼관리자만 접근할 수 있습니다.
+        </p>
+        <Button onClick={() => navigate('/admin/home')}>
+          관리자 홈으로 돌아가기
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background pb-20">
+      {/* Header */}
+      <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
+        <div className="max-w-lg mx-auto px-4 h-14 flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/admin/super')}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <Logo size="sm" showText={false} />
+          <span className="font-semibold text-foreground">학원 타겟 관리</span>
+        </div>
+      </header>
+
+      <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
+        {/* Info Card */}
+        <Card className="shadow-card bg-primary/5 border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Lock className="w-5 h-5 text-primary mt-0.5" />
+              <div>
+                <h3 className="font-medium text-foreground text-sm mb-1">프로필 잠금 기능</h3>
+                <p className="text-xs text-muted-foreground">
+                  잠금을 활성화하면 학원이 타겟 지역과 타겟 태그를 임의로 변경할 수 없습니다.
+                  슈퍼관리자와의 합의 없이 알고리즘 조작을 방지합니다.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="학원명 또는 과목 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Stats */}
+        <div className="flex gap-2">
+          <Badge variant="secondary" className="gap-1">
+            <Building2 className="w-3 h-3" />
+            전체 {academies.length}
+          </Badge>
+          <Badge variant="secondary" className="gap-1">
+            <Lock className="w-3 h-3" />
+            잠금 {academies.filter(a => a.is_profile_locked).length}
+          </Badge>
+        </div>
+
+        {/* Academies List */}
+        {academiesLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <Card key={i} className="shadow-card">
+                <CardContent className="p-4">
+                  <Skeleton className="h-5 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-1/2" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : filteredAcademies.length === 0 ? (
+          <div className="text-center py-12">
+            <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">학원이 없습니다</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredAcademies.map((academy) => (
+              <Card key={academy.id} className="shadow-card">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-secondary overflow-hidden shrink-0">
+                        {academy.profile_image ? (
+                          <img
+                            src={academy.profile_image}
+                            alt={academy.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-primary font-bold text-sm">
+                            {academy.name.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-medium text-foreground text-sm truncate">
+                            {academy.name}
+                          </h3>
+                          {academy.is_profile_locked && (
+                            <Lock className="w-3.5 h-3.5 text-warning shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-2">{academy.subject}</p>
+                        <div className="flex flex-wrap gap-1">
+                          {academy.target_regions?.slice(0, 2).map(region => (
+                            <Badge key={region} variant="outline" className="text-[10px] px-1.5 py-0">
+                              <MapPin className="w-2.5 h-2.5 mr-0.5" />
+                              {getRegionName(region)}
+                            </Badge>
+                          ))}
+                          {(academy.target_regions?.length || 0) > 2 && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              +{(academy.target_regions?.length || 0) - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setSelectedAcademy(academy)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Switch
+                        checked={academy.is_profile_locked || false}
+                        onCheckedChange={() => handleToggleLock(academy)}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* Academy Detail Dialog */}
+      <Dialog open={!!selectedAcademy} onOpenChange={() => setSelectedAcademy(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedAcademy?.name}
+              {selectedAcademy?.is_profile_locked && <Lock className="w-4 h-4 text-warning" />}
+            </DialogTitle>
+            <DialogDescription>{selectedAcademy?.subject}</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
+                <MapPin className="w-4 h-4" />
+                타겟 지역
+              </h4>
+              <div className="flex flex-wrap gap-1">
+                {selectedAcademy?.target_regions?.length ? (
+                  selectedAcademy.target_regions.map(region => (
+                    <Badge key={region} variant="secondary" className="text-xs">
+                      {getRegionName(region)}
+                    </Badge>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground">설정된 지역이 없습니다</p>
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
+                <Target className="w-4 h-4" />
+                타겟 태그
+              </h4>
+              <div className="flex flex-wrap gap-1">
+                {selectedAcademy?.target_tags?.length ? (
+                  selectedAcademy.target_tags.map(tag => (
+                    <Badge key={tag} variant="outline" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground">설정된 태그가 없습니다</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedAcademy(null)}>
+              닫기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default SuperAdminAcademiesPage;

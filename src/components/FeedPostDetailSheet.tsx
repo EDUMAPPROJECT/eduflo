@@ -220,14 +220,39 @@ const FeedPostDetailSheet = ({
               )}
 
               {/* Seminar CTA Button */}
-              {post.type === 'seminar' && post.seminar_id && onSeminarClick && (
+              {post.type === 'seminar' && onSeminarClick && (
+                post.seminar_id ? (
+                  <Button
+                    variant="default"
+                    className="w-full mb-4 gap-2"
+                    onClick={handleSeminarClick}
+                  >
+                    <Calendar className="w-4 h-4" />
+                    설명회 신청하기
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full mb-4 gap-2"
+                    onClick={handleAcademyClick}
+                  >
+                    <Calendar className="w-4 h-4" />
+                    학원 설명회 보기
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                )
+              )}
+
+              {/* Event CTA Button */}
+              {post.type === 'event' && (
                 <Button
-                  variant="default"
-                  className="w-full mb-4 gap-2"
-                  onClick={handleSeminarClick}
+                  variant="outline"
+                  className="w-full mb-4 gap-2 border-purple-500/50 text-purple-600 hover:bg-purple-50"
+                  onClick={handleAcademyClick}
                 >
-                  <Calendar className="w-4 h-4" />
-                  설명회 신청하기
+                  <PartyPopper className="w-4 h-4" />
+                  학원 이벤트 보기
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               )}
