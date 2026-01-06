@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Heart, Share2, ChevronRight, Bell, Calendar, PartyPopper } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ interface FeedPost {
   image_url: string | null;
   like_count: number;
   created_at: string;
+  seminar_id?: string | null;
   academy: {
     id: string;
     name: string;
@@ -39,10 +41,17 @@ const typeConfig = {
 };
 
 const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedPostCardProps) => {
+  const navigate = useNavigate();
   const config = typeConfig[post.type];
   const TypeIcon = config.icon;
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+
+  const handleSeminarClick = () => {
+    if (post.seminar_id) {
+      navigate(`/seminar/${post.seminar_id}`);
+    }
+  };
 
   // Parse image URLs - support both single URL string and JSON array
   const getImageUrls = (): string[] => {
@@ -123,6 +132,21 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedP
             <TypeIcon className="w-3 h-3" />
             {config.label}
           </Badge>
+          {/* Seminar direct link button */}
+          {post.type === 'seminar' && post.seminar_id && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSeminarClick();
+              }}
+              className="h-6 text-xs gap-1 text-orange-600 border-orange-300 hover:bg-orange-50"
+            >
+              신청하기
+              <ChevronRight className="w-3 h-3" />
+            </Button>
+          )}
         </div>
         <h3 className="font-semibold text-foreground mb-1 line-clamp-1">
           {post.title}

@@ -64,6 +64,7 @@ const SuperAdminAcademiesPage = () => {
   // Edit form state
   const [editTargetRegions, setEditTargetRegions] = useState<string[]>([]);
   const [editTags, setEditTags] = useState<string>("");
+  const [editTargetTags, setEditTargetTags] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -135,6 +136,7 @@ const SuperAdminAcademiesPage = () => {
     setEditingAcademy(academy);
     setEditTargetRegions(academy.target_regions || []);
     setEditTags((academy.tags || []).join(", "));
+    setEditTargetTags((academy.target_tags || []).join(", "));
     setSelectedAcademy(null);
   };
 
@@ -144,12 +146,14 @@ const SuperAdminAcademiesPage = () => {
     setSaving(true);
     try {
       const tagsArray = editTags.split(",").map(t => t.trim()).filter(t => t.length > 0);
+      const targetTagsArray = editTargetTags.split(",").map(t => t.trim()).filter(t => t.length > 0);
       
       const { error } = await supabase
         .from("academies")
         .update({
           target_regions: editTargetRegions,
           tags: tagsArray,
+          target_tags: targetTagsArray,
         })
         .eq("id", editingAcademy.id);
 
@@ -157,7 +161,7 @@ const SuperAdminAcademiesPage = () => {
 
       setAcademies(prev => prev.map(a => 
         a.id === editingAcademy.id 
-          ? { ...a, target_regions: editTargetRegions, tags: tagsArray }
+          ? { ...a, target_regions: editTargetRegions, tags: tagsArray, target_tags: targetTagsArray }
           : a
       ));
 
@@ -471,6 +475,23 @@ const SuperAdminAcademiesPage = () => {
               />
               <p className="text-xs text-muted-foreground mt-1">
                 예: 입시전문, 소수정예, 내신대비
+              </p>
+            </div>
+
+            {/* Target Tags */}
+            <div>
+              <Label htmlFor="targetTags" className="text-sm font-medium mb-2 flex items-center gap-1">
+                <Target className="w-4 h-4 text-orange-500" />
+                타겟 태그 (추천 알고리즘용)
+              </Label>
+              <Input
+                id="targetTags"
+                value={editTargetTags}
+                onChange={(e) => setEditTargetTags(e.target.value)}
+                placeholder="집중력부족, 수학약점, 내신대비"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                학부모 테스트 결과와 매칭되는 태그 (예: 집중력부족, 수학약점)
               </p>
             </div>
           </div>

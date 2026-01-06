@@ -77,6 +77,77 @@ interface ClassInfo {
   };
 }
 
+// Mock data for when DB is empty
+const mockInstructors: Teacher[] = [
+  {
+    id: 'mock-1',
+    name: '김에듀 원장',
+    subject: '수학',
+    bio: '서울대 수학교육과 졸 / 전 대치 명문학원 10년 경력 / 수능 수학의 본질을 꿰뚫는 강의',
+    image_url: null,
+  },
+  {
+    id: 'mock-2',
+    name: '이영어 선생님',
+    subject: '영어',
+    bio: '연세대 영문과 졸 / 토익 만점 / 문법부터 독해까지 한 번에 정리',
+    image_url: null,
+  },
+  {
+    id: 'mock-3',
+    name: '박논술 선생님',
+    subject: '국어/논술',
+    bio: '고려대 국어국문 졸 / 대입 논술 전문 / 꼼꼼한 첨삭 지도',
+    image_url: null,
+  },
+  {
+    id: 'mock-4',
+    name: '최과학 선생님',
+    subject: '과학(물리/화학)',
+    bio: 'KAIST 물리학과 졸 / 과학고 출신 / 원리부터 심화까지 체계적 강의',
+    image_url: null,
+  },
+];
+
+const mockCourses: ClassInfo[] = [
+  {
+    id: 'mock-c1',
+    name: '[고2] 수1/수2 심화 완성반',
+    target_grade: '고등학교 2학년',
+    schedule: '월/수/금 18:00~22:00',
+    fee: 450000,
+    description: '겨울방학 특강, 내신/수능 대비',
+    is_recruiting: true,
+  },
+  {
+    id: 'mock-c2',
+    name: '[중3] 예비고1 영어 문법 마스터',
+    target_grade: '중학교 3학년',
+    schedule: '화/목 17:00~20:00',
+    fee: 350000,
+    description: '고등 문법 기초, 서술형 대비',
+    is_recruiting: true,
+  },
+  {
+    id: 'mock-c3',
+    name: '[고3] 수능 국어 파이널 실전반',
+    target_grade: '고등학교 3학년',
+    schedule: '토 10:00~13:00',
+    fee: 280000,
+    description: '실전 모의고사, 1:1 클리닉',
+    is_recruiting: true,
+  },
+  {
+    id: 'mock-c4',
+    name: '[고1] 내신 대비 과학 집중반',
+    target_grade: '고등학교 1학년',
+    schedule: '화/목 19:00~22:00',
+    fee: 400000,
+    description: '물리/화학 내신 1등급 목표',
+    is_recruiting: false,
+  },
+];
+
 const AcademyDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -394,92 +465,108 @@ const AcademyDetailPage = () => {
 
           {/* Teachers Tab */}
           <TabsContent value="teachers" className="space-y-4">
-            {teachers.length === 0 ? (
-              <Card className="shadow-card">
-                <CardContent className="p-6 text-center">
-                  <Users className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">등록된 강사 정보가 없습니다</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {teachers.map((teacher) => (
-                  <Card key={teacher.id} className="shadow-card">
-                    <CardContent className="p-4">
-                      <div className="flex gap-4">
-                        <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0">
-                          {teacher.image_url ? (
-                            <img
-                              src={teacher.image_url}
-                              alt={teacher.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <GraduationCap className="w-8 h-8 text-primary" />
-                          )}
+            {(() => {
+              const displayTeachers = teachers.length > 0 ? teachers : mockInstructors;
+              return (
+                <div className="space-y-3">
+                  {displayTeachers.map((teacher) => (
+                    <Card key={teacher.id} className="shadow-card overflow-hidden">
+                      <CardContent className="p-4">
+                        <div className="flex gap-4">
+                          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center overflow-hidden shrink-0">
+                            {teacher.image_url ? (
+                              <img
+                                src={teacher.image_url}
+                                alt={teacher.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <GraduationCap className="w-8 h-8 text-primary" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold text-foreground">{teacher.name}</h4>
+                              <Badge variant="secondary" className="text-xs">
+                                {teacher.subject || "과목 미지정"}
+                              </Badge>
+                            </div>
+                            {teacher.bio && (
+                              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                                {teacher.bio}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-foreground">{teacher.name}</h4>
-                          <p className="text-sm text-primary">{teacher.subject || "과목 미지정"}</p>
-                          {teacher.bio && (
-                            <p className="text-xs text-muted-foreground mt-2 line-clamp-3">
-                              {teacher.bio}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              );
+            })()}
           </TabsContent>
 
           {/* Classes Tab */}
           <TabsContent value="classes" className="space-y-4">
-            {classes.length === 0 ? (
-              <Card className="shadow-card">
-                <CardContent className="p-6 text-center">
-                  <BookOpen className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">등록된 강좌 정보가 없습니다</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="shadow-card overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>강좌명</TableHead>
-                      <TableHead>대상</TableHead>
-                      <TableHead className="text-right">수강료</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {classes.map((cls) => (
-                      <TableRow key={cls.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{cls.name}</p>
-                            {cls.schedule && (
-                              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                                <Calendar className="w-3 h-3" />
-                                {cls.schedule}
-                              </p>
+            {(() => {
+              const displayClasses = classes.length > 0 ? classes : mockCourses;
+              return (
+                <div className="space-y-3">
+                  {displayClasses.map((cls) => (
+                    <Card key={cls.id} className="shadow-card overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="font-semibold text-foreground">{cls.name}</h4>
+                              {cls.is_recruiting ? (
+                                <Badge className="bg-green-500 text-white text-[10px] px-1.5 py-0">모집중</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">마감</Badge>
+                              )}
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-2 mb-2">
+                              {cls.target_grade && (
+                                <Badge variant="outline" className="text-xs gap-1">
+                                  <Users className="w-3 h-3" />
+                                  {cls.target_grade}
+                                </Badge>
+                              )}
+                              {cls.schedule && (
+                                <Badge variant="outline" className="text-xs gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {cls.schedule}
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            {cls.description && (
+                              <div className="flex flex-wrap gap-1 mb-2">
+                                {cls.description.split(',').map((tag, idx) => (
+                                  <span key={idx} className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                                    {tag.trim()}
+                                  </span>
+                                ))}
+                              </div>
                             )}
                           </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {cls.target_grade || "-"}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {cls.fee ? `${cls.fee.toLocaleString()}원` : "-"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Card>
-            )}
+                          
+                          <div className="text-right shrink-0">
+                            {cls.fee && (
+                              <p className="font-bold text-primary text-lg">
+                                {cls.fee.toLocaleString()}원
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">/월</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              );
+            })()}
           </TabsContent>
         </Tabs>
       </main>
