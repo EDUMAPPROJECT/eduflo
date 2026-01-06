@@ -7,6 +7,7 @@ import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import Logo from "@/components/Logo";
 import GlobalRegionSelector from "@/components/GlobalRegionSelector";
 import FeedPostCard from "@/components/FeedPostCard";
+import FeedPostDetailSheet from "@/components/FeedPostDetailSheet";
 import CreatePostDialog from "@/components/CreatePostDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,6 +34,7 @@ interface FeedPost {
   target_regions: string[];
   like_count: number;
   created_at: string;
+  seminar_id?: string | null;
   academy: {
     id: string;
     name: string;
@@ -62,6 +64,7 @@ const AdminCommunityPage = () => {
   const [academyId, setAcademyId] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [showMigrationNotice, setShowMigrationNotice] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<FeedPost | null>(null);
 
   useEffect(() => {
     // Check if migration notice was dismissed
@@ -296,11 +299,21 @@ const AdminCommunityPage = () => {
                 post={post}
                 onLikeToggle={handleLikeToggle}
                 onAcademyClick={(id) => navigate(`/academy/${id}`)}
+                onCardClick={() => setSelectedPost(post)}
               />
             ))}
           </div>
         )}
       </main>
+
+      {/* Post Detail Sheet */}
+      <FeedPostDetailSheet
+        post={selectedPost}
+        open={!!selectedPost}
+        onClose={() => setSelectedPost(null)}
+        onLikeToggle={handleLikeToggle}
+        onAcademyClick={(id) => navigate(`/academy/${id}`)}
+      />
 
       {/* FAB */}
       {academyId && (
