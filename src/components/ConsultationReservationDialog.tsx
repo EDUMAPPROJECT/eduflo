@@ -31,6 +31,7 @@ interface AcademySettings {
   break_start_time: string | null;
   break_end_time: string | null;
   closed_days: number[];
+  temporary_closed_dates: string[];
 }
 
 interface ConsultationReservationDialogProps {
@@ -48,6 +49,7 @@ const defaultSettings: AcademySettings = {
   break_start_time: null,
   break_end_time: null,
   closed_days: [0, 6], // Sunday = 0, Saturday = 6
+  temporary_closed_dates: [],
 };
 
 const gradeOptions = [
@@ -100,6 +102,7 @@ const ConsultationReservationDialog = ({
           break_start_time: data.break_start_time,
           break_end_time: data.break_end_time,
           closed_days: data.closed_days || [0, 6],
+          temporary_closed_dates: data.temporary_closed_dates || [],
         });
       }
     };
@@ -179,7 +182,13 @@ const ConsultationReservationDialog = ({
     if (isBefore(date, today)) return true;
     
     const dayOfWeek = date.getDay();
-    return settings.closed_days.includes(dayOfWeek);
+    if (settings.closed_days.includes(dayOfWeek)) return true;
+    
+    // Check temporary closed dates
+    const dateStr = format(date, "yyyy-MM-dd");
+    if (settings.temporary_closed_dates.includes(dateStr)) return true;
+    
+    return false;
   };
 
   const handleDateSelect = (date: Date | undefined) => {
