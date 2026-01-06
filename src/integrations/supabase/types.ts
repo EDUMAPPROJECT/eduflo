@@ -74,6 +74,45 @@ export type Database = {
         }
         Relationships: []
       }
+      academy_settings: {
+        Row: {
+          academy_id: string
+          break_end_time: string | null
+          break_start_time: string | null
+          closed_days: number[] | null
+          consultation_end_time: string
+          consultation_start_time: string
+          created_at: string
+          id: string
+          slot_duration: number
+          updated_at: string
+        }
+        Insert: {
+          academy_id: string
+          break_end_time?: string | null
+          break_start_time?: string | null
+          closed_days?: number[] | null
+          consultation_end_time?: string
+          consultation_start_time?: string
+          created_at?: string
+          id?: string
+          slot_duration?: number
+          updated_at?: string
+        }
+        Update: {
+          academy_id?: string
+          break_end_time?: string | null
+          break_start_time?: string | null
+          closed_days?: number[] | null
+          consultation_end_time?: string
+          consultation_start_time?: string
+          created_at?: string
+          id?: string
+          slot_duration?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           content: string
@@ -266,6 +305,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      consultation_reservations: {
+        Row: {
+          academy_id: string
+          created_at: string
+          id: string
+          message: string | null
+          parent_id: string
+          reservation_date: string
+          reservation_time: string
+          status: string
+          student_grade: string | null
+          student_name: string
+          updated_at: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          parent_id: string
+          reservation_date: string
+          reservation_time: string
+          status?: string
+          student_grade?: string | null
+          student_name: string
+          updated_at?: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          parent_id?: string
+          reservation_date?: string
+          reservation_time?: string
+          status?: string
+          student_grade?: string | null
+          student_name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       consultations: {
         Row: {
