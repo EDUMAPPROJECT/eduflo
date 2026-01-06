@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
+import { logError } from "@/lib/errorLogger";
 
 // Message validation schema
 const messageSchema = z.object({
@@ -83,7 +84,7 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
           .maybeSingle();
 
         if (roomError || !roomData) {
-          console.error('Error fetching room:', roomError);
+          logError('ChatMessages Room Fetch', roomError);
           setLoading(false);
           return;
         }
@@ -121,7 +122,7 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
           .order('created_at', { ascending: true });
 
         if (messagesError) {
-          console.error('Error fetching messages:', messagesError);
+          logError('ChatMessages Fetch', messagesError);
         } else {
           setMessages(messagesData || []);
         }
@@ -134,7 +135,7 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
           .neq('sender_id', session.user.id);
 
       } catch (error) {
-        console.error('Error:', error);
+        logError('ChatMessages Init', error);
       } finally {
         setLoading(false);
       }
@@ -192,7 +193,7 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
     const validation = messageSchema.safeParse({ content });
     if (!validation.success) {
       const errorMessage = validation.error.errors[0]?.message || "유효하지 않은 메시지입니다";
-      console.error('Message validation failed:', errorMessage);
+      logError('ChatMessages Validation', validation.error);
       return { success: false, error: errorMessage };
     }
 
@@ -208,7 +209,7 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
         });
 
       if (error) {
-        console.error('Error sending message:', error);
+        logError('ChatMessages Send', error);
         return { success: false, error: "메시지 전송에 실패했습니다" };
       }
 
@@ -220,7 +221,7 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
 
       return { success: true };
     } catch (error) {
-      console.error('Error:', error);
+      logError('ChatMessages Send', error);
       return { success: false, error: "오류가 발생했습니다" };
     }
   }, [chatRoomId, userId]);

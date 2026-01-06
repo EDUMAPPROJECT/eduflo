@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { logError } from "@/lib/errorLogger";
 
 interface BusinessVerification {
   id: string;
@@ -37,12 +38,12 @@ export const useBusinessVerification = () => {
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching verification:', error);
+        logError('BusinessVerification Fetch', error);
       } else {
         setVerification(data as BusinessVerification | null);
       }
     } catch (error) {
-      console.error('Error:', error);
+      logError('BusinessVerification Fetch', error);
     } finally {
       setLoading(false);
     }
@@ -115,14 +116,14 @@ export const useBusinessVerification = () => {
         });
 
       if (error) {
-        console.error('Error submitting verification:', error);
+        logError('BusinessVerification Submit', error);
         return { success: false, error: error.message };
       }
 
       await fetchVerification();
       return { success: true };
     } catch (error: any) {
-      console.error('Error:', error);
+      logError('BusinessVerification Submit', error);
       return { success: false, error: error.message };
     }
   };

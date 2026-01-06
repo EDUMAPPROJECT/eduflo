@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { logError } from "@/lib/errorLogger";
 import Logo from "@/components/Logo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -95,7 +96,7 @@ const SuperAdminUsersPage = () => {
 
       setUsers(combinedUsers);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      logError('SuperAdminUsers Fetch', error);
       toast.error("사용자 목록을 불러오는데 실패했습니다");
     } finally {
       setLoading(false);
@@ -114,7 +115,7 @@ const SuperAdminUsersPage = () => {
       toast.success(`역할이 ${newRole === 'admin' ? '관리자' : '학부모'}로 변경되었습니다`);
       fetchUsers();
     } catch (error) {
-      console.error('Error updating role:', error);
+      logError('SuperAdminUsers RoleChange', error);
       toast.error("역할 변경에 실패했습니다");
     }
   };
@@ -139,7 +140,7 @@ const SuperAdminUsersPage = () => {
         : "슈퍼관리자 권한이 부여되었습니다");
       fetchUsers();
     } catch (error) {
-      console.error('Error toggling super admin:', error);
+      logError('SuperAdminUsers ToggleSuperAdmin', error);
       toast.error("권한 변경에 실패했습니다");
     }
   };
@@ -169,7 +170,7 @@ const SuperAdminUsersPage = () => {
       toast.success("사용자가 삭제되었습니다");
       fetchUsers();
     } catch (error) {
-      console.error('Error deleting user:', error);
+      logError('SuperAdminUsers Delete', error);
       toast.error("사용자 삭제에 실패했습니다");
     }
   };
