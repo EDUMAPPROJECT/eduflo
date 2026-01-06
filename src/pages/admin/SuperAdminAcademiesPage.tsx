@@ -7,8 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +29,10 @@ import {
   Target,
   Lock,
   Unlock,
-  Eye
+  Eye,
+  Pencil,
+  Save,
+  X
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ALL_REGIONS } from "@/contexts/RegionContext";
@@ -39,6 +44,7 @@ interface Academy {
   profile_image: string | null;
   target_regions: string[] | null;
   target_tags: string[] | null;
+  tags: string[] | null;
   is_profile_locked: boolean | null;
   locked_by: string | null;
   locked_at: string | null;
@@ -52,7 +58,13 @@ const SuperAdminAcademiesPage = () => {
   const [academiesLoading, setAcademiesLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAcademy, setSelectedAcademy] = useState<Academy | null>(null);
+  const [editingAcademy, setEditingAcademy] = useState<Academy | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  
+  // Edit form state
+  const [editTargetRegions, setEditTargetRegions] = useState<string[]>([]);
+  const [editTags, setEditTags] = useState<string>("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -74,7 +86,7 @@ const SuperAdminAcademiesPage = () => {
     try {
       const { data, error } = await supabase
         .from("academies")
-        .select("id, name, subject, profile_image, target_regions, target_tags, is_profile_locked, locked_by, locked_at")
+        .select("id, name, subject, profile_image, target_regions, target_tags, tags, is_profile_locked, locked_by, locked_at")
         .order("name");
 
       if (error) throw error;
@@ -117,6 +129,54 @@ const SuperAdminAcademiesPage = () => {
       console.error("Error toggling lock:", error);
       toast({ title: "오류", description: "변경에 실패했습니다.", variant: "destructive" });
     }
+  };
+
+  const handleStartEdit = (academy: Academy) => {
+    setEditingAcademy(academy);
+    setEditTargetRegions(academy.target_regions || []);
+    setEditTags((academy.tags || []).join(", "));
+    setSelectedAcademy(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingAcademy) return;
+    
+    setSaving(true);
+    try {
+      const tagsArray = editTags.split(",").map(t => t.trim()).filter(t => t.length > 0);
+      
+      const { error } = await supabase
+        .from("academies")
+        .update({
+          target_regions: editTargetRegions,
+          tags: tagsArray,
+        })
+        .eq("id", editingAcademy.id);
+
+      if (error) throw error;
+
+      setAcademies(prev => prev.map(a => 
+        a.id === editingAcademy.id 
+          ? { ...a, target_regions: editTargetRegions, tags: tagsArray }
+          : a
+      ));
+
+      toast({ title: "저장 완료", description: "학원 정보가 수정되었습니다." });
+      setEditingAcademy(null);
+    } catch (error) {
+      console.error("Error saving academy:", error);
+      toast({ title: "오류", description: "저장에 실패했습니다.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRegionToggle = (regionId: string) => {
+    setEditTargetRegions(prev => 
+      prev.includes(regionId) 
+        ? prev.filter(r => r !== regionId)
+        : [...prev, regionId]
+    );
   };
 
   const getRegionName = (regionId: string) => {
@@ -171,10 +231,10 @@ const SuperAdminAcademiesPage = () => {
             <div className="flex items-start gap-3">
               <Lock className="w-5 h-5 text-primary mt-0.5" />
               <div>
-                <h3 className="font-medium text-foreground text-sm mb-1">프로필 잠금 기능</h3>
+                <h3 className="font-medium text-foreground text-sm mb-1">프로필 잠금 및 수정 기능</h3>
                 <p className="text-xs text-muted-foreground">
-                  잠금을 활성화하면 학원이 타겟 지역과 타겟 태그를 임의로 변경할 수 없습니다.
-                  슈퍼관리자와의 합의 없이 알고리즘 조작을 방지합니다.
+                  잠금을 활성화하면 학원이 타겟 지역과 태그를 임의로 변경할 수 없습니다.
+                  슈퍼관리자는 학원의 타겟 지역과 태그를 직접 수정할 수 있습니다.
                 </p>
               </div>
             </div>
@@ -275,6 +335,14 @@ const SuperAdminAcademiesPage = () => {
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleStartEdit(academy)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
                       <Switch
                         checked={academy.is_profile_locked || false}
                         onCheckedChange={() => handleToggleLock(academy)}
@@ -321,11 +389,11 @@ const SuperAdminAcademiesPage = () => {
             <div>
               <h4 className="text-sm font-medium text-foreground mb-2 flex items-center gap-1">
                 <Target className="w-4 h-4" />
-                타겟 태그
+                학원 태그
               </h4>
               <div className="flex flex-wrap gap-1">
-                {selectedAcademy?.target_tags?.length ? (
-                  selectedAcademy.target_tags.map(tag => (
+                {selectedAcademy?.tags?.length ? (
+                  selectedAcademy.tags.map(tag => (
                     <Badge key={tag} variant="outline" className="text-xs">
                       {tag}
                     </Badge>
@@ -337,9 +405,88 @@ const SuperAdminAcademiesPage = () => {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setSelectedAcademy(null)}>
               닫기
+            </Button>
+            <Button onClick={() => selectedAcademy && handleStartEdit(selectedAcademy)}>
+              <Pencil className="w-4 h-4 mr-2" />
+              수정
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Academy Dialog */}
+      <Dialog open={!!editingAcademy} onOpenChange={() => setEditingAcademy(null)}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-4 h-4" />
+              {editingAcademy?.name} 수정
+            </DialogTitle>
+            <DialogDescription>타겟 지역과 학원 태그를 수정합니다.</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* Target Regions */}
+            <div>
+              <Label className="text-sm font-medium mb-3 flex items-center gap-1">
+                <MapPin className="w-4 h-4" />
+                타겟 지역 (Multi-select)
+              </Label>
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border rounded-lg bg-secondary/30">
+                {ALL_REGIONS.map(region => (
+                  <div key={region.id} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`region-${region.id}`}
+                      checked={editTargetRegions.includes(region.id)}
+                      onCheckedChange={() => handleRegionToggle(region.id)}
+                    />
+                    <label 
+                      htmlFor={`region-${region.id}`}
+                      className="text-sm cursor-pointer"
+                    >
+                      {region.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                선택된 지역: {editTargetRegions.length}개
+              </p>
+            </div>
+            
+            {/* Tags */}
+            <div>
+              <Label htmlFor="tags" className="text-sm font-medium mb-2 flex items-center gap-1">
+                <Target className="w-4 h-4" />
+                학원 태그 (쉼표로 구분)
+              </Label>
+              <Input
+                id="tags"
+                value={editTags}
+                onChange={(e) => setEditTags(e.target.value)}
+                placeholder="입시전문, 소수정예, 1:1 맞춤"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                예: 입시전문, 소수정예, 내신대비
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEditingAcademy(null)} disabled={saving}>
+              <X className="w-4 h-4 mr-2" />
+              취소
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={saving}>
+              {saving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              저장
             </Button>
           </DialogFooter>
         </DialogContent>

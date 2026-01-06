@@ -219,32 +219,20 @@ const FeedPostDetailSheet = ({
                 </div>
               )}
 
-              {/* Seminar CTA Button */}
-              {post.type === 'seminar' && onSeminarClick && (
-                post.seminar_id ? (
-                  <Button
-                    variant="default"
-                    className="w-full mb-4 gap-2"
-                    onClick={handleSeminarClick}
-                  >
-                    <Calendar className="w-4 h-4" />
-                    설명회 신청하기
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className="w-full mb-4 gap-2"
-                    onClick={handleAcademyClick}
-                  >
-                    <Calendar className="w-4 h-4" />
-                    학원 설명회 보기
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                )
+              {/* Seminar CTA Button - always navigate to seminar detail page */}
+              {post.type === 'seminar' && onSeminarClick && post.seminar_id && (
+                <Button
+                  variant="default"
+                  className="w-full mb-4 gap-2"
+                  onClick={handleSeminarClick}
+                >
+                  <Calendar className="w-4 h-4" />
+                  설명회 신청하기
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
               )}
 
-              {/* Event CTA Button */}
+              {/* Event CTA Button - navigate to academy detail page's event section */}
               {post.type === 'event' && (
                 <Button
                   variant="outline"

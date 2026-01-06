@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrCreateChatRoom } from "@/hooks/useChatRooms";
 import Logo from "@/components/Logo";
 import BottomNavigation from "@/components/BottomNavigation";
+import AcademyNewsTab from "@/components/AcademyNewsTab";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,6 +37,7 @@ import {
   Clock,
   Heart,
   MessageCircle,
+  Newspaper,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logError } from "@/lib/errorLogger";
@@ -344,7 +346,7 @@ const AcademyDetailPage = () => {
               홈
             </TabsTrigger>
             <TabsTrigger value="news" className="gap-1 text-xs">
-              <BookOpen className="w-3 h-3" />
+              <Newspaper className="w-3 h-3" />
               소식
             </TabsTrigger>
             <TabsTrigger value="teachers" className="gap-1 text-xs">
@@ -383,6 +385,11 @@ const AcademyDetailPage = () => {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          {/* News Tab - Academy's feed_posts */}
+          <TabsContent value="news" className="space-y-4">
+            <AcademyNewsTab academyId={id!} />
           </TabsContent>
 
           {/* Teachers Tab */}

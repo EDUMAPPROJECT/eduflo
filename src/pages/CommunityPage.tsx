@@ -324,7 +324,7 @@ const CommunityPage = () => {
           }
         }}
         onAcademyClick={(id) => navigate(`/academy/${id}`)}
-        onSeminarClick={(seminarId) => navigate(`/seminars/${seminarId}`)}
+        onSeminarClick={(seminarId) => navigate(`/seminar/${seminarId}`)}
       />
 
       <BottomNavigation />
