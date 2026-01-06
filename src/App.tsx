@@ -24,6 +24,7 @@ import PreferenceTest from "./pages/PreferenceTest";
 import PreferenceResult from "./pages/PreferenceResult";
 import AdminHomePage from "./pages/admin/AdminHomePage";
 import ConsultationManagementPage from "./pages/admin/ConsultationManagementPage";
+import ReservationManagementPage from "./pages/admin/ReservationManagementPage";
 import ProfileManagementPage from "./pages/admin/ProfileManagementPage";
 import SeminarManagementPage from "./pages/admin/SeminarManagementPage";
 import PostManagementPage from "./pages/admin/PostManagementPage";
@@ -79,6 +80,7 @@ const App = () => {
               <Route path="/academy/dashboard" element={<ProtectedAdminRoute><AcademyDashboardPage /></ProtectedAdminRoute>} />
               <Route path="/admin/home" element={<ProtectedAdminRoute><AdminHomePage /></ProtectedAdminRoute>} />
               <Route path="/admin/consultations" element={<ProtectedAdminRoute><ConsultationManagementPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/reservations" element={<ProtectedAdminRoute><ReservationManagementPage /></ProtectedAdminRoute>} />
               <Route path="/admin/profile" element={<ProtectedAdminRoute><ProfileManagementPage /></ProtectedAdminRoute>} />
               <Route path="/admin/seminars" element={<ProtectedAdminRoute><SeminarManagementPage /></ProtectedAdminRoute>} />
               <Route path="/admin/posts" element={<ProtectedAdminRoute><PostManagementPage /></ProtectedAdminRoute>} />

@@ -102,14 +102,14 @@ const AcademyDashboardPage = () => {
         })));
       }
 
-      // Fetch consultation count
-      const { count } = await supabase
-        .from("consultations")
+      // Fetch reservation count (pending + confirmed)
+      const { count: reservationCount } = await supabase
+        .from("consultation_reservations")
         .select("*", { count: "exact", head: true })
         .eq("academy_id", academyData.id)
-        .eq("status", "pending");
+        .in("status", ["pending", "confirmed"]);
 
-      setConsultationCount(count || 0);
+      setConsultationCount(reservationCount || 0);
 
       // Simulate lead data based on consultation and seminar applications
       // In production, this would come from actual analytics
@@ -247,16 +247,16 @@ const AcademyDashboardPage = () => {
         <div className="grid grid-cols-2 gap-4">
           <Card 
             className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
-            onClick={() => navigate("/admin/consultations")}
+            onClick={() => navigate("/admin/reservations")}
           >
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
-                  <MessageSquare className="w-5 h-5 text-primary" />
+                  <Calendar className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <div className="text-xl font-bold text-foreground">{consultationCount}</div>
-                  <div className="text-xs text-muted-foreground">상담 요청</div>
+                  <div className="text-xs text-muted-foreground">방문 상담</div>
                 </div>
               </div>
             </CardContent>

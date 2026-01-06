@@ -37,6 +37,7 @@ import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 
 type Consultation = Database["public"]["Tables"]["consultations"]["Row"];
+type ConsultationReservation = Database["public"]["Tables"]["consultation_reservations"]["Row"];
 type Bookmark = Database["public"]["Tables"]["bookmarks"]["Row"];
 type Academy = Database["public"]["Tables"]["academies"]["Row"];
 
@@ -68,19 +69,24 @@ interface ConsultationWithAcademy extends Consultation {
   academy?: Academy;
 }
 
+interface ReservationWithAcademy extends ConsultationReservation {
+  academy?: Academy;
+}
+
 const MyPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>("parent");
   const [consultations, setConsultations] = useState<ConsultationWithAcademy[]>([]);
+  const [reservations, setReservations] = useState<ReservationWithAcademy[]>([]);
   const [bookmarks, setBookmarks] = useState<BookmarkWithAcademy[]>([]);
   const [seminarApplications, setSeminarApplications] = useState<SeminarApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [isNicknameDialogOpen, setIsNicknameDialogOpen] = useState(false);
   const [cancelDialog, setCancelDialog] = useState<{
     isOpen: boolean;
-    type: "consultation" | "seminar" | null;
+    type: "consultation" | "seminar" | "reservation" | null;
     id: string | null;
     title: string;
   }>({ isOpen: false, type: null, id: null, title: "" });
@@ -94,6 +100,7 @@ const MyPage = () => {
             fetchProfile(session.user.id);
             fetchRole(session.user.id);
             fetchConsultations(session.user.id);
+            fetchReservations(session.user.id);
             fetchBookmarks(session.user.id);
             fetchSeminarApplications(session.user.id);
           }, 0);
@@ -107,6 +114,7 @@ const MyPage = () => {
         fetchProfile(session.user.id);
         fetchRole(session.user.id);
         fetchConsultations(session.user.id);
+        fetchReservations(session.user.id);
         fetchBookmarks(session.user.id);
         fetchSeminarApplications(session.user.id);
       } else {
@@ -164,6 +172,56 @@ const MyPage = () => {
       }
     } catch (error) {
       console.error("Error fetching consultations:", error);
+    }
+  };
+
+  const fetchReservations = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("consultation_reservations")
+        .select("*")
+        .eq("parent_id", userId)
+        .order("reservation_date", { ascending: false });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const academyIds = [...new Set(data.map(r => r.academy_id))];
+        const { data: academyData } = await supabase
+          .from("academies")
+          .select("*")
+          .in("id", academyIds);
+
+        const reservationsWithAcademies = data.map(reservation => ({
+          ...reservation,
+          academy: academyData?.find(a => a.id === reservation.academy_id)
+        }));
+
+        setReservations(reservationsWithAcademies);
+      } else {
+        setReservations([]);
+      }
+    } catch (error) {
+      console.error("Error fetching reservations:", error);
+    }
+  };
+
+  const cancelReservation = async (reservationId: string) => {
+    try {
+      const { error } = await supabase
+        .from("consultation_reservations")
+        .update({ status: "cancelled" })
+        .eq("id", reservationId);
+
+      if (error) throw error;
+
+      setReservations(prev => prev.map(r => 
+        r.id === reservationId ? { ...r, status: "cancelled" } : r
+      ));
+      toast.success("방문 상담 예약이 취소되었습니다");
+    } catch (error) {
+      console.error("Error canceling reservation:", error);
+      toast.error("예약 취소에 실패했습니다");
     }
   };
 
@@ -282,11 +340,13 @@ const MyPage = () => {
       cancelConsultation(cancelDialog.id);
     } else if (cancelDialog.type === "seminar" && cancelDialog.id) {
       cancelSeminarApplication(cancelDialog.id);
+    } else if (cancelDialog.type === "reservation" && cancelDialog.id) {
+      cancelReservation(cancelDialog.id);
     }
     setCancelDialog({ isOpen: false, type: null, id: null, title: "" });
   };
 
-  const openCancelDialog = (type: "consultation" | "seminar", id: string, title: string) => {
+  const openCancelDialog = (type: "consultation" | "seminar" | "reservation", id: string, title: string) => {
     setCancelDialog({ isOpen: true, type, id, title });
   };
 
@@ -300,11 +360,22 @@ const MyPage = () => {
     switch (status) {
       case "pending":
         return <Badge variant="secondary" className="bg-amber-100 text-amber-700">대기중</Badge>;
+      case "confirmed":
+        return <Badge variant="secondary" className="bg-blue-100 text-blue-700">확정</Badge>;
       case "completed":
         return <Badge variant="secondary" className="bg-green-100 text-green-700">완료</Badge>;
+      case "cancelled":
+        return <Badge variant="destructive">취소됨</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  const formatReservationDate = (dateString: string, timeString: string) => {
+    const date = new Date(dateString);
+    const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
+    const dayName = dayNames[date.getDay()];
+    return `${date.getMonth() + 1}월 ${date.getDate()}일(${dayName}) ${timeString}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -372,38 +443,121 @@ const MyPage = () => {
       <main className="max-w-lg mx-auto px-4 -mt-4">
         {/* Quick Stats Card */}
         <div className="bg-card rounded-2xl p-4 shadow-card mb-6">
-          <div className="grid grid-cols-3 divide-x divide-border">
+          <div className="grid grid-cols-4 divide-x divide-border">
             <div className="text-center py-2">
               <p className="text-2xl font-bold text-primary">{bookmarks.length}</p>
               <p className="text-xs text-muted-foreground">찜한 학원</p>
             </div>
             <div className="text-center py-2">
-              <p className="text-2xl font-bold text-accent">{consultations.length}</p>
+              <p className="text-2xl font-bold text-accent">{reservations.filter(r => r.status !== "cancelled").length}</p>
+              <p className="text-xs text-muted-foreground">방문 상담</p>
+            </div>
+            <div className="text-center py-2">
+              <p className="text-2xl font-bold text-amber-600">{consultations.length}</p>
               <p className="text-xs text-muted-foreground">상담 신청</p>
             </div>
             <div className="text-center py-2">
               <p className="text-2xl font-bold text-green-600">{seminarApplications.length}</p>
-              <p className="text-xs text-muted-foreground">설명회 신청</p>
+              <p className="text-xs text-muted-foreground">설명회</p>
             </div>
           </div>
         </div>
 
         {user && (
-          <Tabs defaultValue="seminars" className="mb-6">
-            <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="seminars" className="gap-1 text-xs">
+          <Tabs defaultValue="reservations" className="mb-6">
+            <TabsList className="w-full grid grid-cols-4">
+              <TabsTrigger value="reservations" className="gap-1 text-xs px-1">
                 <Calendar className="w-3 h-3" />
+                방문상담
+              </TabsTrigger>
+              <TabsTrigger value="seminars" className="gap-1 text-xs px-1">
+                <GraduationCap className="w-3 h-3" />
                 설명회
               </TabsTrigger>
-              <TabsTrigger value="consultations" className="gap-1 text-xs">
+              <TabsTrigger value="consultations" className="gap-1 text-xs px-1">
                 <MessageSquare className="w-3 h-3" />
                 상담
               </TabsTrigger>
-              <TabsTrigger value="bookmarks" className="gap-1 text-xs">
+              <TabsTrigger value="bookmarks" className="gap-1 text-xs px-1">
                 <Heart className="w-3 h-3" />
                 찜
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="reservations" className="mt-4">
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+                </div>
+              ) : reservations.length === 0 ? (
+                <Card className="shadow-card border-border">
+                  <CardContent className="p-6 text-center">
+                    <Calendar className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">신청한 방문 상담이 없습니다</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-3"
+                      onClick={() => navigate("/explore")}
+                    >
+                      학원 둘러보기
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {reservations.map((reservation) => (
+                    <Card 
+                      key={reservation.id} 
+                      className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
+                      onClick={() => navigate(`/academy/${reservation.academy_id}`)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <Calendar className="w-4 h-4 text-primary" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-foreground text-sm line-clamp-1">
+                                {reservation.academy?.name || "학원"}
+                              </h4>
+                              <p className="text-xs text-muted-foreground">
+                                {reservation.student_name} · {reservation.student_grade || "학년 미정"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {getStatusBadge(reservation.status)}
+                            {reservation.status === "pending" && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openCancelDialog("reservation", reservation.id, reservation.academy?.name || "방문 상담");
+                                }}
+                                className="p-1.5 hover:bg-destructive/10 rounded-full transition-colors"
+                                title="예약 취소"
+                              >
+                                <X className="w-4 h-4 text-destructive" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-primary font-medium mb-2">
+                          <Clock className="w-4 h-4" />
+                          <span>{formatReservationDate(reservation.reservation_date, reservation.reservation_time)}</span>
+                        </div>
+                        {reservation.message && (
+                          <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2 line-clamp-2">
+                            {reservation.message}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
 
             <TabsContent value="seminars" className="mt-4">
               {loading ? (
@@ -437,7 +591,7 @@ const MyPage = () => {
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                              <Calendar className="w-4 h-4 text-primary" />
+                              <GraduationCap className="w-4 h-4 text-primary" />
                             </div>
                             <div>
                               <h4 className="font-medium text-foreground text-sm line-clamp-1">
@@ -664,13 +818,19 @@ const MyPage = () => {
         <AlertDialog open={cancelDialog.isOpen} onOpenChange={(open) => !open && setCancelDialog({ isOpen: false, type: null, id: null, title: "" })}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>
-                {cancelDialog.type === "seminar" ? "설명회 신청 취소" : "상담 신청 취소"}
+            <AlertDialogTitle>
+                {cancelDialog.type === "seminar" 
+                  ? "설명회 신청 취소" 
+                  : cancelDialog.type === "reservation" 
+                    ? "방문 상담 예약 취소"
+                    : "상담 신청 취소"}
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {cancelDialog.type === "seminar" 
                   ? `"${cancelDialog.title}" 설명회 신청을 취소하시겠습니까?`
-                  : `"${cancelDialog.title}" 상담 신청을 취소하시겠습니까?`
+                  : cancelDialog.type === "reservation"
+                    ? `"${cancelDialog.title}" 방문 상담 예약을 취소하시겠습니까?`
+                    : `"${cancelDialog.title}" 상담 신청을 취소하시겠습니까?`
                 }
                 <br />
                 취소한 신청은 복구할 수 없습니다.
