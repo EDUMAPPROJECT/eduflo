@@ -159,6 +159,7 @@ const AcademyDetailPage = () => {
   const [user, setUser] = useState<any>(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
 
   // Consultation form
   const [studentName, setStudentName] = useState("");
@@ -460,7 +461,11 @@ const AcademyDetailPage = () => {
 
           {/* News Tab - Academy's feed_posts */}
           <TabsContent value="news" className="space-y-4">
-            <AcademyNewsTab academyId={id!} />
+            <AcademyNewsTab 
+              academyId={id!} 
+              academyName={academy.name}
+              academyProfileImage={academy.profile_image}
+            />
           </TabsContent>
 
           {/* Teachers Tab */}
@@ -513,7 +518,11 @@ const AcademyDetailPage = () => {
               return (
                 <div className="space-y-3">
                   {displayClasses.map((cls) => (
-                    <Card key={cls.id} className="shadow-card overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                    <Card 
+                      key={cls.id} 
+                      className="shadow-card overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => setSelectedClass(cls)}
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
@@ -569,6 +578,138 @@ const AcademyDetailPage = () => {
             })()}
           </TabsContent>
         </Tabs>
+
+        {/* Class Detail Dialog */}
+        <Dialog open={!!selectedClass} onOpenChange={() => setSelectedClass(null)}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-lg">
+                {selectedClass?.name}
+                {selectedClass?.is_recruiting ? (
+                  <Badge className="bg-green-500 text-white text-xs">모집중</Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-xs">마감</Badge>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            
+            {selectedClass && (
+              <div className="space-y-5 py-2">
+                {/* Basic Info */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-secondary/50 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-1">대상 학년</p>
+                    <p className="font-medium text-sm">{selectedClass.target_grade || "미지정"}</p>
+                  </div>
+                  <div className="bg-secondary/50 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-1">수강료</p>
+                    <p className="font-bold text-primary">
+                      {selectedClass.fee ? `${selectedClass.fee.toLocaleString()}원/월` : "문의"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Schedule */}
+                {selectedClass.schedule && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      수업 일정
+                    </h4>
+                    <p className="text-sm text-muted-foreground bg-secondary/30 rounded-lg p-3">
+                      {selectedClass.schedule}
+                    </p>
+                  </div>
+                )}
+
+                {/* Features */}
+                {selectedClass.description && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground mb-2">강좌 특징</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedClass.description.split(',').map((tag, idx) => (
+                        <Badge key={idx} variant="outline" className="text-xs">
+                          {tag.trim()}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Curriculum */}
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1">
+                    <BookOpen className="w-4 h-4" />
+                    커리큘럼
+                  </h4>
+                  <div className="space-y-2 bg-secondary/30 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="text-xs font-bold text-primary">1</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">기초 개념 정립 및 원리 이해</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="text-xs font-bold text-primary">2</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">유형별 문제 풀이 및 심화 학습</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="text-xs font-bold text-primary">3</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">실전 모의고사 및 취약점 보완</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="text-xs font-bold text-primary">4</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">1:1 클리닉 및 개인별 피드백</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Teacher Info */}
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1">
+                    <GraduationCap className="w-4 h-4" />
+                    담당 선생님
+                  </h4>
+                  <Card className="shadow-none border">
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                          <GraduationCap className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {selectedClass.teacher?.name || "김에듀 원장"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            전문 강사 / 10년 이상 경력
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* CTA Button */}
+                <Button 
+                  className="w-full" 
+                  size="lg"
+                  onClick={() => {
+                    setSelectedClass(null);
+                    setIsDialogOpen(true);
+                  }}
+                >
+                  상담 신청하기
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
 
       {/* Fixed Bottom Buttons */}
