@@ -9,6 +9,7 @@ import NicknameSettingsDialog from "@/components/NicknameSettingsDialog";
 import TargetRegionSelector from "@/components/TargetRegionSelector";
 import AcademyTargetTagsEditor from "@/components/AcademyTargetTagsEditor";
 import CurriculumEditor from "@/components/CurriculumEditor";
+import ConsultationSettingsSection from "@/components/ConsultationSettingsSection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -715,6 +716,9 @@ const ProfileManagementPage = () => {
                 />
               </>
             )}
+
+            {/* Consultation Settings */}
+            <ConsultationSettingsSection academyId={academy.id} />
 
             <Button className="w-full gap-2" onClick={handleSaveProfile} disabled={saving}>
               <Save className="w-4 h-4" />

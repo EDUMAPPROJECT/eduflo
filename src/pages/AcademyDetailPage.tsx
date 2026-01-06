@@ -5,13 +5,11 @@ import { useOrCreateChatRoom } from "@/hooks/useChatRooms";
 import Logo from "@/components/Logo";
 import BottomNavigation from "@/components/BottomNavigation";
 import AcademyNewsTab from "@/components/AcademyNewsTab";
+import ConsultationReservationDialog from "@/components/ConsultationReservationDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -41,7 +39,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { logError } from "@/lib/errorLogger";
-import { consultationSchema, validateInput } from "@/lib/validation";
 
 const LocationMap = lazy(() => import("@/components/LocationMap"));
 
@@ -167,11 +164,7 @@ const AcademyDetailPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
 
-  // Consultation form
-  const [studentName, setStudentName] = useState("");
-  const [studentGrade, setStudentGrade] = useState("");
-  const [message, setMessage] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  // Removed old consultation form state - using new ConsultationReservationDialog
 
   const handleStartChat = async () => {
     if (!user) {
@@ -287,51 +280,7 @@ const AcademyDetailPage = () => {
     }
   };
 
-  const handleConsultationSubmit = async () => {
-    if (!user) {
-      toast.error("로그인이 필요합니다");
-      navigate("/auth");
-      return;
-    }
-
-    // Validate input
-    const validation = validateInput(consultationSchema, {
-      student_name: studentName,
-      student_grade: studentGrade || null,
-      message: message || null,
-    });
-
-    if (!validation.success) {
-      toast.error((validation as { success: false; error: string }).error);
-      return;
-    }
-
-    const validatedData = (validation as { success: true; data: { student_name: string; student_grade?: string | null; message?: string | null } }).data;
-
-    setSubmitting(true);
-    try {
-      const { error } = await supabase.from("consultations").insert({
-        academy_id: id,
-        parent_id: user.id,
-        student_name: validatedData.student_name,
-        student_grade: validatedData.student_grade,
-        message: validatedData.message,
-      });
-
-      if (error) throw error;
-
-      toast.success("상담 신청이 완료되었습니다");
-      setIsDialogOpen(false);
-      setStudentName("");
-      setStudentGrade("");
-      setMessage("");
-    } catch (error) {
-      logError("submit-consultation", error);
-      toast.error("신청에 실패했습니다");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  // Removed old handleConsultationSubmit - using new ConsultationReservationDialog
 
   if (loading) {
     return (
@@ -766,51 +715,15 @@ const AcademyDetailPage = () => {
         </div>
       </div>
 
-      {/* Consultation Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-sm mx-auto">
-          <DialogHeader>
-            <DialogTitle>방문 상담 신청</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="studentName">학생 이름 *</Label>
-              <Input
-                id="studentName"
-                placeholder="학생 이름을 입력하세요"
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="studentGrade">학년</Label>
-              <Input
-                id="studentGrade"
-                placeholder="예: 중학교 2학년"
-                value={studentGrade}
-                onChange={(e) => setStudentGrade(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="message">문의 사항</Label>
-              <Textarea
-                id="message"
-                placeholder="궁금한 점이 있으시면 적어주세요"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={3}
-              />
-            </div>
-            <Button
-              className="w-full"
-              onClick={handleConsultationSubmit}
-              disabled={submitting}
-            >
-              {submitting ? "신청 중..." : "신청 완료"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Consultation Reservation Dialog */}
+      {academy && (
+        <ConsultationReservationDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          academyId={academy.id}
+          academyName={academy.name}
+        />
+      )}
 
       <BottomNavigation />
     </div>

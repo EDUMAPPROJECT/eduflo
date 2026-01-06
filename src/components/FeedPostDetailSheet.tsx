@@ -61,12 +61,33 @@ const FeedPostDetailSheet = ({
   onClose, 
   onLikeToggle, 
   onAcademyClick,
-  onSeminarClick
+  onSeminarClick,
+  onDelete
 }: FeedPostDetailSheetProps) => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false });
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isOwner, setIsOwner] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const checkOwnership = async () => {
+      if (!post) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: academy } = await supabase
+          .from("academies")
+          .select("id")
+          .eq("id", post.academy_id)
+          .eq("owner_id", session.user.id)
+          .maybeSingle();
+        setIsOwner(!!academy);
+      }
+    };
+    checkOwnership();
+  }, [post]);
 
   if (!post) return null;
 
@@ -98,6 +119,29 @@ const FeedPostDetailSheet = ({
   emblaApi?.on('select', () => {
     setCurrentSlide(emblaApi.selectedScrollSnap());
   });
+
+  const handleDelete = async () => {
+    if (!post) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("feed_posts")
+        .delete()
+        .eq("id", post.id);
+
+      if (error) throw error;
+
+      toast.success("게시글이 삭제되었습니다");
+      setDeleteDialogOpen(false);
+      onClose();
+      onDelete?.(post.id);
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      toast.error("게시글 삭제에 실패했습니다");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -157,9 +201,21 @@ const FeedPostDetailSheet = ({
                     </p>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={onClose}>
-                  <X className="w-5 h-5" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  {isOwner && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => setDeleteDialogOpen(true)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="icon" onClick={onClose}>
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
               </div>
             </SheetHeader>
           </div>
@@ -316,6 +372,28 @@ const FeedPostDetailSheet = ({
         open={viewerOpen}
         onClose={() => setViewerOpen(false)}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>게시글 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              이 게시글을 삭제하시겠습니까? 삭제된 게시글은 복구할 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "삭제 중..." : "삭제"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
