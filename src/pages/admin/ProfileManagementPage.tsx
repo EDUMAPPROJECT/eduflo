@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -407,6 +408,29 @@ const ProfileManagementPage = () => {
     await supabase.from("classes").delete().eq("id", id);
     fetchClasses(academy.id);
     toast({ title: "삭제 완료" });
+  };
+
+  const handleToggleRecruiting = async (classId: string, isRecruiting: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("classes")
+        .update({ is_recruiting: isRecruiting })
+        .eq("id", classId);
+      
+      if (error) throw error;
+      
+      setClasses(prev => prev.map(cls => 
+        cls.id === classId ? { ...cls, is_recruiting: isRecruiting } : cls
+      ));
+      
+      toast({ 
+        title: isRecruiting ? "모집 상태로 변경" : "마감 상태로 변경",
+        description: isRecruiting ? "학생 모집이 시작되었습니다" : "학생 모집이 마감되었습니다"
+      });
+    } catch (error) {
+      logError("toggle-recruiting", error);
+      toast({ title: "오류", description: "상태 변경에 실패했습니다", variant: "destructive" });
+    }
   };
 
   if (loading || verificationLoading) {
@@ -883,6 +907,19 @@ const ProfileManagementPage = () => {
                       <div className="text-xs text-muted-foreground space-y-1">
                         {cls.schedule && <p>📅 {cls.schedule}</p>}
                         {cls.fee && <p>💰 {cls.fee.toLocaleString()}원</p>}
+                      </div>
+                      {/* Recruiting Status Toggle */}
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                        <span className="text-xs text-muted-foreground">모집 상태</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-medium ${cls.is_recruiting ? 'text-primary' : 'text-muted-foreground'}`}>
+                            {cls.is_recruiting ? '모집중' : '마감'}
+                          </span>
+                          <Switch
+                            checked={cls.is_recruiting ?? true}
+                            onCheckedChange={(checked) => handleToggleRecruiting(cls.id, checked)}
+                          />
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
