@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBusinessVerification } from "@/hooks/useBusinessVerification";
 import { supabase } from "@/integrations/supabase/client";
+import { logError } from "@/lib/errorLogger";
 import Logo from "@/components/Logo";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -102,7 +103,7 @@ const BusinessVerificationPage = () => {
         .upload(fileName, documentFile);
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
+        logError('BusinessVerificationPage Upload', uploadError);
         toast.error("파일 업로드에 실패했습니다");
         return;
       }
@@ -121,7 +122,7 @@ const BusinessVerificationPage = () => {
         toast.error(result.error || "인증 요청에 실패했습니다");
       }
     } catch (error) {
-      console.error('Error:', error);
+      logError('BusinessVerificationPage Submit', error);
       toast.error("오류가 발생했습니다");
     } finally {
       setUploading(false);

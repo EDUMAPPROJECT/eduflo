@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { logError } from "@/lib/errorLogger";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import Logo from "@/components/Logo";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
@@ -57,13 +58,13 @@ const VerificationReviewPage = () => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching verifications:', error);
+        logError('VerificationReview Fetch', error);
         toast.error("인증 목록을 불러오는데 실패했습니다");
       } else {
         setVerifications((data || []) as BusinessVerification[]);
       }
     } catch (error) {
-      console.error('Error:', error);
+      logError('VerificationReview Fetch', error);
     } finally {
       setLoading(false);
     }
@@ -92,7 +93,6 @@ const VerificationReviewPage = () => {
         .single();
 
       if (!profile?.email) {
-        console.log('No email found for user');
         return;
       }
 
@@ -106,12 +106,10 @@ const VerificationReviewPage = () => {
       });
 
       if (error) {
-        console.error('Error sending email:', error);
-      } else {
-        console.log('Verification email sent successfully');
+        logError('VerificationReview SendEmail', error);
       }
     } catch (error) {
-      console.error('Error sending verification email:', error);
+      logError('VerificationReview SendEmail', error);
     }
   };
 
@@ -128,7 +126,7 @@ const VerificationReviewPage = () => {
         .eq('id', verification.id);
 
       if (error) {
-        console.error('Error approving:', error);
+        logError('VerificationReview Approve', error);
         toast.error("승인 처리에 실패했습니다");
       } else {
         toast.success("인증이 승인되었습니다");
@@ -142,7 +140,7 @@ const VerificationReviewPage = () => {
         );
       }
     } catch (error) {
-      console.error('Error:', error);
+      logError('VerificationReview Approve', error);
       toast.error("오류가 발생했습니다");
     } finally {
       setProcessing(false);
@@ -168,7 +166,7 @@ const VerificationReviewPage = () => {
         .eq('id', selectedVerification.id);
 
       if (error) {
-        console.error('Error rejecting:', error);
+        logError('VerificationReview Reject', error);
         toast.error("거절 처리에 실패했습니다");
       } else {
         toast.success("인증이 거절되었습니다");
@@ -187,7 +185,7 @@ const VerificationReviewPage = () => {
         setSelectedVerification(null);
       }
     } catch (error) {
-      console.error('Error:', error);
+      logError('VerificationReview Reject', error);
       toast.error("오류가 발생했습니다");
     } finally {
       setProcessing(false);
@@ -407,14 +405,14 @@ const VerificationReviewPage = () => {
                               .createSignedUrl(verification.document_url, 3600);
                             
                             if (error || !data?.signedUrl) {
-                              console.error('Error creating signed URL:', error);
+                              logError('VerificationReview SignedURL', error);
                               toast.error("서류를 불러오는데 실패했습니다");
                               return;
                             }
                             
                             window.open(data.signedUrl, '_blank');
                           } catch (error) {
-                            console.error('Error:', error);
+                            logError('VerificationReview SignedURL', error);
                             toast.error("서류를 불러오는데 실패했습니다");
                           } finally {
                             setLoadingDocument(null);

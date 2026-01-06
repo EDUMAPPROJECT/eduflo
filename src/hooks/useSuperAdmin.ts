@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logError } from "@/lib/errorLogger";
 
 export const useSuperAdmin = () => {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -22,13 +23,13 @@ export const useSuperAdmin = () => {
           .maybeSingle();
 
         if (error) {
-          console.error('Error checking super admin:', error);
+          logError('SuperAdmin Check', error);
           setIsSuperAdmin(false);
         } else {
           setIsSuperAdmin(data?.is_super_admin === true);
         }
       } catch (error) {
-        console.error('Error:', error);
+        logError('SuperAdmin Check', error);
         setIsSuperAdmin(false);
       } finally {
         setLoading(false);
