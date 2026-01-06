@@ -195,8 +195,22 @@ const AcademyDetailPage = () => {
       fetchAcademy();
       fetchTeachers();
       fetchClasses();
+      // Track profile view
+      trackProfileView(id);
     }
   }, [id]);
+
+  const trackProfileView = async (academyId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      await supabase.from("profile_views").insert({
+        academy_id: academyId,
+        viewer_id: session?.user?.id || null,
+      });
+    } catch {
+      // Silently fail - view tracking is non-critical
+    }
+  };
 
   const fetchAcademy = async () => {
     try {

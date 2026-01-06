@@ -581,6 +581,30 @@ export type Database = {
           },
         ]
       }
+      profile_views: {
+        Row: {
+          academy_id: string
+          created_at: string
+          id: string
+          viewed_at: string
+          viewer_id: string | null
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          id?: string
+          viewed_at?: string
+          viewer_id?: string | null
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          id?: string
+          viewed_at?: string
+          viewer_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

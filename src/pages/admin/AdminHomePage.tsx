@@ -42,22 +42,36 @@ const AdminHomePage = () => {
           .maybeSingle();
 
         if (academy) {
-          // Count today's consultations
-          const { count: consultationCount } = await supabase
+          // Count today's chat consultations
+          const { count: chatCount } = await supabase
             .from("consultations")
             .select("*", { count: "exact", head: true })
             .eq("academy_id", academy.id)
             .gte("created_at", today.toISOString())
             .lt("created_at", tomorrow.toISOString());
 
-          setTodayConsultations(consultationCount || 0);
+          // Count today's visit reservation requests
+          const { count: reservationCount } = await supabase
+            .from("consultation_reservations")
+            .select("*", { count: "exact", head: true })
+            .eq("academy_id", academy.id)
+            .gte("created_at", today.toISOString())
+            .lt("created_at", tomorrow.toISOString());
+
+          setTodayConsultations((chatCount || 0) + (reservationCount || 0));
           
-          // Profile views would need a separate tracking table
-          // For now, we'll show a placeholder
-          setProfileViews(Math.floor(Math.random() * 50) + 10);
+          // Fetch real profile view count for today
+          const { count: viewCount } = await supabase
+            .from("profile_views")
+            .select("*", { count: "exact", head: true })
+            .eq("academy_id", academy.id)
+            .gte("viewed_at", today.toISOString())
+            .lt("viewed_at", tomorrow.toISOString());
+
+          setProfileViews(viewCount || 0);
         }
       } catch (error) {
-        console.error("Error fetching stats:", error);
+        // Error fetching stats - silently fail
       } finally {
         setLoading(false);
       }
