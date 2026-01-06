@@ -189,12 +189,15 @@ const CreatePostDialog = ({ open, onOpenChange, academyId, onSuccess }: CreatePo
                 <Link2 className="w-4 h-4" />
                 설명회 연결 (선택)
               </Label>
-              <Select value={selectedSeminarId} onValueChange={setSelectedSeminarId}>
+              <Select 
+                value={selectedSeminarId || "none"} 
+                onValueChange={(val) => setSelectedSeminarId(val === "none" ? "" : val)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="연결할 설명회를 선택하세요" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">연결 안함</SelectItem>
+                  <SelectItem value="none">연결 안함</SelectItem>
                   {seminars.map((seminar) => (
                     <SelectItem key={seminar.id} value={seminar.id}>
                       <div className="flex flex-col">
