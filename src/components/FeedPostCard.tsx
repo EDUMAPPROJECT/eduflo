@@ -29,7 +29,7 @@ interface FeedPostCardProps {
   post: FeedPost;
   onLikeToggle: (postId: string, isLiked: boolean) => void;
   onAcademyClick: (academyId: string) => void;
-  onSeminarClick?: () => void;
+  onCardClick?: () => void;
 }
 
 const typeConfig = {
@@ -38,7 +38,7 @@ const typeConfig = {
   event: { label: '이벤트', icon: PartyPopper, color: 'bg-purple-500 text-white' },
 };
 
-const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onSeminarClick }: FeedPostCardProps) => {
+const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedPostCardProps) => {
   const config = typeConfig[post.type];
   const TypeIcon = config.icon;
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -114,7 +114,10 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onSeminarClick }: Fe
       </div>
 
       {/* Content */}
-      <div className="px-4 pb-3">
+      <div 
+        className="px-4 pb-3 cursor-pointer"
+        onClick={onCardClick}
+      >
         <div className="flex items-center gap-2 mb-2">
           <Badge className={cn("text-xs px-2 py-0.5 gap-1", config.color)}>
             <TypeIcon className="w-3 h-3" />
@@ -203,17 +206,15 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onSeminarClick }: Fe
           </button>
         </div>
 
-        {(post.type === 'seminar' || post.type === 'event') && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onSeminarClick ? onSeminarClick() : onAcademyClick(post.academy.id)}
-            className="gap-1"
-          >
-            {post.type === 'seminar' ? '설명회 보기' : '자세히 보기'}
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onCardClick}
+          className="gap-1"
+        >
+          자세히 보기
+          <ChevronRight className="w-4 h-4" />
+        </Button>
       </div>
     </Card>
   );

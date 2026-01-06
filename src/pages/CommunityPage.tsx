@@ -8,6 +8,7 @@ import BottomNavigation from "@/components/BottomNavigation";
 import Logo from "@/components/Logo";
 import GlobalRegionSelector from "@/components/GlobalRegionSelector";
 import FeedPostCard from "@/components/FeedPostCard";
+import FeedPostDetailSheet from "@/components/FeedPostDetailSheet";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -56,6 +57,7 @@ const CommunityPage = () => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [userId, setUserId] = useState<string | null>(null);
   const [bookmarkedAcademies, setBookmarkedAcademies] = useState<string[]>([]);
+  const [selectedPost, setSelectedPost] = useState<FeedPost | null>(null);
 
   // Fetch function for infinite scroll
   const fetchPosts = useCallback(async (page: number): Promise<{ data: FeedPost[]; hasMore: boolean }> => {
@@ -272,7 +274,7 @@ const CommunityPage = () => {
                 post={post}
                 onLikeToggle={handleLikeToggle}
                 onAcademyClick={(id) => navigate(`/academy/${id}`)}
-                onSeminarClick={post.type === 'seminar' ? () => navigate('/explore?tab=seminars') : undefined}
+                onCardClick={() => setSelectedPost(post)}
               />
             ))}
             
@@ -291,6 +293,25 @@ const CommunityPage = () => {
           </div>
         )}
       </main>
+
+      {/* Post Detail Sheet */}
+      <FeedPostDetailSheet
+        post={selectedPost}
+        open={!!selectedPost}
+        onClose={() => setSelectedPost(null)}
+        onLikeToggle={(postId, isLiked) => {
+          handleLikeToggle(postId, isLiked);
+          // Update selected post state as well
+          if (selectedPost && selectedPost.id === postId) {
+            setSelectedPost(prev => prev ? {
+              ...prev,
+              is_liked: !isLiked,
+              like_count: prev.like_count + (isLiked ? -1 : 1)
+            } : null);
+          }
+        }}
+        onAcademyClick={(id) => navigate(`/academy/${id}`)}
+      />
 
       <BottomNavigation />
     </div>
