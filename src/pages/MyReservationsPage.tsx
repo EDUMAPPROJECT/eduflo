@@ -347,8 +347,11 @@ const MyReservationsPage = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="reservations" className="mb-6">
-          <TabsList className="w-full grid grid-cols-3">
+        <Tabs defaultValue="all" className="mb-6">
+          <TabsList className="w-full grid grid-cols-4">
+            <TabsTrigger value="all" className="gap-1 text-xs">
+              전체
+            </TabsTrigger>
             <TabsTrigger value="reservations" className="gap-1 text-xs">
               <Calendar className="w-3 h-3" />
               방문
@@ -362,6 +365,192 @@ const MyReservationsPage = () => {
               상담
             </TabsTrigger>
           </TabsList>
+
+          {/* All Tab */}
+          <TabsContent value="all" className="mt-4">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+              </div>
+            ) : reservations.length === 0 && seminarApplications.length === 0 && consultations.length === 0 ? (
+              <Card className="shadow-card border-border">
+                <CardContent className="p-6 text-center">
+                  <Calendar className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">예약 내역이 없습니다</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3"
+                    onClick={() => navigate("/explore")}
+                  >
+                    학원 둘러보기
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {/* 방문 상담 */}
+                {reservations.map((reservation) => (
+                  <Card 
+                    key={`res-${reservation.id}`} 
+                    className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
+                    onClick={() => navigate(`/academy/${reservation.academy_id}`)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Calendar className="w-4 h-4 text-primary" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">방문</Badge>
+                              <h4 className="font-medium text-foreground text-sm line-clamp-1">
+                                {reservation.academy?.name || "학원"}
+                              </h4>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {reservation.student_name} · {reservation.student_grade || "학년 미정"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(reservation.status)}
+                          {reservation.status === "pending" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openCancelDialog("reservation", reservation.id, reservation.academy?.name || "방문 상담");
+                              }}
+                              className="p-1.5 hover:bg-destructive/10 rounded-full transition-colors"
+                              title="예약 취소"
+                            >
+                              <X className="w-4 h-4 text-destructive" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-primary font-medium">
+                        <Clock className="w-4 h-4" />
+                        <span>{formatReservationDate(reservation.reservation_date, reservation.reservation_time)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {/* 설명회 */}
+                {seminarApplications.map((app) => (
+                  <Card 
+                    key={`sem-${app.id}`} 
+                    className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
+                    onClick={() => app.seminar?.id && navigate(`/seminar/${app.seminar.id}`)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                            <GraduationCap className="w-4 h-4 text-accent" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">설명회</Badge>
+                              <h4 className="font-medium text-foreground text-sm line-clamp-1">
+                                {app.seminar?.title || "설명회"}
+                              </h4>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {app.seminar?.academy?.name} · {app.student_name}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant={app.seminar?.status === "recruiting" ? "default" : "secondary"}
+                            className="text-xs"
+                          >
+                            {app.seminar?.status === "recruiting" ? "모집중" : "마감"}
+                          </Badge>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openCancelDialog("seminar", app.id, app.seminar?.title || "설명회");
+                            }}
+                            className="p-1.5 hover:bg-destructive/10 rounded-full transition-colors"
+                            title="신청 취소"
+                          >
+                            <X className="w-4 h-4 text-destructive" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        {app.seminar?.date && (
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            <span>{formatDate(app.seminar.date)}</span>
+                          </div>
+                        )}
+                        {app.seminar?.location && (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            <span className="line-clamp-1">{app.seminar.location}</span>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {/* 상담 */}
+                {consultations.map((consultation) => (
+                  <Card 
+                    key={`con-${consultation.id}`} 
+                    className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
+                    onClick={() => navigate(`/academy/${consultation.academy_id}`)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                            <MessageSquare className="w-4 h-4 text-amber-600" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">상담</Badge>
+                              <h4 className="font-medium text-foreground text-sm">
+                                {consultation.academy?.name || "학원"}
+                              </h4>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {consultation.student_name} · {consultation.student_grade || "학년 미정"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(consultation.status)}
+                          {consultation.status === "pending" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openCancelDialog("consultation", consultation.id, consultation.academy?.name || "학원");
+                              }}
+                              className="p-1.5 hover:bg-destructive/10 rounded-full transition-colors"
+                              title="상담 취소"
+                            >
+                              <X className="w-4 h-4 text-destructive" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="w-3 h-3" />
+                        <span>{formatDate(consultation.created_at)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
           <TabsContent value="reservations" className="mt-4">
             {loading ? (
