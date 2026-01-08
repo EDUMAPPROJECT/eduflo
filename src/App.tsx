@@ -12,6 +12,7 @@ import HomePage from "./pages/HomePage";
 import ExplorePage from "./pages/ExplorePage";
 import CommunityPage from "./pages/CommunityPage";
 import MyPage from "./pages/MyPage";
+import MyReservationsPage from "./pages/MyReservationsPage";
 import SettingsPage from "./pages/SettingsPage";
 import CustomerServicePage from "./pages/CustomerServicePage";
 import SeminarDetailPage from "./pages/SeminarDetailPage";
@@ -67,6 +68,7 @@ const App = () => {
               <Route path="/explore" element={<ExplorePage />} />
               <Route path="/community" element={<CommunityPage />} />
               <Route path="/my" element={<MyPage />} />
+              <Route path="/my/reservations" element={<MyReservationsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/customer-service" element={<CustomerServicePage />} />
               <Route path="/chats" element={<ChatListPage />} />

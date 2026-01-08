@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Calendar, Bell, Clock, PartyPopper } from "lucide-react";
 
 const actions = [
-  { name: "내 예약", icon: Calendar, path: "/my" },
+  { name: "내 예약", icon: Calendar, path: "/my/reservations" },
   { name: "공지사항", icon: Bell, path: "/customer-service" },
   { name: "시간표", icon: Clock, path: "/timetable" },
   { name: "이벤트", icon: PartyPopper, path: "/events" },
