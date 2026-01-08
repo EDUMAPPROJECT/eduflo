@@ -31,6 +31,60 @@ export const CLASS_COLORS = [
   { bg: "bg-red-500", text: "text-white", light: "bg-red-100", border: "border-red-500" },
 ];
 
+export interface ParsedScheduleEntry {
+  day: string;
+  startHour: number;
+  startMinute: number;
+  endHour: number;
+  endMinute: number;
+}
+
+// Parse schedule string like "월 18:00~20:00, 수 19:00~21:00" or "월/수/금 18:00~22:00"
+export function parseScheduleMultiple(schedule: string | null): ParsedScheduleEntry[] {
+  if (!schedule) return [];
+  
+  const entries: ParsedScheduleEntry[] = [];
+  
+  // Split by comma for new format: "월 18:00~20:00, 수 19:00~21:00"
+  const parts = schedule.split(",").map(s => s.trim()).filter(Boolean);
+  
+  for (const part of parts) {
+    // Match pattern: 요일 시간~시간 (single day with time)
+    const singleDayMatch = part.match(/^([월화수목금토일])\s*(\d{1,2}):(\d{2})\s*[~\-]\s*(\d{1,2}):(\d{2})$/);
+    if (singleDayMatch) {
+      entries.push({
+        day: singleDayMatch[1],
+        startHour: parseInt(singleDayMatch[2], 10),
+        startMinute: parseInt(singleDayMatch[3], 10),
+        endHour: parseInt(singleDayMatch[4], 10),
+        endMinute: parseInt(singleDayMatch[5], 10),
+      });
+      continue;
+    }
+    
+    // Match pattern: 요일들 시간~시간 (multiple days with same time)
+    const multiDayMatch = part.match(/([월화수목금토일\/]+)\s*(\d{1,2}):(\d{2})\s*[~\-]\s*(\d{1,2}):(\d{2})/);
+    if (multiDayMatch) {
+      const dayString = multiDayMatch[1];
+      const startHour = parseInt(multiDayMatch[2], 10);
+      const startMinute = parseInt(multiDayMatch[3], 10);
+      const endHour = parseInt(multiDayMatch[4], 10);
+      const endMinute = parseInt(multiDayMatch[5], 10);
+      
+      const days = dayString.includes("/") 
+        ? dayString.split("/").filter(Boolean)
+        : dayString.split("").filter(d => ["월", "화", "수", "목", "금", "토", "일"].includes(d));
+      
+      for (const day of days) {
+        entries.push({ day, startHour, startMinute, endHour, endMinute });
+      }
+    }
+  }
+  
+  return entries;
+}
+
+// Legacy support - returns first entry in old format
 export interface ParsedSchedule {
   days: string[];
   startHour: number;
@@ -39,26 +93,21 @@ export interface ParsedSchedule {
   endMinute: number;
 }
 
-// Parse schedule string like "월/수/금 18:00~22:00" or "화/목 17:00~20:00"
 export function parseSchedule(schedule: string | null): ParsedSchedule | null {
-  if (!schedule) return null;
+  const entries = parseScheduleMultiple(schedule);
+  if (entries.length === 0) return null;
   
-  // Match pattern: 요일들 시간~시간
-  const match = schedule.match(/([월화수목금토일\/]+)\s*(\d{1,2}):(\d{2})\s*[~\-]\s*(\d{1,2}):(\d{2})/);
-  if (!match) return null;
-
-  const dayString = match[1];
-  const startHour = parseInt(match[2], 10);
-  const startMinute = parseInt(match[3], 10);
-  const endHour = parseInt(match[4], 10);
-  const endMinute = parseInt(match[5], 10);
-
-  // Split days by "/" or just individual characters
-  const days = dayString.includes("/") 
-    ? dayString.split("/").filter(Boolean)
-    : dayString.split("").filter(d => ["월", "화", "수", "목", "금", "토", "일"].includes(d));
-
-  return { days, startHour, startMinute, endHour, endMinute };
+  // Group entries by time
+  const days = entries.map(e => e.day);
+  const first = entries[0];
+  
+  return {
+    days,
+    startHour: first.startHour,
+    startMinute: first.startMinute,
+    endHour: first.endHour,
+    endMinute: first.endMinute,
+  };
 }
 
 export function useClassEnrollments() {
