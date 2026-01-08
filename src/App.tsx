@@ -22,6 +22,8 @@ import LearningStyleTest from "./pages/LearningStyleTest";
 import LearningStyleResult from "./pages/LearningStyleResult";
 import PreferenceTest from "./pages/PreferenceTest";
 import PreferenceResult from "./pages/PreferenceResult";
+import TimetablePage from "./pages/TimetablePage";
+import EventsPage from "./pages/EventsPage";
 import AdminHomePage from "./pages/admin/AdminHomePage";
 import ConsultationManagementPage from "./pages/admin/ConsultationManagementPage";
 import ReservationManagementPage from "./pages/admin/ReservationManagementPage";
@@ -75,6 +77,8 @@ const App = () => {
               <Route path="/learning-style-result" element={<LearningStyleResult />} />
               <Route path="/preference-test" element={<PreferenceTest />} />
               <Route path="/preference-result" element={<PreferenceResult />} />
+              <Route path="/timetable" element={<TimetablePage />} />
+              <Route path="/events" element={<EventsPage />} />
               {/* Protected Admin Routes */}
               <Route path="/academy/setup" element={<ProtectedAdminRoute><AcademySetupPage /></ProtectedAdminRoute>} />
               <Route path="/academy/dashboard" element={<ProtectedAdminRoute><AcademyDashboardPage /></ProtectedAdminRoute>} />

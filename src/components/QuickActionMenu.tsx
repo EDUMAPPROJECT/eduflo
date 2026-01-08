@@ -4,8 +4,8 @@ import { Calendar, Bell, Clock, PartyPopper } from "lucide-react";
 const actions = [
   { name: "내 예약", icon: Calendar, path: "/my" },
   { name: "공지사항", icon: Bell, path: "/customer-service" },
-  { name: "시간표", icon: Clock, path: "/my" },
-  { name: "이벤트", icon: PartyPopper, path: "/community" },
+  { name: "시간표", icon: Clock, path: "/timetable" },
+  { name: "이벤트", icon: PartyPopper, path: "/events" },
 ];
 
 const QuickActionMenu = () => {
