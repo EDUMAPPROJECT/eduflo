@@ -10,6 +10,7 @@ import TargetRegionSelector from "@/components/TargetRegionSelector";
 import AcademyTargetTagsEditor from "@/components/AcademyTargetTagsEditor";
 import CurriculumEditor from "@/components/CurriculumEditor";
 import ConsultationSettingsSection from "@/components/ConsultationSettingsSection";
+import ClassScheduleInput from "@/components/ClassScheduleInput";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -841,7 +842,7 @@ const ProfileManagementPage = () => {
                   </div>
                   <div className="space-y-2">
                     <Label>수업 일정</Label>
-                    <Input placeholder="예: 월/수/금 16:00~18:00" value={classSchedule} onChange={(e) => setClassSchedule(e.target.value)} />
+                    <ClassScheduleInput value={classSchedule} onChange={setClassSchedule} />
                   </div>
                   <div className="space-y-2">
                     <Label>수강료 (원)</Label>
