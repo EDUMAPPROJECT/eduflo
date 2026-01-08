@@ -260,15 +260,11 @@ const HomePage = () => {
           </section>
         )}
 
-        {/* Greeting */}
-        <section className="mb-4 px-4">
-          <h2 className="text-lg font-semibold text-foreground">
+        {/* Greeting & Quick Action Menu */}
+        <section className="mb-6 bg-primary/10 mx-4 rounded-xl p-4">
+          <h2 className="text-lg font-semibold text-foreground mb-3">
             {userName || "학부모"}님 안녕하세요!
           </h2>
-        </section>
-
-        {/* Quick Action Menu */}
-        <section className="mb-6 px-4">
           <QuickActionMenu />
         </section>
 

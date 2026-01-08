@@ -1,9 +1,12 @@
-import { ArrowLeft, Clock, Calendar } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BottomNavigation from "@/components/BottomNavigation";
 
 const TimetablePage = () => {
   const navigate = useNavigate();
+
+  const days = ["월", "화", "수", "목", "금", "토", "일"];
+  const hours = Array.from({ length: 14 }, (_, i) => i + 9); // 09:00 ~ 22:00
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -17,40 +20,50 @@ const TimetablePage = () => {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-lg mx-auto py-6 px-4">
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <Clock className="w-8 h-8 text-primary" />
+      {/* Weekly Calendar */}
+      <main className="max-w-lg mx-auto py-4 px-2">
+        <div className="overflow-x-auto">
+          <div className="min-w-[360px]">
+            {/* Days Header */}
+            <div className="grid grid-cols-8 gap-px bg-border rounded-t-lg overflow-hidden">
+              <div className="bg-muted p-2 text-center text-xs font-medium text-muted-foreground">
+                시간
+              </div>
+              {days.map((day) => (
+                <div
+                  key={day}
+                  className="bg-muted p-2 text-center text-xs font-medium text-foreground"
+                >
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Time Slots */}
+            <div className="border border-t-0 border-border rounded-b-lg overflow-hidden">
+              {hours.map((hour) => (
+                <div key={hour} className="grid grid-cols-8 gap-px bg-border">
+                  {/* Time Label */}
+                  <div className="bg-muted/50 p-2 text-center text-xs text-muted-foreground flex items-center justify-center">
+                    {hour.toString().padStart(2, "0")}:00
+                  </div>
+                  {/* Day Cells */}
+                  {days.map((day) => (
+                    <div
+                      key={`${day}-${hour}`}
+                      className="bg-card h-10 hover:bg-primary/5 transition-colors cursor-pointer"
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
-          <h2 className="text-xl font-semibold mb-2">시간표 기능 준비중</h2>
-          <p className="text-muted-foreground text-sm">
-            곧 학원 수업 시간표를 확인할 수 있는<br />
-            기능이 추가될 예정입니다.
-          </p>
         </div>
 
-        {/* Placeholder Cards */}
-        <div className="space-y-3 mt-8">
-          <div className="p-4 rounded-xl bg-muted/50 border border-border">
-            <div className="flex items-center gap-3">
-              <Calendar className="w-5 h-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">수업 일정 관리</p>
-                <p className="text-xs text-muted-foreground">등록한 학원의 수업 시간을 한눈에</p>
-              </div>
-            </div>
-          </div>
-          <div className="p-4 rounded-xl bg-muted/50 border border-border">
-            <div className="flex items-center gap-3">
-              <Clock className="w-5 h-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">알림 기능</p>
-                <p className="text-xs text-muted-foreground">수업 시작 전 알림을 받아보세요</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Info Text */}
+        <p className="text-xs text-muted-foreground text-center mt-4">
+          수업 일정을 등록하면 이곳에 표시됩니다
+        </p>
       </main>
 
       <BottomNavigation />
