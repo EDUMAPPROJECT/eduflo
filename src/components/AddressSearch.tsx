@@ -1,183 +1,77 @@
-import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 interface AddressSearchProps {
   value: string;
   onChange: (address: string) => void;
   placeholder?: string;
-  /**
-   * When true, allow typing the base address manually (fallback when search API is unavailable).
-   * Detail address input will also be shown.
-   */
-  manualInput?: boolean;
-}
-
-declare global {
-  interface Window {
-    daum: {
-      Postcode: new (options: {
-        oncomplete: (data: DaumPostcodeData) => void;
-        onclose?: () => void;
-        width?: string;
-        height?: string;
-      }) => {
-        embed: (container: HTMLElement) => void;
-        open: () => void;
-      };
-    };
-  }
-}
-
-interface DaumPostcodeData {
-  address: string;
-  addressType: string;
-  bname: string;
-  buildingName: string;
-  roadAddress: string;
-  jibunAddress: string;
-  zonecode: string;
-  sido: string;
-  sigungu: string;
 }
 
 const AddressSearch = ({
   value,
   onChange,
-  placeholder = "주소 검색",
-  manualInput = false,
+  placeholder = "주소 입력",
 }: AddressSearchProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const [baseAddress, setBaseAddress] = useState("");
   const [detailAddress, setDetailAddress] = useState("");
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Parse incoming value into base/detail (supports controlled usage)
+  // Parse incoming value into base/detail only on initial mount
   useEffect(() => {
-    if (!value) {
-      setBaseAddress("");
-      setDetailAddress("");
-      return;
+    if (isInitialized) return;
+    
+    if (value) {
+      // Check if value contains detail address pattern (separated by comma)
+      const commaIndex = value.lastIndexOf(", ");
+      if (commaIndex > 0) {
+        setBaseAddress(value.substring(0, commaIndex));
+        setDetailAddress(value.substring(commaIndex + 2));
+      } else {
+        setBaseAddress(value);
+        setDetailAddress("");
+      }
     }
+    setIsInitialized(true);
+  }, [value, isInitialized]);
 
-    const match = value.match(/^(.+?)(?:\s*,\s*|\s+)(\d+동\s*.+|\d+호\s*.+|.+동\s*\d+호.*|.+)$/);
-    if (match) {
-      setBaseAddress(match[1]);
-      setDetailAddress(match[2]);
-    } else {
-      setBaseAddress(value);
-      setDetailAddress("");
-    }
-  }, [value]);
-
-  // Update parent value when addresses change
-  useEffect(() => {
-    const fullAddress = baseAddress
-      ? detailAddress
-        ? `${baseAddress}, ${detailAddress}`
-        : baseAddress
+  // Memoized update function to prevent infinite loops
+  const updateParent = useCallback((base: string, detail: string) => {
+    const fullAddress = base
+      ? detail
+        ? `${base}, ${detail}`
+        : base
       : "";
     onChange(fullAddress);
-  }, [baseAddress, detailAddress, onChange]);
+  }, [onChange]);
 
-  useEffect(() => {
-    // Check if script is already loaded
-    if (window.daum?.Postcode) {
-      setIsScriptLoaded(true);
-      return;
-    }
+  const handleBaseChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newBase = e.target.value;
+    setBaseAddress(newBase);
+    updateParent(newBase, detailAddress);
+  };
 
-    // Load Daum Postcode script
-    const script = document.createElement("script");
-    script.src = "//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
-    script.async = true;
-    script.onload = () => {
-      setIsScriptLoaded(true);
-    };
-    document.head.appendChild(script);
-
-    return () => {
-      // Don't remove script on cleanup as it may be used by other instances
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isOpen && isScriptLoaded && containerRef.current) {
-      // Clear previous content
-      containerRef.current.innerHTML = "";
-
-      new window.daum.Postcode({
-        oncomplete: (data: DaumPostcodeData) => {
-          // Get full address (prefer road address)
-          let fullAddress = data.roadAddress || data.jibunAddress;
-
-          // Add building name if exists
-          if (data.buildingName) {
-            fullAddress += ` (${data.buildingName})`;
-          }
-
-          setBaseAddress(fullAddress);
-          setDetailAddress("");
-          setIsOpen(false);
-        },
-        width: "100%",
-        height: "100%",
-      }).embed(containerRef.current);
-    }
-  }, [isOpen, isScriptLoaded]);
-
-  const showDetail = manualInput || !!baseAddress;
+  const handleDetailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDetail = e.target.value;
+    setDetailAddress(newDetail);
+    updateParent(baseAddress, newDetail);
+  };
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
-        <Input
-          value={baseAddress}
-          placeholder={placeholder}
-          className="flex-1"
-          readOnly={!manualInput}
-          onChange={manualInput ? (e) => setBaseAddress(e.target.value) : undefined}
-        />
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button type="button" variant="outline" className="gap-2 shrink-0">
-              <Search className="w-4 h-4" />
-              검색
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md h-[500px] p-0 overflow-hidden">
-            <DialogHeader className="p-4 pb-2">
-              <DialogTitle className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-primary" />
-                주소 검색
-              </DialogTitle>
-            </DialogHeader>
-            {!isScriptLoaded ? (
-              <div className="p-4 text-sm text-muted-foreground">
-                주소 검색을 불러오는 중입니다. 잠시 후에도 비어있으면 아래에 직접 주소를 입력해주세요.
-              </div>
-            ) : (
-              <div
-                ref={containerRef}
-                className="w-full"
-                style={{ height: "calc(100% - 60px)" }}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
-      </div>
+      <Input
+        value={baseAddress}
+        onChange={handleBaseChange}
+        placeholder={placeholder}
+        className="w-full"
+      />
 
-      {showDetail && (
-        <Input
-          value={detailAddress}
-          onChange={(e) => setDetailAddress(e.target.value)}
-          placeholder="상세 주소 입력 (예: 3층 301호)"
-          className="w-full"
-        />
-      )}
+      <Input
+        value={detailAddress}
+        onChange={handleDetailChange}
+        placeholder="상세 주소 입력 (예: 3층 301호)"
+        className="w-full"
+      />
 
       {(baseAddress || detailAddress) && (
         <p className="text-xs text-muted-foreground flex items-center gap-1">

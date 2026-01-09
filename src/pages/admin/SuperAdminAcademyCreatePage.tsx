@@ -478,8 +478,7 @@ const SuperAdminAcademyCreatePage = () => {
                 <AddressSearch 
                   value={address} 
                   onChange={setAddress} 
-                  placeholder="주소를 검색하거나 직접 입력해주세요"
-                  manualInput
+                  placeholder="주소를 입력해주세요"
                 />
               </CardContent>
             </Card>
