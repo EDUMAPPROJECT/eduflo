@@ -11,6 +11,7 @@ import AcademyTargetTagsEditor from "@/components/AcademyTargetTagsEditor";
 import CurriculumEditor from "@/components/CurriculumEditor";
 import ConsultationSettingsSection from "@/components/ConsultationSettingsSection";
 import ClassScheduleInput from "@/components/ClassScheduleInput";
+import AddressSearch from "@/components/AddressSearch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -632,10 +633,10 @@ const ProfileManagementPage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Input 
+                <AddressSearch 
                   value={address} 
-                  onChange={(e) => setAddress(e.target.value)} 
-                  placeholder="예: 경기도 화성시 동탄대로 123"
+                  onChange={setAddress} 
+                  placeholder="주소를 검색해주세요"
                 />
               </CardContent>
             </Card>
