@@ -1,10 +1,10 @@
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, MapPin, Clock, School } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import BottomNavigation from "@/components/BottomNavigation";
 import { useClassEnrollments, parseScheduleMultiple, CLASS_COLORS } from "@/hooks/useClassEnrollments";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -44,6 +44,8 @@ const TimetablePage = () => {
   const [newDay, setNewDay] = useState("월");
   const [newStartTime, setNewStartTime] = useState("09:00");
   const [newEndTime, setNewEndTime] = useState("10:00");
+  const [selectedBlock, setSelectedBlock] = useState<ScheduleBlock | null>(null);
+  const [showClassDetailDialog, setShowClassDetailDialog] = useState(false);
 
   const days = ["월", "화", "수", "목", "금", "토", "일"];
   const hours = Array.from({ length: 14 }, (_, i) => i + 9); // 09:00 ~ 22:00
@@ -202,10 +204,19 @@ const TimetablePage = () => {
       if (confirm("이 일정을 삭제하시겠습니까?")) {
         handleDeleteSchedule(block.id);
       }
-    } else if (block.academyId) {
-      navigate(`/academy/${block.academyId}`);
+    } else {
+      setSelectedBlock(block);
+      setShowClassDetailDialog(true);
     }
   };
+
+  // Find enrollment info for selected block
+  const getEnrollmentForBlock = (block: ScheduleBlock | null) => {
+    if (!block || block.isManual) return null;
+    return enrollments.find(e => block.id.startsWith(e.class_id));
+  };
+
+  const selectedEnrollment = getEnrollmentForBlock(selectedBlock);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -347,9 +358,74 @@ const TimetablePage = () => {
         <p className="text-xs text-muted-foreground text-center mt-4">
           {scheduleBlocks.length === 0 
             ? "MY CLASS에 강좌를 등록하거나 일정을 추가해주세요"
-            : "강좌 클릭 시 학원 페이지로, 수동 일정 클릭 시 삭제 가능"}
+            : "강좌 클릭 시 상세 정보 확인, 수동 일정 클릭 시 삭제 가능"}
         </p>
       </main>
+
+      {/* Class Detail Dialog */}
+      <Dialog open={showClassDetailDialog} onOpenChange={setShowClassDetailDialog}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <School className="w-5 h-5 text-primary" />
+              {selectedBlock?.className}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedBlock?.academyName}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Schedule Info */}
+            <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+              <Clock className="w-4 h-4 text-muted-foreground mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium">{selectedBlock?.day}요일</p>
+                <p className="text-muted-foreground">
+                  {selectedBlock && `${selectedBlock.startHour.toString().padStart(2, '0')}:${selectedBlock.startMinute.toString().padStart(2, '0')} - ${selectedBlock.endHour.toString().padStart(2, '0')}:${selectedBlock.endMinute.toString().padStart(2, '0')}`}
+                </p>
+              </div>
+            </div>
+
+            {/* Additional Info */}
+            <div className="space-y-2">
+              {selectedEnrollment?.class?.target_grade && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">대상:</span>
+                  <span>{selectedEnrollment.class.target_grade}</span>
+                </div>
+              )}
+              {selectedEnrollment?.class?.fee && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">수강료:</span>
+                  <span>{selectedEnrollment.class.fee.toLocaleString()}원</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowClassDetailDialog(false)}
+              className="flex-1"
+            >
+              닫기
+            </Button>
+            {selectedBlock?.academyId && (
+              <Button 
+                onClick={() => {
+                  setShowClassDetailDialog(false);
+                  navigate(`/academy/${selectedBlock.academyId}`);
+                }}
+                className="flex-1"
+              >
+                학원 페이지로 이동
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Schedule Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
