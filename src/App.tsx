@@ -42,6 +42,7 @@ import SuperAdminSettingsPage from "./pages/admin/SuperAdminSettingsPage";
 import SuperAdminUsersPage from "./pages/admin/SuperAdminUsersPage";
 import SuperAdminPostsPage from "./pages/admin/SuperAdminPostsPage";
 import SuperAdminAcademiesPage from "./pages/admin/SuperAdminAcademiesPage";
+import SuperAdminAcademyCreatePage from "./pages/admin/SuperAdminAcademyCreatePage";
 import AdminMyPage from "./pages/admin/AdminMyPage";
 import AcademySetupPage from "./pages/academy/AcademySetupPage";
 import AcademyDashboardPage from "./pages/academy/AcademyDashboardPage";
@@ -101,6 +102,7 @@ const App = () => {
               <Route path="/admin/super/users" element={<ProtectedAdminRoute><SuperAdminUsersPage /></ProtectedAdminRoute>} />
               <Route path="/admin/super/posts" element={<ProtectedAdminRoute><SuperAdminPostsPage /></ProtectedAdminRoute>} />
               <Route path="/admin/super/academies" element={<ProtectedAdminRoute><SuperAdminAcademiesPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/super/academies/create" element={<ProtectedAdminRoute><SuperAdminAcademyCreatePage /></ProtectedAdminRoute>} />
               <Route path="/admin/my" element={<ProtectedAdminRoute><AdminMyPage /></ProtectedAdminRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>

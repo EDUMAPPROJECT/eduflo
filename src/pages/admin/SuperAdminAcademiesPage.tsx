@@ -87,14 +87,6 @@ const SuperAdminAcademiesPage = () => {
   const [saving, setSaving] = useState(false);
   const [deletingAcademy, setDeletingAcademy] = useState<Academy | null>(null);
   const [deleting, setDeleting] = useState(false);
-  
-  // Create form state
-  const [isCreating, setIsCreating] = useState(false);
-  const [createName, setCreateName] = useState("");
-  const [createSubject, setCreateSubject] = useState("");
-  const [createAddress, setCreateAddress] = useState("");
-  const [createDescription, setCreateDescription] = useState("");
-  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -249,42 +241,6 @@ const SuperAdminAcademiesPage = () => {
     }
   };
 
-  const handleCreateAcademy = async () => {
-    if (!createName.trim() || !createSubject.trim()) {
-      toast({ title: "오류", description: "학원명과 과목은 필수입니다.", variant: "destructive" });
-      return;
-    }
-    
-    setCreating(true);
-    try {
-      const { data, error } = await supabase
-        .from("academies")
-        .insert({
-          name: createName.trim(),
-          subject: createSubject.trim(),
-          address: createAddress.trim() || null,
-          description: createDescription.trim() || null,
-          owner_id: null, // Super admin creates without owner
-        })
-        .select("id, name, subject, profile_image, target_regions, target_tags, tags, is_profile_locked, locked_by, locked_at, address, description")
-        .single();
-
-      if (error) throw error;
-
-      setAcademies(prev => [...prev, data as Academy].sort((a, b) => a.name.localeCompare(b.name)));
-      toast({ title: "생성 완료", description: `${createName.trim()} 학원이 생성되었습니다.` });
-      setIsCreating(false);
-      setCreateName("");
-      setCreateSubject("");
-      setCreateAddress("");
-      setCreateDescription("");
-    } catch (error) {
-      console.error("Error creating academy:", error);
-      toast({ title: "오류", description: "학원 생성에 실패했습니다.", variant: "destructive" });
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const handleRegionToggle = (regionId: string) => {
     setEditTargetRegions(prev => 
@@ -379,7 +335,7 @@ const SuperAdminAcademiesPage = () => {
               잠금 {academies.filter(a => a.is_profile_locked).length}
             </Badge>
           </div>
-          <Button size="sm" onClick={() => setIsCreating(true)} className="gap-1">
+          <Button size="sm" onClick={() => navigate('/admin/super/academies/create')} className="gap-1">
             <Plus className="w-4 h-4" />
             학원 추가
           </Button>
@@ -705,82 +661,6 @@ const SuperAdminAcademiesPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Create Academy Dialog */}
-      <Dialog open={isCreating} onOpenChange={setIsCreating}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5" />
-              새 학원 추가
-            </DialogTitle>
-            <DialogDescription>
-              슈퍼관리자 권한으로 새로운 학원 프로필을 생성합니다.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="create-name" className="text-sm font-medium">
-                학원명 <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="create-name"
-                value={createName}
-                onChange={(e) => setCreateName(e.target.value)}
-                placeholder="학원명을 입력하세요"
-                maxLength={100}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="create-subject" className="text-sm font-medium">
-                과목 <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="create-subject"
-                value={createSubject}
-                onChange={(e) => setCreateSubject(e.target.value)}
-                placeholder="예: 수학, 영어, 국어"
-                maxLength={50}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="create-address" className="text-sm font-medium">주소</Label>
-              <Input
-                id="create-address"
-                value={createAddress}
-                onChange={(e) => setCreateAddress(e.target.value)}
-                placeholder="학원 주소를 입력하세요"
-                maxLength={200}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="create-description" className="text-sm font-medium">소개</Label>
-              <Textarea
-                id="create-description"
-                value={createDescription}
-                onChange={(e) => setCreateDescription(e.target.value)}
-                placeholder="학원 소개를 입력하세요"
-                maxLength={500}
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setIsCreating(false)} disabled={creating}>
-              취소
-            </Button>
-            <Button onClick={handleCreateAcademy} disabled={creating || !createName.trim() || !createSubject.trim()}>
-              {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-              생성
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
