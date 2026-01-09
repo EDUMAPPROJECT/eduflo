@@ -19,6 +19,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   ArrowLeft, 
   Shield, 
@@ -32,7 +42,8 @@ import {
   Eye,
   Pencil,
   Save,
-  X
+  X,
+  Trash2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ALL_REGIONS } from "@/contexts/RegionContext";
@@ -48,6 +59,8 @@ interface Academy {
   is_profile_locked: boolean | null;
   locked_by: string | null;
   locked_at: string | null;
+  address: string | null;
+  description: string | null;
 }
 
 const SuperAdminAcademiesPage = () => {
@@ -65,7 +78,13 @@ const SuperAdminAcademiesPage = () => {
   const [editTargetRegions, setEditTargetRegions] = useState<string[]>([]);
   const [editTags, setEditTags] = useState<string>("");
   const [editTargetTags, setEditTargetTags] = useState<string>("");
+  const [editName, setEditName] = useState<string>("");
+  const [editSubject, setEditSubject] = useState<string>("");
+  const [editAddress, setEditAddress] = useState<string>("");
+  const [editDescription, setEditDescription] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [deletingAcademy, setDeletingAcademy] = useState<Academy | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -87,7 +106,7 @@ const SuperAdminAcademiesPage = () => {
     try {
       const { data, error } = await supabase
         .from("academies")
-        .select("id, name, subject, profile_image, target_regions, target_tags, tags, is_profile_locked, locked_by, locked_at")
+        .select("id, name, subject, profile_image, target_regions, target_tags, tags, is_profile_locked, locked_by, locked_at, address, description")
         .order("name");
 
       if (error) throw error;
@@ -137,11 +156,20 @@ const SuperAdminAcademiesPage = () => {
     setEditTargetRegions(academy.target_regions || []);
     setEditTags((academy.tags || []).join(", "));
     setEditTargetTags((academy.target_tags || []).join(", "));
+    setEditName(academy.name);
+    setEditSubject(academy.subject);
+    setEditAddress(academy.address || "");
+    setEditDescription(academy.description || "");
     setSelectedAcademy(null);
   };
 
   const handleSaveEdit = async () => {
     if (!editingAcademy) return;
+    
+    if (!editName.trim() || !editSubject.trim()) {
+      toast({ title: "오류", description: "학원명과 과목은 필수입니다.", variant: "destructive" });
+      return;
+    }
     
     setSaving(true);
     try {
@@ -151,6 +179,10 @@ const SuperAdminAcademiesPage = () => {
       const { error } = await supabase
         .from("academies")
         .update({
+          name: editName.trim(),
+          subject: editSubject.trim(),
+          address: editAddress.trim() || null,
+          description: editDescription.trim() || null,
           target_regions: editTargetRegions,
           tags: tagsArray,
           target_tags: targetTagsArray,
@@ -161,7 +193,16 @@ const SuperAdminAcademiesPage = () => {
 
       setAcademies(prev => prev.map(a => 
         a.id === editingAcademy.id 
-          ? { ...a, target_regions: editTargetRegions, tags: tagsArray, target_tags: targetTagsArray }
+          ? { 
+              ...a, 
+              name: editName.trim(),
+              subject: editSubject.trim(),
+              address: editAddress.trim() || null,
+              description: editDescription.trim() || null,
+              target_regions: editTargetRegions, 
+              tags: tagsArray, 
+              target_tags: targetTagsArray 
+            }
           : a
       ));
 
@@ -172,6 +213,29 @@ const SuperAdminAcademiesPage = () => {
       toast({ title: "오류", description: "저장에 실패했습니다.", variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteAcademy = async () => {
+    if (!deletingAcademy) return;
+    
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("academies")
+        .delete()
+        .eq("id", deletingAcademy.id);
+
+      if (error) throw error;
+
+      setAcademies(prev => prev.filter(a => a.id !== deletingAcademy.id));
+      toast({ title: "삭제 완료", description: `${deletingAcademy.name} 학원이 삭제되었습니다.` });
+      setDeletingAcademy(null);
+    } catch (error) {
+      console.error("Error deleting academy:", error);
+      toast({ title: "오류", description: "삭제에 실패했습니다.", variant: "destructive" });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -330,7 +394,7 @@ const SuperAdminAcademiesPage = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -346,6 +410,14 @@ const SuperAdminAcademiesPage = () => {
                         onClick={() => handleStartEdit(academy)}
                       >
                         <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => setDeletingAcademy(academy)}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                       <Switch
                         checked={academy.is_profile_locked || false}
@@ -425,14 +497,57 @@ const SuperAdminAcademiesPage = () => {
       <Dialog open={!!editingAcademy} onOpenChange={() => setEditingAcademy(null)}>
         <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Pencil className="w-4 h-4" />
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Pencil className="w-4 h-4 shrink-0" />
               {editingAcademy?.name} 수정
             </DialogTitle>
-            <DialogDescription>타겟 지역과 학원 태그를 수정합니다.</DialogDescription>
+            <DialogDescription>학원 정보를 수정합니다.</DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6 py-4">
+          <div className="space-y-5 py-4">
+            {/* Basic Info */}
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="editName" className="text-sm font-medium">학원명 *</Label>
+                <Input
+                  id="editName"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="학원명 입력"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editSubject" className="text-sm font-medium">과목 *</Label>
+                <Input
+                  id="editSubject"
+                  value={editSubject}
+                  onChange={(e) => setEditSubject(e.target.value)}
+                  placeholder="수학, 영어, 국어 등"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editAddress" className="text-sm font-medium">주소</Label>
+                <Input
+                  id="editAddress"
+                  value={editAddress}
+                  onChange={(e) => setEditAddress(e.target.value)}
+                  placeholder="주소 입력"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editDescription" className="text-sm font-medium">설명</Label>
+                <Input
+                  id="editDescription"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="학원 설명"
+                  className="mt-1"
+                />
+              </div>
+            </div>
             {/* Target Regions */}
             <div>
               <Label className="text-sm font-medium mb-3 flex items-center gap-1">
@@ -512,6 +627,31 @@ const SuperAdminAcademiesPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingAcademy} onOpenChange={() => setDeletingAcademy(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>학원 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{deletingAcademy?.name}</strong> 학원을 정말 삭제하시겠습니까?
+              <br />
+              <span className="text-destructive">이 작업은 되돌릴 수 없으며, 관련된 모든 데이터(강좌, 게시물 등)가 함께 삭제됩니다.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAcademy}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
