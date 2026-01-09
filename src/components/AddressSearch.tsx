@@ -41,7 +41,32 @@ interface DaumPostcodeData {
 const AddressSearch = ({ value, onChange, placeholder = "주소 검색" }: AddressSearchProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
+  const [baseAddress, setBaseAddress] = useState("");
+  const [detailAddress, setDetailAddress] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Parse existing value into base and detail on mount
+  useEffect(() => {
+    if (value) {
+      // Check if value contains detail address pattern (separated by comma or space after closing parenthesis)
+      const match = value.match(/^(.+?)(?:\s*,\s*|\s+)(\d+동\s*.+|\d+호\s*.+|.+동\s*\d+호.*)$/);
+      if (match) {
+        setBaseAddress(match[1]);
+        setDetailAddress(match[2]);
+      } else {
+        setBaseAddress(value);
+        setDetailAddress("");
+      }
+    }
+  }, []);
+
+  // Update parent value when addresses change
+  useEffect(() => {
+    if (baseAddress) {
+      const fullAddress = detailAddress ? `${baseAddress}, ${detailAddress}` : baseAddress;
+      onChange(fullAddress);
+    }
+  }, [baseAddress, detailAddress]);
 
   useEffect(() => {
     // Check if script is already loaded
@@ -79,21 +104,21 @@ const AddressSearch = ({ value, onChange, placeholder = "주소 검색" }: Addre
             fullAddress += ` (${data.buildingName})`;
           }
           
-          onChange(fullAddress);
+          setBaseAddress(fullAddress);
+          setDetailAddress("");
           setIsOpen(false);
         },
         width: "100%",
         height: "100%",
       }).embed(containerRef.current);
     }
-  }, [isOpen, isScriptLoaded, onChange]);
+  }, [isOpen, isScriptLoaded]);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="flex gap-2">
         <Input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          value={baseAddress}
           placeholder={placeholder}
           className="flex-1"
           readOnly
@@ -120,10 +145,20 @@ const AddressSearch = ({ value, onChange, placeholder = "주소 검색" }: Addre
           </DialogContent>
         </Dialog>
       </div>
-      {value && (
+      
+      {baseAddress && (
+        <Input
+          value={detailAddress}
+          onChange={(e) => setDetailAddress(e.target.value)}
+          placeholder="상세 주소 입력 (예: 3층 301호)"
+          className="w-full"
+        />
+      )}
+      
+      {baseAddress && (
         <p className="text-xs text-muted-foreground flex items-center gap-1">
           <MapPin className="w-3 h-3" />
-          {value}
+          {detailAddress ? `${baseAddress}, ${detailAddress}` : baseAddress}
         </p>
       )}
     </div>

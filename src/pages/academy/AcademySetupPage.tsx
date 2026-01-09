@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusinessVerification } from "@/hooks/useBusinessVerification";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,12 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import Logo from "@/components/Logo";
 import ImageUpload from "@/components/ImageUpload";
+import AddressSearch from "@/components/AddressSearch";
 import { ArrowLeft, Building2, MapPin, BookOpen, GraduationCap, FileCheck, ShieldAlert } from "lucide-react";
-
-const REGIONS = {
-  "동탄1신도시": ["동탄1동", "동탄2동", "동탄3동"],
-  "동탄2신도시": ["동탄4동", "동탄5동", "동탄6동", "동탄7동", "동탄8동", "동탄9동"],
-};
 
 const SUBJECTS = ["수학", "영어", "국어", "과학", "사회", "음악", "미술", "체육", "코딩", "기타"];
 
@@ -37,10 +33,7 @@ const AcademySetupPage = () => {
   
   // Form state
   const [name, setName] = useState("");
-  const [city, setCity] = useState("화성시");
-  const [district, setDistrict] = useState("동탄2신도시");
-  const [dong, setDong] = useState("");
-  const [detailAddress, setDetailAddress] = useState("");
+  const [address, setAddress] = useState("");
   const [subject, setSubject] = useState("");
   const [targetGrades, setTargetGrades] = useState<string[]>([]);
   const [profileImage, setProfileImage] = useState("");
@@ -90,8 +83,8 @@ const AcademySetupPage = () => {
       toast({ title: "학원명을 입력해주세요", variant: "destructive" });
       return;
     }
-    if (!dong) {
-      toast({ title: "상세 지역을 선택해주세요", variant: "destructive" });
+    if (!address.trim()) {
+      toast({ title: "학원 주소를 입력해주세요", variant: "destructive" });
       return;
     }
     if (!subject) {
@@ -106,7 +99,6 @@ const AcademySetupPage = () => {
     setLoading(true);
 
     try {
-      const fullAddress = `${city} ${district} ${dong}${detailAddress ? ` ${detailAddress}` : ""}`;
       const targetGradeStr = targetGrades
         .map(id => TARGET_GRADES.find(g => g.id === id)?.label)
         .join("/");
@@ -115,7 +107,7 @@ const AcademySetupPage = () => {
         .from("academies")
         .insert({
           name: name.trim(),
-          address: fullAddress,
+          address: address,
           subject,
           target_grade: targetGradeStr,
           profile_image: profileImage || null,
@@ -187,7 +179,7 @@ const AcademySetupPage = () => {
     );
   }
 
-  const dongOptions = REGIONS[district as keyof typeof REGIONS] || [];
+  
 
   return (
     <div className="min-h-screen bg-background">
@@ -266,53 +258,15 @@ const AcademySetupPage = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-primary" />
-                위치 정보
+                위치 정보 *
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>시/군</Label>
-                  <Input value={city} disabled className="bg-muted" />
-                </div>
-                <div>
-                  <Label>구역</Label>
-                  <Select value={district} onValueChange={(v) => { setDistrict(v); setDong(""); }}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="동탄1신도시">동탄1신도시</SelectItem>
-                      <SelectItem value="동탄2신도시">동탄2신도시</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <Label>행정동 *</Label>
-                <Select value={dong} onValueChange={setDong}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="동을 선택하세요" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dongOptions.map((d) => (
-                      <SelectItem key={d} value={d}>{d}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="detailAddress">상세 주소</Label>
-                <Input
-                  id="detailAddress"
-                  placeholder="예: 에듀타워 3층 301호"
-                  value={detailAddress}
-                  onChange={(e) => setDetailAddress(e.target.value)}
-                  maxLength={100}
-                />
-              </div>
+            <CardContent>
+              <AddressSearch
+                value={address}
+                onChange={setAddress}
+                placeholder="학원 주소를 검색해주세요"
+              />
             </CardContent>
           </Card>
 
