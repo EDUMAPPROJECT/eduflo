@@ -567,28 +567,28 @@ const AcademyDetailPage = () => {
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h4 className="font-semibold text-foreground">{cls.name}</h4>
+                              <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                                <h4 className="font-semibold text-foreground text-sm">{cls.name}</h4>
                                 {cls.is_recruiting ? (
-                                  <Badge className="bg-green-500 text-white text-[10px] px-1.5 py-0">모집중</Badge>
+                                  <Badge className="bg-green-500 text-white text-[10px] px-1.5 py-0 shrink-0">모집중</Badge>
                                 ) : (
-                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">마감</Badge>
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">마감</Badge>
                                 )}
                                 {isEnrolled && (
-                                  <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0">등록됨</Badge>
+                                  <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0 shrink-0">등록됨</Badge>
                                 )}
                               </div>
                               
-                              <div className="flex flex-wrap gap-2 mb-2">
+                              <div className="flex items-center gap-1.5 mb-2">
                                 {cls.target_grade && (
-                                  <Badge variant="outline" className="text-xs gap-1">
-                                    <Users className="w-3 h-3" />
+                                  <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0 shrink-0">
+                                    <Users className="w-2.5 h-2.5" />
                                     {cls.target_grade}
                                   </Badge>
                                 )}
                                 {cls.schedule && (
-                                  <Badge variant="outline" className="text-xs gap-1">
-                                    <Clock className="w-3 h-3" />
+                                  <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0 whitespace-nowrap">
+                                    <Clock className="w-2.5 h-2.5" />
                                     {cls.schedule}
                                   </Badge>
                                 )}
@@ -845,21 +845,19 @@ const AcademyDetailPage = () => {
       </main>
 
       {/* Fixed Bottom Buttons */}
-      <div className="fixed bottom-16 left-0 right-0 bg-card border-t border-border p-4 z-50">
-        <div className="max-w-lg mx-auto flex gap-3">
+      <div className="fixed bottom-16 left-0 right-0 bg-card border-t border-border p-3 z-50">
+        <div className="max-w-lg mx-auto flex gap-2">
           <Button
             variant="outline"
-            className="flex-1 h-14 text-base gap-2"
-            size="xl"
+            className="flex-1 h-11 text-sm gap-1.5"
             onClick={handleStartChat}
             disabled={chatLoading}
           >
-            <MessageCircle className="w-5 h-5" />
+            <MessageCircle className="w-4 h-4" />
             {chatLoading ? "연결 중..." : "채팅 상담"}
           </Button>
           <Button
-            className="flex-1 h-14 text-base"
-            size="xl"
+            className="flex-1 h-11 text-sm"
             onClick={() => setIsDialogOpen(true)}
           >
             방문 상담 신청
