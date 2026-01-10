@@ -70,6 +70,10 @@ const HomePage = () => {
     try {
       setLoadingSeminars(true);
 
+      // Calculate 3 weeks from now
+      const threeWeeksFromNow = new Date();
+      threeWeeksFromNow.setDate(threeWeeksFromNow.getDate() + 21);
+
       const { data, error } = await supabase
         .from("seminars")
         .select(`
@@ -85,8 +89,8 @@ const HomePage = () => {
         `)
         .eq("status", "recruiting")
         .gte("date", new Date().toISOString())
-        .order("date", { ascending: true })
-        .limit(10);
+        .lte("date", threeWeeksFromNow.toISOString())
+        .order("date", { ascending: true });
 
       if (error) throw error;
 
