@@ -142,13 +142,13 @@ export default function ClassScheduleInput({ value, onChange }: ClassScheduleInp
           const endTimeParts = splitTime(entry.endTime);
           
           return (
-            <div key={index} className="flex items-center gap-1 p-2 bg-muted/30 rounded-lg flex-wrap">
+            <div key={index} className="flex items-center gap-0.5 p-1.5 bg-muted/30 rounded-lg">
               {/* Day Selection */}
               <Select 
                 value={entry.day} 
                 onValueChange={(val) => updateEntry(index, "day", val)}
               >
-                <SelectTrigger className="w-[60px] h-9 px-2 text-sm shrink-0">
+                <SelectTrigger className="w-[52px] h-8 px-1.5 text-xs shrink-0">
                   <SelectValue placeholder="요일" />
                 </SelectTrigger>
                 <SelectContent>
@@ -169,7 +169,7 @@ export default function ClassScheduleInput({ value, onChange }: ClassScheduleInp
                 value={startTimeParts.hour} 
                 onValueChange={(val) => updateEntry(index, "startTime", combineTime(val, startTimeParts.minute || "00"))}
               >
-                <SelectTrigger className="w-[56px] h-9 px-2 text-xs shrink-0">
+                <SelectTrigger className="w-[48px] h-8 px-1 text-xs shrink-0">
                   <SelectValue placeholder="시" />
                 </SelectTrigger>
                 <SelectContent className="max-h-48">
@@ -186,7 +186,7 @@ export default function ClassScheduleInput({ value, onChange }: ClassScheduleInp
                 value={startTimeParts.minute} 
                 onValueChange={(val) => updateEntry(index, "startTime", combineTime(startTimeParts.hour || "00", val))}
               >
-                <SelectTrigger className="w-[56px] h-9 px-2 text-xs shrink-0">
+                <SelectTrigger className="w-[48px] h-8 px-1 text-xs shrink-0">
                   <SelectValue placeholder="분" />
                 </SelectTrigger>
                 <SelectContent>
@@ -198,14 +198,14 @@ export default function ClassScheduleInput({ value, onChange }: ClassScheduleInp
                 </SelectContent>
               </Select>
 
-              <span className="text-muted-foreground text-xs">~</span>
+              <span className="text-muted-foreground text-xs px-0.5">~</span>
 
               {/* End Time - Hour */}
               <Select 
                 value={endTimeParts.hour} 
                 onValueChange={(val) => updateEntry(index, "endTime", combineTime(val, endTimeParts.minute || "00"))}
               >
-                <SelectTrigger className="w-[56px] h-9 px-2 text-xs shrink-0">
+                <SelectTrigger className="w-[48px] h-8 px-1 text-xs shrink-0">
                   <SelectValue placeholder="시" />
                 </SelectTrigger>
                 <SelectContent className="max-h-48">
@@ -222,7 +222,7 @@ export default function ClassScheduleInput({ value, onChange }: ClassScheduleInp
                 value={endTimeParts.minute} 
                 onValueChange={(val) => updateEntry(index, "endTime", combineTime(endTimeParts.hour || "00", val))}
               >
-                <SelectTrigger className="w-[56px] h-9 px-2 text-xs shrink-0">
+                <SelectTrigger className="w-[48px] h-8 px-1 text-xs shrink-0">
                   <SelectValue placeholder="분" />
                 </SelectTrigger>
                 <SelectContent>
@@ -239,10 +239,10 @@ export default function ClassScheduleInput({ value, onChange }: ClassScheduleInp
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 shrink-0"
+                className="h-7 w-7 shrink-0 ml-0.5"
                 onClick={() => removeEntry(index)}
               >
-                <X className="h-4 w-4 text-muted-foreground" />
+                <X className="h-3.5 w-3.5 text-muted-foreground" />
               </Button>
             </div>
           );
