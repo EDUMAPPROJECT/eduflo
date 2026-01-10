@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import Logo from "@/components/Logo";
-import BottomNavigation from "@/components/BottomNavigation";
+import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import { 
   Building2, 
   Calendar, 
@@ -397,7 +397,7 @@ const AcademyDashboardPage = () => {
         </section>
       </main>
 
-      <BottomNavigation />
+      <AdminBottomNavigation />
     </div>
   );
 };
