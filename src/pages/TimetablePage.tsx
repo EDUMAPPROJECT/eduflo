@@ -319,35 +319,70 @@ const TimetablePage = () => {
           </div>
         )}
 
-        {/* Legend */}
-        {scheduleBlocks.length > 0 && (
-          <div className="mt-4 p-3 bg-card rounded-lg border border-border">
-            <p className="text-xs text-muted-foreground mb-2">등록된 일정</p>
-            <div className="flex flex-wrap gap-2">
-              {enrollments.map((enrollment, idx) => (
-                <div
-                  key={enrollment.id}
-                  className="flex items-center gap-1.5"
-                >
+        {/* Enrolled Classes Cards */}
+        {enrollments.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <p className="text-xs text-muted-foreground px-1">등록된 강좌</p>
+            <div className="grid gap-2">
+              {enrollments.map((enrollment, idx) => {
+                const entries = parseScheduleMultiple(enrollment.class?.schedule || null);
+                const scheduleText = entries.map(e => 
+                  `${e.day} ${e.startHour.toString().padStart(2, '0')}:${e.startMinute.toString().padStart(2, '0')}-${e.endHour.toString().padStart(2, '0')}:${e.endMinute.toString().padStart(2, '0')}`
+                ).join(', ');
+                
+                return (
                   <div
-                    className={`w-3 h-3 rounded-sm ${CLASS_COLORS[idx % CLASS_COLORS.length].bg}`}
-                  />
-                  <span className="text-xs text-foreground">
-                    {enrollment.class?.name}
-                  </span>
-                </div>
-              ))}
+                    key={enrollment.id}
+                    className="p-3 bg-card rounded-lg border border-border flex items-start gap-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => enrollment.class?.academy?.id && navigate(`/academy/${enrollment.class.academy.id}`)}
+                  >
+                    <div
+                      className={`w-3 h-10 rounded-sm shrink-0 ${CLASS_COLORS[idx % CLASS_COLORS.length].bg}`}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {enrollment.class?.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {enrollment.class?.academy?.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {scheduleText || '시간 미정'}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Manual Schedules Cards */}
+        {manualSchedules.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <p className="text-xs text-muted-foreground px-1">수동 추가 일정</p>
+            <div className="grid gap-2">
               {manualSchedules.map((schedule, idx) => (
                 <div
                   key={schedule.id}
-                  className="flex items-center gap-1.5"
+                  className="p-3 bg-card rounded-lg border border-border flex items-start gap-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => {
+                    if (confirm("이 일정을 삭제하시겠습니까?")) {
+                      handleDeleteSchedule(schedule.id);
+                    }
+                  }}
                 >
                   <div
-                    className={`w-3 h-3 rounded-sm ${CLASS_COLORS[(enrollments.length + idx) % CLASS_COLORS.length].bg}`}
+                    className={`w-3 h-10 rounded-sm shrink-0 ${CLASS_COLORS[(enrollments.length + idx) % CLASS_COLORS.length].bg}`}
                   />
-                  <span className="text-xs text-foreground">
-                    {schedule.title}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {schedule.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {schedule.day} {schedule.start_time}-{schedule.end_time}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
