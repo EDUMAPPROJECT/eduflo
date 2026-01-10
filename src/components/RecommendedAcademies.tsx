@@ -80,7 +80,7 @@ const RecommendedAcademies = ({ profileTags, childName, maxCount = 3 }: Props) =
           const matchResult = calculateMatchScore(userTags!, academyTags);
           return { ...academy, matchResult };
         })
-        .filter(a => a.matchResult.score >= 60) // Only show 60% or higher matches
+        .filter(a => a.matchResult.score > 0)
         .sort((a, b) => b.matchResult.score - a.matchResult.score)
         .slice(0, maxCount);
 
