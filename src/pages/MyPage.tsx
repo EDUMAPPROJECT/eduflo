@@ -4,41 +4,25 @@ import { supabase } from "@/integrations/supabase/client";
 import BottomNavigation from "@/components/BottomNavigation";
 import Logo from "@/components/Logo";
 import NicknameSettingsDialog from "@/components/NicknameSettingsDialog";
-import MyClassList from "@/components/MyClassList";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ChevronRight, 
   Heart, 
   Settings, 
   HelpCircle, 
   LogOut,
-  Building2,
-  Calendar,
   Pencil,
   BookOpen
 } from "lucide-react";
 import { toast } from "sonner";
-import type { Database } from "@/integrations/supabase/types";
-
-type Bookmark = Database["public"]["Tables"]["bookmarks"]["Row"];
-type Academy = Database["public"]["Tables"]["academies"]["Row"];
-
-interface BookmarkWithAcademy extends Bookmark {
-  academy?: Academy;
-}
 
 const MyPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>("parent");
-  const [bookmarks, setBookmarks] = useState<BookmarkWithAcademy[]>([]);
   const [reservationCount, setReservationCount] = useState(0);
   const [seminarCount, setSeminarCount] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [isNicknameDialogOpen, setIsNicknameDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -49,7 +33,6 @@ const MyPage = () => {
           setTimeout(() => {
             fetchProfile(session.user.id);
             fetchRole(session.user.id);
-            fetchBookmarks(session.user.id);
             fetchCounts(session.user.id);
           }, 0);
         }
@@ -61,10 +44,7 @@ const MyPage = () => {
       if (session?.user) {
         fetchProfile(session.user.id);
         fetchRole(session.user.id);
-        fetchBookmarks(session.user.id);
         fetchCounts(session.user.id);
-      } else {
-        setLoading(false);
       }
     });
 
@@ -107,55 +87,6 @@ const MyPage = () => {
       setSeminarCount(semCount || 0);
     } catch (error) {
       console.error("Error fetching counts:", error);
-    }
-  };
-
-  const fetchBookmarks = async (userId: string) => {
-    try {
-      const { data: bookmarkData, error: bookmarkError } = await supabase
-        .from("bookmarks")
-        .select("*")
-        .eq("user_id", userId);
-
-      if (bookmarkError) throw bookmarkError;
-
-      if (bookmarkData && bookmarkData.length > 0) {
-        const academyIds = bookmarkData.map(b => b.academy_id);
-        const { data: academyData } = await supabase
-          .from("academies")
-          .select("*")
-          .in("id", academyIds);
-
-        const bookmarksWithAcademies = bookmarkData.map(bookmark => ({
-          ...bookmark,
-          academy: academyData?.find(a => a.id === bookmark.academy_id)
-        }));
-
-        setBookmarks(bookmarksWithAcademies);
-      } else {
-        setBookmarks([]);
-      }
-    } catch (error) {
-      console.error("Error fetching bookmarks:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const removeBookmark = async (bookmarkId: string) => {
-    try {
-      const { error } = await supabase
-        .from("bookmarks")
-        .delete()
-        .eq("id", bookmarkId);
-
-      if (error) throw error;
-
-      setBookmarks(prev => prev.filter(b => b.id !== bookmarkId));
-      toast.success("찜 목록에서 삭제되었습니다");
-    } catch (error) {
-      console.error("Error removing bookmark:", error);
-      toast.error("삭제에 실패했습니다");
     }
   };
 
@@ -240,99 +171,23 @@ const MyPage = () => {
           </div>
         </div>
 
-        {user && (
-          <Tabs defaultValue="myclass" className="mb-6">
-            <TabsList className="w-full grid grid-cols-2">
-              <TabsTrigger value="myclass" className="gap-1">
-                <BookOpen className="w-4 h-4" />
-                MY CLASS
-              </TabsTrigger>
-              <TabsTrigger value="bookmarks" className="gap-1">
-                <Heart className="w-4 h-4" />
-                찜
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="myclass" className="mt-4">
-              <MyClassList />
-            </TabsContent>
-
-            <TabsContent value="bookmarks" className="mt-4">
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
-                </div>
-              ) : bookmarks.length === 0 ? (
-                <Card className="shadow-card border-border">
-                  <CardContent className="p-6 text-center">
-                    <Heart className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">찜한 학원이 없습니다</p>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="mt-3"
-                      onClick={() => navigate("/explore")}
-                    >
-                      학원 둘러보기
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-3">
-                  {bookmarks.map((bookmark) => (
-                    <Card 
-                      key={bookmark.id} 
-                      className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
-                      onClick={() => navigate(`/academy/${bookmark.academy_id}`)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center shrink-0">
-                            {bookmark.academy?.profile_image ? (
-                              <img 
-                                src={bookmark.academy.profile_image} 
-                                alt={bookmark.academy.name}
-                                className="w-full h-full object-cover rounded-xl"
-                              />
-                            ) : (
-                              <Building2 className="w-6 h-6 text-primary" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-foreground text-sm truncate">
-                              {bookmark.academy?.name || "학원"}
-                            </h4>
-                            <p className="text-xs text-muted-foreground">
-                              {bookmark.academy?.subject}
-                            </p>
-                            {bookmark.academy?.tags && bookmark.academy.tags.length > 0 && (
-                              <div className="flex gap-1 mt-1 flex-wrap">
-                                {bookmark.academy.tags.slice(0, 2).map((tag) => (
-                                  <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeBookmark(bookmark.id);
-                            }}
-                            className="p-2 hover:bg-muted rounded-full transition-colors"
-                          >
-                            <Heart className="w-5 h-5 fill-red-500 text-red-500" />
-                          </button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        )}
+        {/* Menu List */}
+        <div className="bg-card rounded-2xl shadow-card overflow-hidden mb-6">
+          {user && (
+            <>
+              <MenuItemButton 
+                icon={BookOpen} 
+                label="MY CLASS" 
+                onClick={() => navigate("/my/classes")} 
+              />
+              <MenuItemButton 
+                icon={Heart} 
+                label="찜한 학원" 
+                onClick={() => navigate("/my/bookmarks")} 
+              />
+            </>
+          )}
+        </div>
 
         {/* Menu List */}
         <div className="bg-card rounded-2xl shadow-card overflow-hidden">
