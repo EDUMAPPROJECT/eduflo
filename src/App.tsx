@@ -12,6 +12,8 @@ import HomePage from "./pages/HomePage";
 import ExplorePage from "./pages/ExplorePage";
 import CommunityPage from "./pages/CommunityPage";
 import MyPage from "./pages/MyPage";
+import MyClassesPage from "./pages/MyClassesPage";
+import MyBookmarksPage from "./pages/MyBookmarksPage";
 import MyReservationsPage from "./pages/MyReservationsPage";
 import SettingsPage from "./pages/SettingsPage";
 import CustomerServicePage from "./pages/CustomerServicePage";
@@ -70,6 +72,8 @@ const App = () => {
               <Route path="/explore" element={<ExplorePage />} />
               <Route path="/community" element={<CommunityPage />} />
               <Route path="/my" element={<MyPage />} />
+              <Route path="/my/classes" element={<MyClassesPage />} />
+              <Route path="/my/bookmarks" element={<MyBookmarksPage />} />
               <Route path="/my/reservations" element={<MyReservationsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/customer-service" element={<CustomerServicePage />} />
