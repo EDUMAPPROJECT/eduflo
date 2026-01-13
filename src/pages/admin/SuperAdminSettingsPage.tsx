@@ -20,8 +20,12 @@ import {
   Edit2,
   Loader2,
   Shield,
-  Save
+  Save,
+  Sparkles,
+  Copy,
+  Check
 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +47,126 @@ interface PlatformSettings {
   email_verification_enabled: boolean;
 }
 
+const AI_PROMPT = `# 학부모-학원 연결 플랫폼 (Parent-Academy Connection Platform)
+
+## 프로젝트 개요
+학부모와 학원을 연결하는 모바일 우선 웹 애플리케이션입니다. 학부모는 학원을 탐색하고, 상담을 예약하고, 수업을 등록할 수 있습니다. 학원 관리자는 학원 프로필, 수업, 상담 예약을 관리할 수 있습니다.
+
+## 기술 스택
+- React 18 + TypeScript + Vite
+- Tailwind CSS + shadcn/ui
+- Supabase (Auth, Database, Storage, Edge Functions)
+- React Query (TanStack Query)
+- React Router v6
+
+## 사용자 역할
+1. **학부모 (Parent)**: 학원 탐색, 찜하기, 상담 예약, 수업 등록, 시간표 관리
+2. **학원 관리자 (Admin)**: 학원 프로필 관리, 수업/강사 관리, 상담 예약 관리, 피드 포스트 작성
+3. **슈퍼 관리자 (Super Admin)**: 전체 플랫폼 관리, 학원 등록/수정, 사용자 관리, 시스템 설정
+
+## 주요 기능
+
+### 학부모 기능
+- 지역별 학원 탐색 및 검색
+- 학원 상세 정보 조회 (강사, 수업, 커리큘럼)
+- 학원 찜하기 (북마크)
+- 상담 예약 신청
+- 수업 등록 및 시간표 관리
+- 수동 일정 추가
+- 학습 성향 테스트
+- 커뮤니티 피드 조회
+
+### 학원 관리자 기능
+- 학원 프로필 관리 (기본 정보, 이미지, 태그)
+- 강사 등록 및 관리
+- 수업 개설 및 관리 (시간표, 수강료, 커리큘럼)
+- 상담 예약 확인 및 관리
+- 피드 포스트 작성 (공지, 이벤트, 설명회)
+- 채팅 상담
+
+### 슈퍼 관리자 기능
+- 등록 학원 관리 (생성, 수정, 삭제)
+- 사용자 관리
+- 사업자 인증 심사
+- 플랫폼 공지사항 관리
+- 시스템 설정 (이메일 인증 등)
+
+## 데이터베이스 테이블
+- academies: 학원 정보
+- teachers: 강사 정보
+- classes: 수업 정보
+- consultations: 상담 신청
+- consultation_reservations: 상담 예약
+- bookmarks: 찜한 학원
+- class_enrollments: 수업 등록
+- manual_schedules: 수동 일정
+- feed_posts: 피드 게시물
+- seminars: 설명회
+- chat_rooms, messages: 채팅
+- profiles: 사용자 프로필
+- user_roles: 사용자 역할
+- announcements: 플랫폼 공지
+- platform_settings: 플랫폼 설정
+
+## 라우트 구조
+
+### 학부모용
+- /: 홈 (학원 탐색)
+- /explore: 탐색
+- /events: 이벤트/설명회
+- /community: 커뮤니티 피드
+- /my: 마이페이지
+- /my/classes: 내 수업
+- /my/bookmarks: 찜한 학원
+- /my/reservations: 상담 예약 내역
+- /timetable: 시간표
+- /academy/:id: 학원 상세
+- /chat: 채팅 목록
+- /chat/:roomId: 채팅방
+
+### 학원 관리자용
+- /admin/home: 관리자 홈
+- /admin/dashboard: 대시보드
+- /admin/profile: 프로필 관리
+- /admin/consultations: 상담 관리
+- /admin/reservations: 예약 관리
+- /admin/posts: 게시물 관리
+- /admin/feed-posts: 피드 관리
+- /admin/seminars: 설명회 관리
+- /admin/chat: 채팅
+
+### 슈퍼 관리자용
+- /admin/super: 슈퍼 관리자 메인
+- /admin/super/academies: 학원 관리
+- /admin/super/academies/create: 학원 생성
+- /admin/super/academies/:id/edit: 학원 수정
+- /admin/super/users: 사용자 관리
+- /admin/super/settings: 시스템 설정
+- /admin/super/verification: 사업자 인증 심사
+
+## 디자인 시스템
+- 모바일 우선 반응형 디자인 (max-w-lg)
+- 하단 네비게이션 바
+- 카드 기반 UI
+- 시맨틱 컬러 토큰 사용 (--primary, --secondary, --muted 등)
+- 한국어 UI
+
+## 인증 플로우
+1. 이메일/비밀번호 회원가입
+2. 역할 선택 (학부모/학원 관리자)
+3. 학원 관리자는 학원 설정 필요
+4. 슈퍼 관리자는 user_roles 테이블에서 is_super_admin = true
+
+## 주요 컴포넌트
+- BottomNavigation: 학부모용 하단 네비게이션
+- AdminBottomNavigation: 관리자용 하단 네비게이션
+- Logo: 로고 컴포넌트
+- RegionSelector: 지역 선택
+- ImageUpload: 이미지 업로드
+- ClassScheduleInput: 수업 시간표 입력
+
+이 프롬프트를 사용하여 AI가 앱의 구조와 기능을 이해하고 추가 개발을 할 수 있습니다.`;
+
 const SuperAdminSettingsPage = () => {
   const navigate = useNavigate();
   const { isSuperAdmin, loading: authLoading } = useSuperAdmin();
@@ -60,6 +184,19 @@ const SuperAdminSettingsPage = () => {
     email_verification_enabled: true
   });
   const [settingsLoading, setSettingsLoading] = useState(false);
+  const [promptDialogOpen, setPromptDialogOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(AI_PROMPT);
+      setCopied(true);
+      toast.success("프롬프트가 복사되었습니다");
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      toast.error("복사에 실패했습니다");
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && isSuperAdmin) {
@@ -440,6 +577,49 @@ const SuperAdminSettingsPage = () => {
           </CardContent>
         </Card>
       </main>
+
+      {/* AI Prompt Button - Fixed Bottom Right */}
+      <Dialog open={promptDialogOpen} onOpenChange={setPromptDialogOpen}>
+        <DialogTrigger asChild>
+          <Button
+            size="icon"
+            className="fixed bottom-24 right-4 h-12 w-12 rounded-full shadow-lg z-50"
+          >
+            <Sparkles className="w-5 h-5" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              AI 구현용 프롬프트
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              아래 프롬프트를 AI에게 제공하면 이 앱의 구조와 기능을 이해하고 추가 개발을 할 수 있습니다.
+            </p>
+            <ScrollArea className="h-[50vh] border border-border rounded-lg p-4">
+              <pre className="text-xs whitespace-pre-wrap font-mono text-foreground">
+                {AI_PROMPT}
+              </pre>
+            </ScrollArea>
+            <Button onClick={handleCopyPrompt} className="w-full">
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  복사됨
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4 mr-2" />
+                  프롬프트 복사
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
