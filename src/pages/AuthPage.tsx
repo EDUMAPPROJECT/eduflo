@@ -207,7 +207,7 @@ const AuthPage = () => {
                 className="h-12"
                 onClick={() => setSelectedRole("admin")}
               >
-                학원 원장님
+                학원
               </Button>
             </div>
 

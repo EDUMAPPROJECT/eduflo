@@ -22,6 +22,8 @@ export type Database = {
           id: string
           is_mou: boolean | null
           is_profile_locked: boolean | null
+          join_code: string | null
+          join_code_created_at: string | null
           locked_at: string | null
           locked_by: string | null
           name: string
@@ -41,6 +43,8 @@ export type Database = {
           id?: string
           is_mou?: boolean | null
           is_profile_locked?: boolean | null
+          join_code?: string | null
+          join_code_created_at?: string | null
           locked_at?: string | null
           locked_by?: string | null
           name: string
@@ -60,6 +64,8 @@ export type Database = {
           id?: string
           is_mou?: boolean | null
           is_profile_locked?: boolean | null
+          join_code?: string | null
+          join_code_created_at?: string | null
           locked_at?: string | null
           locked_by?: string | null
           name?: string
@@ -73,6 +79,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      academy_members: {
+        Row: {
+          academy_id: string
+          created_at: string
+          id: string
+          permissions: Json
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          academy_id: string
+          created_at?: string
+          id?: string
+          permissions?: Json
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          academy_id?: string
+          created_at?: string
+          id?: string
+          permissions?: Json
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academy_members_academy_id_fkey"
+            columns: ["academy_id"]
+            isOneToOne: false
+            referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       academy_settings: {
         Row: {
@@ -867,15 +911,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_academy_join_code: { Args: never; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_academy_permission: {
+        Args: { _academy_id: string; _permission: string; _user_id: string }
+        Returns: boolean
       }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_academy_member: {
+        Args: { _academy_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_academy_owner: {
+        Args: { _academy_id: string; _user_id: string }
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }

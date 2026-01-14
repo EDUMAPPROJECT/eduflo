@@ -103,7 +103,8 @@ const AcademySetupPage = () => {
         .map(id => TARGET_GRADES.find(g => g.id === id)?.label)
         .join("/");
 
-      const { error } = await supabase
+      // Create academy
+      const { data: academyData, error: academyError } = await supabase
         .from("academies")
         .insert({
           name: name.trim(),
@@ -114,9 +115,35 @@ const AcademySetupPage = () => {
           description: description.trim() || null,
           owner_id: user.id,
           tags: [],
+        })
+        .select('id')
+        .single();
+
+      if (academyError) throw academyError;
+
+      // Add user as owner in academy_members
+      const { error: memberError } = await supabase
+        .from("academy_members")
+        .insert({
+          academy_id: academyData.id,
+          user_id: user.id,
+          role: 'owner',
+          permissions: {
+            manage_classes: true,
+            manage_teachers: true,
+            manage_posts: true,
+            manage_seminars: true,
+            manage_consultations: true,
+            view_analytics: true,
+            manage_settings: true,
+            manage_members: true,
+          },
         });
 
-      if (error) throw error;
+      if (memberError) {
+        console.error("Error adding owner to academy_members:", memberError);
+        // Continue anyway as academy is created
+      }
 
       toast({ title: "학원이 성공적으로 등록되었습니다!" });
       navigate("/academy/dashboard");

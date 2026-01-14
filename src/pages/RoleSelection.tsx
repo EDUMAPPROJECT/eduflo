@@ -59,9 +59,9 @@ const RoleSelection = () => {
               <Building2 className="w-6 h-6 text-accent" />
             </div>
             <div className="text-left flex-1">
-              <div className="font-semibold text-base">학원 원장님으로 시작하기</div>
+              <div className="font-semibold text-base">학원으로 시작하기</div>
               <div className="text-xs text-muted-foreground font-normal">
-                우리 학원 홍보하기
+                학원 등록 또는 기존 학원 참여
               </div>
             </div>
           </Button>

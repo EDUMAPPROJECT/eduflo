@@ -8,6 +8,7 @@ import ImageUpload from "@/components/ImageUpload";
 import NicknameSettingsDialog from "@/components/NicknameSettingsDialog";
 import TargetRegionSelector from "@/components/TargetRegionSelector";
 import AcademyTargetTagsEditor from "@/components/AcademyTargetTagsEditor";
+import AcademyMemberManagement from "@/components/AcademyMemberManagement";
 import CurriculumEditor from "@/components/CurriculumEditor";
 import ConsultationSettingsSection from "@/components/ConsultationSettingsSection";
 import ClassScheduleInput from "@/components/ClassScheduleInput";
@@ -554,7 +555,7 @@ const ProfileManagementPage = () => {
 
       <main className="max-w-lg mx-auto px-4 py-6">
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="w-full grid grid-cols-3 mb-6">
+          <TabsList className="w-full grid grid-cols-4 mb-6">
             <TabsTrigger value="profile" className="gap-1 text-xs">
               <Building2 className="w-3 h-3" />
               프로필
@@ -566,6 +567,10 @@ const ProfileManagementPage = () => {
             <TabsTrigger value="classes" className="gap-1 text-xs">
               <BookOpen className="w-3 h-3" />
               개설 강좌
+            </TabsTrigger>
+            <TabsTrigger value="members" className="gap-1 text-xs">
+              <Users className="w-3 h-3" />
+              관리자
             </TabsTrigger>
           </TabsList>
 
@@ -951,6 +956,11 @@ const ProfileManagementPage = () => {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          {/* Members Tab */}
+          <TabsContent value="members">
+            <AcademyMemberManagement academyId={academy.id} />
           </TabsContent>
         </Tabs>
       </main>
