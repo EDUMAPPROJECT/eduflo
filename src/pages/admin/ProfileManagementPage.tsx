@@ -206,17 +206,18 @@ const ProfileManagementPage = () => {
     if (!user) return;
 
     try {
-      // First check academy_members for user's membership
+      // First check academy_members for user's APPROVED membership only
       const { data: memberData, error: memberError } = await supabase
         .from("academy_members")
-        .select("academy_id, role")
+        .select("academy_id, role, status")
         .eq("user_id", user.id)
+        .eq("status", "approved")
         .maybeSingle();
 
       if (memberError) throw memberError;
 
       if (memberData) {
-        // User is a member of an academy, fetch the academy data
+        // User is an approved member of an academy, fetch the academy data
         const { data: academyData, error: academyError } = await supabase
           .from("academies")
           .select("*")
@@ -580,6 +581,9 @@ const ProfileManagementPage = () => {
     );
   };
 
+  // Check if user has a pending membership
+  const pendingMembership = memberships.find(m => m.membership.status === 'pending');
+
   if (!academy) {
     return (
       <div className="min-h-screen bg-background pb-20">
@@ -592,13 +596,37 @@ const ProfileManagementPage = () => {
           </div>
         </header>
         <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
-          <div className="text-center mb-6">
-            <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <h2 className="text-lg font-bold text-foreground mb-1">학원 계정을 설정해주세요</h2>
-            <p className="text-sm text-muted-foreground">
-              새 학원을 등록하거나, 기존 학원에 참여할 수 있습니다
-            </p>
-          </div>
+          {/* Pending Membership Notice */}
+          {pendingMembership && (
+            <Card className="shadow-card border-warning/30 bg-warning/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center flex-shrink-0">
+                    <Clock className="w-6 h-6 text-warning" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-foreground mb-1">승인 대기 중</h3>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      <strong>{pendingMembership.name}</strong> 학원에 참여 요청을 보냈습니다.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      학원 원장님이 승인하면 학원 관리 기능을 이용할 수 있습니다.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!pendingMembership && (
+            <div className="text-center mb-6">
+              <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <h2 className="text-lg font-bold text-foreground mb-1">학원 계정을 설정해주세요</h2>
+              <p className="text-sm text-muted-foreground">
+                새 학원을 등록하거나, 기존 학원에 참여할 수 있습니다
+              </p>
+            </div>
+          )}
 
           {/* Option 1: Register New Academy */}
           <Card 
