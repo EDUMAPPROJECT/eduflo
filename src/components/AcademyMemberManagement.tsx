@@ -15,7 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Users, Copy, RefreshCw, Crown, Shield, Trash2, Settings } from "lucide-react";
+import { Users, Copy, RefreshCw, Crown, Shield, Trash2, Settings, Clock, Check, X } from "lucide-react";
 import { logError } from "@/lib/errorLogger";
 
 interface AcademyMemberManagementProps {
@@ -26,6 +26,7 @@ interface MemberWithProfile {
   id: string;
   user_id: string;
   role: string;
+  status: string;
   permissions: AcademyMember['permissions'];
   created_at: string;
   profile: {
@@ -182,6 +183,43 @@ const AcademyMemberManagement = ({ academyId }: AcademyMemberManagementProps) =>
     view_analytics: "통계 조회",
     manage_settings: "설정 관리",
     manage_members: "멤버 관리",
+    edit_profile: "학원 프로필 편집",
+  };
+
+  const approveMember = async (memberId: string) => {
+    try {
+      const { error } = await supabase
+        .from('academy_members')
+        .update({ status: 'approved' })
+        .eq('id', memberId);
+
+      if (error) throw error;
+
+      toast.success("관리자가 승인되었습니다");
+      fetchMembers();
+    } catch (error) {
+      logError('Approve Member', error);
+      toast.error("승인에 실패했습니다");
+    }
+  };
+
+  const rejectMember = async (memberId: string) => {
+    if (!confirm("정말로 이 참여 요청을 거절하시겠습니까?")) return;
+
+    try {
+      const { error } = await supabase
+        .from('academy_members')
+        .delete()
+        .eq('id', memberId);
+
+      if (error) throw error;
+
+      toast.success("참여 요청이 거절되었습니다");
+      fetchMembers();
+    } catch (error) {
+      logError('Reject Member', error);
+      toast.error("거절에 실패했습니다");
+    }
   };
 
   if (!isAcademyOwner) {
@@ -230,20 +268,73 @@ const AcademyMemberManagement = ({ academyId }: AcademyMemberManagementProps) =>
           )}
         </div>
 
-        {/* Members List */}
+        {/* Pending Members List */}
+        {members.filter(m => m.status === 'pending').length > 0 && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-500" />
+              승인 대기 중
+            </h4>
+            <div className="space-y-2">
+              {members.filter(m => m.status === 'pending').map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">
+                        {member.profile?.user_name || '이름 없음'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {member.profile?.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
+                      대기중
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => approveMember(member.id)}
+                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                    >
+                      <Check className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => rejectMember(member.id)}
+                      className="text-destructive hover:bg-destructive/10"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Approved Members List */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium">현재 관리자</h4>
           {loading ? (
             <div className="text-sm text-muted-foreground text-center py-4">
               로딩 중...
             </div>
-          ) : members.length === 0 ? (
+          ) : members.filter(m => m.status === 'approved').length === 0 ? (
             <div className="text-sm text-muted-foreground text-center py-4">
               등록된 관리자가 없습니다
             </div>
           ) : (
             <div className="space-y-2">
-              {members.map((member) => (
+              {members.filter(m => m.status === 'approved').map((member) => (
                 <div
                   key={member.id}
                   className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"

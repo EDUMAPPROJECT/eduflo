@@ -5,15 +5,28 @@ import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import Logo from "@/components/Logo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, LogOut, Settings, Pencil } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { User, LogOut, Settings, Pencil, Building2, Users, FileCheck, Loader2, Lock, Clock } from "lucide-react";
 import { toast } from "sonner";
 import NicknameSettingsDialog from "@/components/NicknameSettingsDialog";
+import { useAcademyMembership } from "@/hooks/useAcademyMembership";
+import { useBusinessVerification } from "@/hooks/useBusinessVerification";
+import AcademyMemberManagement from "@/components/AcademyMemberManagement";
 
 const AdminMyPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [isNicknameDialogOpen, setIsNicknameDialogOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joining, setJoining] = useState(false);
+
+  const { memberships, loading: membershipLoading, primaryAcademy, joinByCode, isOwner } = useAcademyMembership();
+  const { isVerified, isPending } = useBusinessVerification();
+
+  const hasAcademy = memberships.length > 0;
+  const hasApprovedAcademy = memberships.some(m => m.membership.status === 'approved');
+  const hasPendingMembership = memberships.some(m => m.membership.status === 'pending');
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -49,6 +62,44 @@ const AdminMyPage = () => {
     setUserName(newName);
   };
 
+  const handleJoinByCode = async () => {
+    if (!joinCode.trim()) {
+      toast.error("참여 코드를 입력해주세요");
+      return;
+    }
+
+    setJoining(true);
+    const result = await joinByCode(joinCode.trim());
+    setJoining(false);
+
+    if (result.success) {
+      if (result.pending) {
+        toast.success(`${result.academyName}에 참여 요청을 보냈습니다. 원장님의 승인을 기다려주세요.`);
+      } else {
+        toast.success(`${result.academyName}에 참여했습니다`);
+      }
+      setJoinCode("");
+    } else {
+      toast.error(result.error || "참여에 실패했습니다");
+    }
+  };
+
+  const handleRegisterNewAcademy = () => {
+    if (!isVerified) {
+      navigate("/admin/verification");
+      return;
+    }
+    navigate("/academy/setup");
+  };
+
+  if (membershipLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
@@ -62,9 +113,9 @@ const AdminMyPage = () => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-lg mx-auto px-4 py-6">
+      <main className="max-w-lg mx-auto px-4 py-6 space-y-6">
         {/* Profile Section */}
-        <Card className="shadow-card border-border mb-6">
+        <Card className="shadow-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center">
@@ -90,24 +141,134 @@ const AdminMyPage = () => {
           </CardContent>
         </Card>
 
-        {/* Menu Items */}
-        <div className="space-y-3">
-          <Card 
-            className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all duration-200"
-            onClick={() => navigate("/admin/profile")}
-          >
+        {/* Pending Membership Notice */}
+        {hasPendingMembership && !hasApprovedAcademy && (
+          <Card className="shadow-card border-amber-200 bg-amber-50 dark:bg-amber-950/30">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
-                <Settings className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-amber-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-medium text-foreground">학원 프로필 관리</h4>
-                <p className="text-sm text-muted-foreground">
-                  학원 정보 및 설정을 관리합니다
+                <h4 className="font-medium text-amber-800 dark:text-amber-200">승인 대기 중</h4>
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                  학원 원장님의 승인을 기다리고 있습니다
                 </p>
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Academy Setup Section - Only show if no approved academy */}
+        {!hasApprovedAcademy && !hasPendingMembership && (
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-muted-foreground">학원 등록</h3>
+            
+            {/* Register New Academy */}
+            <Card 
+              className={`shadow-card border-border cursor-pointer hover:shadow-soft transition-all duration-200 ${!isVerified ? 'opacity-80' : ''}`}
+              onClick={handleRegisterNewAcademy}
+            >
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  {!isVerified ? (
+                    <Lock className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <Building2 className="w-5 h-5 text-primary" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-foreground">새 학원 등록하기</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {!isVerified 
+                      ? isPending 
+                        ? "사업자 인증 검토 중입니다" 
+                        : "사업자 인증이 필요합니다"
+                      : "직접 학원을 등록하고 운영하세요"
+                    }
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Join Existing Academy */}
+            <Card className="shadow-card border-border">
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                    <Users className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-foreground">기존 학원에 참여하기</h4>
+                    <p className="text-sm text-muted-foreground">
+                      참여 코드를 입력하여 관리자로 합류하세요
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="6자리 참여 코드"
+                    value={joinCode}
+                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                    maxLength={6}
+                    className="font-mono text-center tracking-widest"
+                  />
+                  <Button 
+                    onClick={handleJoinByCode} 
+                    disabled={joining || joinCode.length < 6}
+                  >
+                    {joining ? <Loader2 className="w-4 h-4 animate-spin" /> : "참여"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Business Verification Card - Only if not verified */}
+            {!isVerified && (
+              <Card 
+                className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all duration-200"
+                onClick={() => navigate("/admin/verification")}
+              >
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                    <FileCheck className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-foreground">사업자 인증하기</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {isPending ? "인증 검토 중입니다" : "새 학원 등록을 위해 인증하세요"}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Academy Member Management - Only for academy owners */}
+        {primaryAcademy && isOwner(primaryAcademy.id) && (
+          <AcademyMemberManagement academyId={primaryAcademy.id} />
+        )}
+
+        {/* Menu Items */}
+        <div className="space-y-3">
+          {hasApprovedAcademy && (
+            <Card 
+              className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all duration-200"
+              onClick={() => navigate("/admin/profile")}
+            >
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                  <Settings className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-foreground">학원 프로필 관리</h4>
+                  <p className="text-sm text-muted-foreground">
+                    학원 정보 및 설정을 관리합니다
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card 
             className="shadow-card border-destructive/20 cursor-pointer hover:shadow-soft transition-all duration-200"

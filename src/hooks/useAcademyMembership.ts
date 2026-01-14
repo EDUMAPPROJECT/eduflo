@@ -7,6 +7,7 @@ export interface AcademyMember {
   academy_id: string;
   user_id: string;
   role: 'owner' | 'admin';
+  status: 'pending' | 'approved';
   permissions: {
     manage_classes: boolean;
     manage_teachers: boolean;
@@ -16,6 +17,7 @@ export interface AcademyMember {
     view_analytics: boolean;
     manage_settings: boolean;
     manage_members: boolean;
+    edit_profile: boolean;
   };
   created_at: string;
   updated_at: string;
@@ -104,7 +106,7 @@ export const useAcademyMembership = () => {
   }, [fetchMemberships]);
 
   // Join academy by code
-  const joinByCode = async (code: string): Promise<{ success: boolean; error?: string; academyName?: string }> => {
+  const joinByCode = async (code: string): Promise<{ success: boolean; error?: string; academyName?: string; pending?: boolean }> => {
     if (!userId) return { success: false, error: '로그인이 필요합니다' };
 
     try {
@@ -136,13 +138,14 @@ export const useAcademyMembership = () => {
         return { success: false, error: '이미 해당 학원의 멤버입니다' };
       }
 
-      // Add as admin member
+      // Add as pending admin member (requires owner approval)
       const { error: insertError } = await supabase
         .from('academy_members')
         .insert({
           academy_id: academy.id,
           user_id: userId,
           role: 'admin',
+          status: 'pending',
           permissions: {
             manage_classes: true,
             manage_teachers: true,
@@ -152,6 +155,7 @@ export const useAcademyMembership = () => {
             view_analytics: true,
             manage_settings: false,
             manage_members: false,
+            edit_profile: false,
           },
         });
 
@@ -161,7 +165,7 @@ export const useAcademyMembership = () => {
       }
 
       await fetchMemberships();
-      return { success: true, academyName: academy.name };
+      return { success: true, academyName: academy.name, pending: true };
     } catch (error: any) {
       logError('Academy Join', error);
       return { success: false, error: error.message };
