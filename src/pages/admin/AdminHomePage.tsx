@@ -6,7 +6,9 @@ import { useAcademyMembership } from "@/hooks/useAcademyMembership";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import Logo from "@/components/Logo";
 import { Card, CardContent } from "@/components/ui/card";
-import { MessageSquare, Calendar, Users, User, CalendarCheck, FileText, CalendarDays, Shield } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { MessageSquare, Calendar, Users, User, CalendarCheck, FileText, CalendarDays, Shield, AlertCircle } from "lucide-react";
 
 const AdminHomePage = () => {
   const navigate = useNavigate();
@@ -22,6 +24,8 @@ const AdminHomePage = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [academyId, setAcademyId] = useState<string | null>(null);
+  const [hasEditProfilePermission, setHasEditProfilePermission] = useState(false);
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -43,15 +47,19 @@ const AdminHomePage = () => {
         // Check if user has approved academy membership
         const { data: memberData } = await supabase
           .from("academy_members")
-          .select("academy_id, role, status")
+          .select("academy_id, role, status, permissions")
           .eq("user_id", user.id)
           .eq("status", "approved")
           .maybeSingle();
 
         let academy = null;
+        let canEditProfile = false;
         
         if (memberData) {
           academy = { id: memberData.academy_id };
+          // Check edit permission: owner has all permissions, or check edit_profile permission
+          const permissions = memberData.permissions as Record<string, boolean> | null;
+          canEditProfile = memberData.role === 'owner' || (permissions?.edit_profile === true);
         } else {
           // Fallback: check if user is owner
           const { data: ownerData } = await supabase
@@ -60,7 +68,12 @@ const AdminHomePage = () => {
             .eq("owner_id", user.id)
             .maybeSingle();
           academy = ownerData;
+          if (ownerData) {
+            canEditProfile = true; // Owner always has edit permission
+          }
         }
+
+        setHasEditProfilePermission(canEditProfile);
 
         if (academy) {
           setAcademyId(academy.id);
@@ -132,11 +145,20 @@ const AdminHomePage = () => {
     fetchStats();
   }, [user]);
 
+  const handleQuickActionClick = (path: string, requiresEditPermission?: boolean) => {
+    if (requiresEditPermission && !hasEditProfilePermission) {
+      setShowPermissionDialog(true);
+      return;
+    }
+    navigate(path);
+  };
+
   const quickActions = [
     {
       icon: User,
       label: "프로필 관리",
-      path: "/admin/profile"
+      path: "/admin/profile",
+      requiresEditPermission: true
     },
     {
       icon: CalendarCheck,
@@ -258,7 +280,7 @@ const AdminHomePage = () => {
                 <Card
                   key={action.path}
                   className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
-                  onClick={() => navigate(action.path)}
+                  onClick={() => handleQuickActionClick(action.path, action.requiresEditPermission)}
                 >
                   <CardContent className="p-6 flex flex-col items-center justify-center text-center">
                     <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center mb-3">
@@ -292,6 +314,26 @@ const AdminHomePage = () => {
           </Card>
         )}
       </main>
+
+      {/* Permission Dialog */}
+      <Dialog open={showPermissionDialog} onOpenChange={setShowPermissionDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-destructive" />
+              </div>
+              <DialogTitle>권한이 없습니다</DialogTitle>
+            </div>
+            <DialogDescription>
+              프로필 편집 권한이 없습니다. 학원 원장님에게 권한을 요청해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <Button onClick={() => setShowPermissionDialog(false)} className="w-full">
+            확인
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       <AdminBottomNavigation />
     </div>

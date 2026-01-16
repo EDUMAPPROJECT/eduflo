@@ -784,31 +784,6 @@ const ProfileManagementPage = () => {
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-4">
-            {/* Nickname Settings */}
-            <Card className="shadow-card">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <User className="w-4 h-4 text-primary" />
-                  내 닉네임
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-foreground">
-                    {userProfile?.user_name || "닉네임 미설정"}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsNicknameDialogOpen(true)}
-                    className="gap-1"
-                  >
-                    <Pencil className="w-3 h-3" />
-                    변경
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
 
             <Card className="shadow-card">
               <CardHeader className="pb-3">

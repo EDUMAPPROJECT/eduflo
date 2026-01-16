@@ -271,23 +271,6 @@ const ProfileReadOnlyPage = () => {
                   </div>
                 )}
 
-                {/* Banner Image */}
-                {(academy as any).banner_image && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-1 mb-2">
-                      <Image className="w-4 h-4" />
-                      배너 사진
-                    </label>
-                    <div className="rounded-lg overflow-hidden">
-                      <img 
-                        src={(academy as any).banner_image} 
-                        alt={`${academy.name} 배너`}
-                        className="w-full h-32 object-cover"
-                      />
-                    </div>
-                  </div>
-                )}
-
                 {/* Name */}
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">학원명</label>
@@ -332,24 +315,6 @@ const ProfileReadOnlyPage = () => {
                     <div className="flex flex-wrap gap-2 mt-2">
                       {academy.tags.map((tag, idx) => (
                         <Badge key={idx} variant="secondary">{tag}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Target Regions */}
-                {(academy as any).target_regions && (academy as any).target_regions.length > 0 && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                      <Target className="w-4 h-4" />
-                      타겟 지역
-                      {(academy as any).is_profile_locked && (
-                        <Lock className="w-3 h-3 text-muted-foreground ml-1" />
-                      )}
-                    </label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {(academy as any).target_regions.map((region: string, idx: number) => (
-                        <Badge key={idx} variant="outline">{region}</Badge>
                       ))}
                     </div>
                   </div>
