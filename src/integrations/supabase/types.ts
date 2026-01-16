@@ -915,6 +915,7 @@ export type Database = {
     }
     Functions: {
       generate_academy_join_code: { Args: never; Returns: string }
+      generate_random_nickname: { Args: never; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
