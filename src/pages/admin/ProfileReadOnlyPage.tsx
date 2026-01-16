@@ -22,7 +22,9 @@ import {
   User,
   Target,
   Lock,
+  Image,
 } from "lucide-react";
+import { getTagLabel } from "@/lib/tagDictionary";
 import type { Database } from "@/integrations/supabase/types";
 
 type Academy = Database["public"]["Tables"]["academies"]["Row"];
@@ -239,12 +241,10 @@ const ProfileReadOnlyPage = () => {
           <TabsContent value="profile" className="space-y-4">
             {/* Edit Button - only visible to those with permission */}
             {hasEditPermission && (
-              <div className="flex justify-end">
-                <Button onClick={handleEditClick} size="sm" className="gap-2">
-                  <Pencil className="w-4 h-4" />
-                  편집하기
-                </Button>
-              </div>
+              <Button onClick={handleEditClick} className="w-full gap-2">
+                <Pencil className="w-4 h-4" />
+                편집하기
+              </Button>
             )}
 
             <Card className="shadow-card border-border">
@@ -344,7 +344,7 @@ const ProfileReadOnlyPage = () => {
                     </label>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {(academy as any).target_tags.map((tag: string, idx: number) => (
-                        <Badge key={idx} variant="outline">{tag}</Badge>
+                        <Badge key={idx} variant="outline">{getTagLabel(tag)}</Badge>
                       ))}
                     </div>
                   </div>
@@ -357,12 +357,10 @@ const ProfileReadOnlyPage = () => {
           <TabsContent value="teachers" className="space-y-4">
             {/* Edit Button - only visible to those with permission */}
             {hasEditPermission && (
-              <div className="flex justify-end">
-                <Button onClick={handleEditClick} size="sm" className="gap-2">
-                  <Pencil className="w-4 h-4" />
-                  편집하기
-                </Button>
-              </div>
+              <Button onClick={handleEditClick} className="w-full gap-2">
+                <Pencil className="w-4 h-4" />
+                편집하기
+              </Button>
             )}
 
             <Card className="shadow-card border-border">
@@ -412,12 +410,10 @@ const ProfileReadOnlyPage = () => {
           <TabsContent value="classes" className="space-y-4">
             {/* Edit Button - only visible to those with permission */}
             {hasEditPermission && (
-              <div className="flex justify-end">
-                <Button onClick={handleEditClick} size="sm" className="gap-2">
-                  <Pencil className="w-4 h-4" />
-                  편집하기
-                </Button>
-              </div>
+              <Button onClick={handleEditClick} className="w-full gap-2">
+                <Pencil className="w-4 h-4" />
+                편집하기
+              </Button>
             )}
 
             <Card className="shadow-card border-border">
