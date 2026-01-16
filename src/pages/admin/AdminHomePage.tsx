@@ -242,13 +242,16 @@ const AdminHomePage = () => {
                       D-{upcomingSeminar.daysLeft}
                     </div>
                     <p className="text-xs text-green-600 mt-1">
-                      {upcomingSeminar.currentAttendees}/{upcomingSeminar.capacity}명
+                      설명회 {upcomingSeminar.currentAttendees}/{upcomingSeminar.capacity}명
                     </p>
                   </CardContent>
                 </Card>
               )}
             </div>
 
+            {/* Quick Actions Section Title */}
+            <h3 className="text-sm font-semibold text-muted-foreground mb-3">학원 관리 탭</h3>
+            
             {/* Quick Actions - 2x2 Grid */}
             <div className="grid grid-cols-2 gap-4">
               {quickActions.map((action) => (

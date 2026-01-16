@@ -18,7 +18,7 @@ const AdminBottomNavigation = () => {
   const navItems: NavItem[] = [
     { icon: Home, label: "홈", path: "/admin/home" },
     { icon: MessageCircle, label: "채팅", path: "/admin/chats", showBadge: true },
-    { icon: Building2, label: "학원 프로필", path: "/admin/profile" },
+    { icon: Building2, label: "학원 프로필", path: "/admin/profileread" },
     { icon: Newspaper, label: "커뮤니티", path: "/admin/community" },
     { icon: User, label: "마이", path: "/admin/my" },
   ];

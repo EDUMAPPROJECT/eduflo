@@ -31,6 +31,7 @@ import AdminHomePage from "./pages/admin/AdminHomePage";
 import ConsultationManagementPage from "./pages/admin/ConsultationManagementPage";
 import ReservationManagementPage from "./pages/admin/ReservationManagementPage";
 import ProfileManagementPage from "./pages/admin/ProfileManagementPage";
+import ProfileReadOnlyPage from "./pages/admin/ProfileReadOnlyPage";
 import SeminarManagementPage from "./pages/admin/SeminarManagementPage";
 import PostManagementPage from "./pages/admin/PostManagementPage";
 import FeedPostManagementPage from "./pages/admin/FeedPostManagementPage";
@@ -96,6 +97,7 @@ const App = () => {
               <Route path="/admin/consultations" element={<ProtectedAdminRoute><ConsultationManagementPage /></ProtectedAdminRoute>} />
               <Route path="/admin/reservations" element={<ProtectedAdminRoute><ReservationManagementPage /></ProtectedAdminRoute>} />
               <Route path="/admin/profile" element={<ProtectedAdminRoute><ProfileManagementPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/profileread" element={<ProtectedAdminRoute><ProfileReadOnlyPage /></ProtectedAdminRoute>} />
               <Route path="/admin/seminars" element={<ProtectedAdminRoute><SeminarManagementPage /></ProtectedAdminRoute>} />
               <Route path="/admin/posts" element={<ProtectedAdminRoute><PostManagementPage /></ProtectedAdminRoute>} />
               <Route path="/admin/feed-posts" element={<ProtectedAdminRoute><FeedPostManagementPage /></ProtectedAdminRoute>} />
