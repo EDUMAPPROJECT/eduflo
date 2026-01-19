@@ -223,17 +223,17 @@ const HomePage = () => {
           </section>
         )}
 
-        {/* Today's Schedule Section */}
-        <section className="mb-6 px-4">
-          <TodayScheduleSection />
-        </section>
-
         {/* Greeting & Quick Action Menu */}
         <section className="mb-6 bg-primary/10 mx-4 rounded-xl p-4">
           <h2 className="text-lg font-semibold text-foreground mb-3">
             {userName || "학부모"}님 안녕하세요!
           </h2>
           <QuickActionMenu />
+        </section>
+
+        {/* Today's Schedule Section */}
+        <section className="mb-6 px-4">
+          <TodayScheduleSection />
         </section>
 
         {/* Tag-based Recommended Academies Section */}

@@ -12,7 +12,10 @@ import {
   HelpCircle, 
   LogOut,
   Pencil,
-  BookOpen
+  BookOpen,
+  Users,
+  FileText,
+  Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -171,7 +174,30 @@ const MyPage = () => {
           </div>
         </div>
 
-        {/* Menu List */}
+        {/* Service Menu List */}
+        <div className="bg-card rounded-2xl shadow-card overflow-hidden mb-6">
+          {user && (
+            <>
+              <MenuItemButton 
+                icon={Users} 
+                label="자녀 연결" 
+                onClick={() => toast.info("자녀 연결 기능은 준비 중입니다")} 
+              />
+              <MenuItemButton 
+                icon={FileText} 
+                label="성적 등록" 
+                onClick={() => toast.info("성적 등록 기능은 준비 중입니다")} 
+              />
+              <MenuItemButton 
+                icon={Sparkles} 
+                label="성향 테스트" 
+                onClick={() => navigate("/learning-style")} 
+              />
+            </>
+          )}
+        </div>
+
+        {/* My Activity Menu List */}
         <div className="bg-card rounded-2xl shadow-card overflow-hidden mb-6">
           {user && (
             <>
