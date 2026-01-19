@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNavigation from "@/components/BottomNavigation";
-import Logo from "@/components/Logo";
+import ReservationDetailSheet from "@/components/ReservationDetailSheet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +67,13 @@ const MyReservationsPage = () => {
     id: string | null;
     title: string;
   }>({ isOpen: false, type: null, id: null, title: "" });
+  
+  // Detail sheet state
+  const [detailSheet, setDetailSheet] = useState<{
+    open: boolean;
+    type: "reservation" | "seminar";
+    data: any;
+  }>({ open: false, type: "reservation", data: null });
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -169,6 +176,7 @@ const MyReservationsPage = () => {
         r.id === reservationId ? { ...r, status: "cancelled" } : r
       ));
       toast.success("방문 상담 예약이 취소되었습니다");
+      setDetailSheet({ open: false, type: "reservation", data: null });
     } catch (error) {
       console.error("Error canceling reservation:", error);
       toast.error("예약 취소에 실패했습니다");
@@ -186,6 +194,7 @@ const MyReservationsPage = () => {
 
       setSeminarApplications(prev => prev.filter(a => a.id !== applicationId));
       toast.success("설명회 신청이 취소되었습니다");
+      setDetailSheet({ open: false, type: "seminar", data: null });
     } catch (error) {
       console.error("Error canceling seminar application:", error);
       toast.error("설명회 신청 취소에 실패했습니다");
@@ -203,6 +212,42 @@ const MyReservationsPage = () => {
 
   const openCancelDialog = (type: "seminar" | "reservation", id: string, title: string) => {
     setCancelDialog({ isOpen: true, type, id, title });
+  };
+
+  const openReservationDetail = (reservation: ReservationWithAcademy) => {
+    setDetailSheet({
+      open: true,
+      type: "reservation",
+      data: {
+        id: reservation.id,
+        studentName: reservation.student_name,
+        studentGrade: reservation.student_grade,
+        message: reservation.message,
+        academyName: reservation.academy?.name,
+        reservationDate: reservation.reservation_date,
+        reservationTime: reservation.reservation_time,
+        status: reservation.status,
+      }
+    });
+  };
+
+  const openSeminarDetail = (app: SeminarApplication) => {
+    setDetailSheet({
+      open: true,
+      type: "seminar",
+      data: {
+        id: app.id,
+        studentName: app.student_name,
+        studentGrade: app.student_grade,
+        message: app.message,
+        seminarTitle: app.seminar?.title,
+        seminarDate: app.seminar?.date,
+        seminarLocation: app.seminar?.location,
+        seminarAcademyName: app.seminar?.academy?.name,
+        attendeeCount: app.attendee_count,
+        seminarStatus: getEffectiveSeminarStatus(app.seminar),
+      }
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -339,7 +384,7 @@ const MyReservationsPage = () => {
                   <Card 
                     key={`res-${reservation.id}`} 
                     className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
-                    onClick={() => navigate(`/academy/${reservation.academy_id}`)}
+                    onClick={() => openReservationDetail(reservation)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-2">
@@ -388,7 +433,7 @@ const MyReservationsPage = () => {
                   <Card 
                     key={`sem-${app.id}`} 
                     className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
-                    onClick={() => app.seminar?.id && navigate(`/seminar/${app.seminar.id}`)}
+                    onClick={() => openSeminarDetail(app)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-2">
@@ -475,7 +520,7 @@ const MyReservationsPage = () => {
                   <Card 
                     key={reservation.id} 
                     className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
-                    onClick={() => navigate(`/academy/${reservation.academy_id}`)}
+                    onClick={() => openReservationDetail(reservation)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-2">
@@ -550,7 +595,7 @@ const MyReservationsPage = () => {
                   <Card 
                     key={app.id} 
                     className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
-                    onClick={() => app.seminar?.id && navigate(`/seminar/${app.seminar.id}`)}
+                    onClick={() => openSeminarDetail(app)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-2">
@@ -614,6 +659,30 @@ const MyReservationsPage = () => {
 
         </Tabs>
       </main>
+
+      {/* Reservation Detail Sheet */}
+      <ReservationDetailSheet
+        open={detailSheet.open}
+        onOpenChange={(open) => setDetailSheet(prev => ({ ...prev, open }))}
+        type={detailSheet.type}
+        data={detailSheet.data}
+        canCancel={
+          detailSheet.type === "reservation" 
+            ? detailSheet.data?.status === "pending"
+            : true
+        }
+        onCancel={() => {
+          if (detailSheet.data?.id) {
+            openCancelDialog(
+              detailSheet.type, 
+              detailSheet.data.id, 
+              detailSheet.type === "reservation" 
+                ? detailSheet.data.academyName 
+                : detailSheet.data.seminarTitle
+            );
+          }
+        }}
+      />
 
       {/* Cancel Confirmation Dialog */}
       <AlertDialog open={cancelDialog.isOpen} onOpenChange={(open) => !open && setCancelDialog({ isOpen: false, type: null, id: null, title: "" })}>
