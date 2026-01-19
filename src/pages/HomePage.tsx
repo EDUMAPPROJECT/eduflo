@@ -8,7 +8,6 @@ import QuickActionMenu from "@/components/QuickActionMenu";
 import LearningStyleBanner from "@/components/LearningStyleBanner";
 import GlobalRegionSelector from "@/components/GlobalRegionSelector";
 import SeminarCarousel from "@/components/SeminarCarousel";
-import CompactAcademyList from "@/components/CompactAcademyList";
 import EmptyRegionState from "@/components/EmptyRegionState";
 import AcademyNewsFeed from "@/components/AcademyNewsFeed";
 import PostDetailDialog from "@/components/PostDetailDialog";
@@ -24,16 +23,6 @@ interface Seminar {
   academy?: {
     name: string;
   } | null;
-}
-
-interface Academy {
-  id: string;
-  name: string;
-  profile_image: string | null;
-  tags: string[] | null;
-  subject: string;
-  address: string | null;
-  target_regions?: string[] | null;
 }
 
 interface Post {
@@ -52,12 +41,10 @@ interface Post {
 
 const HomePage = () => {
   const navigate = useNavigate();
-  const { selectedRegion, selectedRegionName } = useRegion();
+  const { selectedRegion } = useRegion();
   const [seminars, setSeminars] = useState<Seminar[]>([]);
-  const [academies, setAcademies] = useState<Academy[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loadingSeminars, setLoadingSeminars] = useState(true);
-  const [loadingAcademies, setLoadingAcademies] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [learningStyle, setLearningStyle] = useState<string | null>(null);
   const [profileTags, setProfileTags] = useState<string[]>([]);
@@ -111,25 +98,6 @@ const HomePage = () => {
       console.error("Error fetching seminars:", error);
     } finally {
       setLoadingSeminars(false);
-    }
-  }, []);
-
-  const fetchAcademies = useCallback(async (regionId: string) => {
-    try {
-      setLoadingAcademies(true);
-
-      const { data, error } = await supabase
-        .from("academies")
-        .select("id, name, profile_image, tags, subject, address, target_regions")
-        .contains("target_regions", [regionId])
-        .limit(4);
-
-      if (error) throw error;
-      setAcademies(data || []);
-    } catch (error) {
-      console.error("Error fetching academies:", error);
-    } finally {
-      setLoadingAcademies(false);
     }
   }, []);
 
@@ -204,9 +172,6 @@ const HomePage = () => {
           if (profile?.profile_tags && profile.profile_tags.length > 0) {
             setProfileTags(profile.profile_tags);
           }
-          if (profile?.user_name) {
-            setUserName(profile.user_name);
-          }
         }
       } catch (error) {
         console.error("Error checking profile:", error);
@@ -220,22 +185,15 @@ const HomePage = () => {
 
   useEffect(() => {
     fetchSeminars(selectedRegion);
-    fetchAcademies(selectedRegion);
     fetchPosts(selectedRegion);
-  }, [selectedRegion, fetchSeminars, fetchAcademies, fetchPosts]);
+  }, [selectedRegion, fetchSeminars, fetchPosts]);
 
   const handlePostClick = (post: Post) => {
     setSelectedPost(post);
     setPostDialogOpen(true);
   };
 
-  const hasNoData = !loadingSeminars && !loadingAcademies && 
-                    seminars.length === 0 && academies.length === 0;
-
-  const displayName = userName || "학부모";
-  const recommendationTitle = learningStyle 
-    ? `${displayName}님을 위한 추천 학원`
-    : "지금 동탄에서 가장 인기있는 학원";
+  const hasNoData = !loadingSeminars && seminars.length === 0;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -272,7 +230,6 @@ const HomePage = () => {
           <QuickActionMenu />
         </section>
 
-
         {/* Tag-based Recommended Academies Section */}
         <section className="mb-6 px-4">
           <RecommendedAcademies 
@@ -297,14 +254,6 @@ const HomePage = () => {
               posts={posts}
               loading={loadingPosts}
               onPostClick={handlePostClick}
-            />
-
-            {/* Compact Academy List */}
-            <CompactAcademyList
-              academies={academies}
-              learningStyle={learningStyle}
-              loading={loadingAcademies}
-              title={recommendationTitle}
             />
           </>
         )}

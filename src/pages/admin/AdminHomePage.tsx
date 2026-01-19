@@ -156,7 +156,7 @@ const AdminHomePage = () => {
   const quickActions = [
     {
       icon: User,
-      label: "프로필 관리",
+      label: "학원 프로필 관리",
       path: "/admin/profile",
       requiresEditPermission: true
     },
