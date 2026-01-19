@@ -26,6 +26,7 @@ interface ReservationDetailSheetProps {
     // Seminar specific
     seminarTitle?: string;
     seminarDate?: string;
+    seminarTime?: string;
     seminarLocation?: string | null;
     seminarAcademyName?: string;
     attendeeCount?: number | null;
@@ -57,6 +58,8 @@ const ReservationDetailSheet = ({
         return <Badge variant="destructive">취소됨</Badge>;
       case "recruiting":
         return <Badge variant="default">모집중</Badge>;
+      case "applied":
+        return <Badge variant="secondary" className="bg-green-100 text-green-700">신청 완료</Badge>;
       case "closed":
         return <Badge variant="secondary">마감</Badge>;
       default:
@@ -123,15 +126,28 @@ const ReservationDetailSheet = ({
             )}
 
             {type === "seminar" && data.seminarDate && (
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-accent" />
+              <>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-accent" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">설명회 날짜</p>
+                    <p className="font-medium">{formatDate(data.seminarDate)}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">설명회 날짜</p>
-                  <p className="font-medium">{formatDate(data.seminarDate)}</p>
-                </div>
-              </div>
+                {data.seminarTime && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-accent" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">설명회 시간</p>
+                      <p className="font-medium">{data.seminarTime}</p>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {type === "seminar" && data.seminarLocation && (

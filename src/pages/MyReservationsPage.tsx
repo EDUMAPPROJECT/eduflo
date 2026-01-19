@@ -43,6 +43,7 @@ interface SeminarApplication {
     id: string;
     title: string;
     date: string;
+    time?: string | null;
     location: string | null;
     status: "recruiting" | "closed";
     academy?: {
@@ -242,10 +243,11 @@ const MyReservationsPage = () => {
         message: app.message,
         seminarTitle: app.seminar?.title,
         seminarDate: app.seminar?.date,
+        seminarTime: app.seminar?.time || null,
         seminarLocation: app.seminar?.location,
         seminarAcademyName: app.seminar?.academy?.name,
         attendeeCount: app.attendee_count,
-        seminarStatus: getEffectiveSeminarStatus(app.seminar),
+        seminarStatus: "applied", // Always show as "신청 완료" for applied seminars
       }
     });
   };
@@ -283,7 +285,16 @@ const MyReservationsPage = () => {
 
   // Check if seminar date has passed (auto-close)
   const isSeminarExpired = (dateString: string) => {
-    return new Date(dateString) < new Date();
+    const seminarDate = new Date(dateString);
+    seminarDate.setHours(23, 59, 59, 999); // End of the seminar day
+    return seminarDate < new Date();
+  };
+
+  // Check if reservation date has passed
+  const isReservationExpired = (dateString: string) => {
+    const reservationDate = new Date(dateString);
+    reservationDate.setHours(23, 59, 59, 999);
+    return reservationDate < new Date();
   };
 
   // Get effective status considering expiration
@@ -292,6 +303,20 @@ const MyReservationsPage = () => {
     if (isSeminarExpired(seminar.date)) return "closed";
     return seminar.status;
   };
+
+  // Filter out past reservations and sort by date (earliest first)
+  const filteredReservations = reservations
+    .filter(r => !isReservationExpired(r.reservation_date))
+    .sort((a, b) => new Date(a.reservation_date).getTime() - new Date(b.reservation_date).getTime());
+
+  // Filter out past seminars and sort by date (earliest first)
+  const filteredSeminarApplications = seminarApplications
+    .filter(app => app.seminar && !isSeminarExpired(app.seminar.date))
+    .sort((a, b) => {
+      const dateA = a.seminar?.date ? new Date(a.seminar.date).getTime() : 0;
+      const dateB = b.seminar?.date ? new Date(b.seminar.date).getTime() : 0;
+      return dateA - dateB;
+    });
 
   if (!user) {
     return (
@@ -331,11 +356,11 @@ const MyReservationsPage = () => {
         <div className="bg-card rounded-2xl p-4 shadow-card mb-6">
           <div className="grid grid-cols-2 divide-x divide-border">
             <div className="text-center py-2">
-              <p className="text-2xl font-bold text-primary">{reservations.filter(r => r.status !== "cancelled").length}</p>
+              <p className="text-2xl font-bold text-primary">{filteredReservations.filter(r => r.status !== "cancelled").length}</p>
               <p className="text-xs text-muted-foreground">방문 상담</p>
             </div>
             <div className="text-center py-2">
-              <p className="text-2xl font-bold text-accent">{seminarApplications.length}</p>
+              <p className="text-2xl font-bold text-accent">{filteredSeminarApplications.length}</p>
               <p className="text-xs text-muted-foreground">설명회</p>
             </div>
           </div>
@@ -362,7 +387,7 @@ const MyReservationsPage = () => {
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
               </div>
-            ) : reservations.length === 0 && seminarApplications.length === 0 ? (
+            ) : filteredReservations.length === 0 && filteredSeminarApplications.length === 0 ? (
               <Card className="shadow-card border-border">
                 <CardContent className="p-6 text-center">
                   <Calendar className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
@@ -380,7 +405,7 @@ const MyReservationsPage = () => {
             ) : (
               <div className="space-y-3">
                 {/* 방문 상담 */}
-                {reservations.map((reservation) => (
+                {filteredReservations.map((reservation) => (
                   <Card 
                     key={`res-${reservation.id}`} 
                     className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
@@ -429,7 +454,7 @@ const MyReservationsPage = () => {
                 ))}
 
                 {/* 설명회 */}
-                {seminarApplications.map((app) => (
+                {filteredSeminarApplications.map((app) => (
                   <Card 
                     key={`sem-${app.id}`} 
                     className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
@@ -455,10 +480,10 @@ const MyReservationsPage = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge 
-                            variant={getEffectiveSeminarStatus(app.seminar) === "recruiting" ? "default" : "secondary"}
-                            className="text-xs"
+                            variant="secondary"
+                            className="text-xs bg-green-100 text-green-700"
                           >
-                            {getEffectiveSeminarStatus(app.seminar) === "recruiting" ? "모집중" : "마감"}
+                            신청 완료
                           </Badge>
                           <button
                             onClick={(e) => {
@@ -499,7 +524,7 @@ const MyReservationsPage = () => {
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
               </div>
-            ) : reservations.length === 0 ? (
+            ) : filteredReservations.length === 0 ? (
               <Card className="shadow-card border-border">
                 <CardContent className="p-6 text-center">
                   <Calendar className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
@@ -516,7 +541,7 @@ const MyReservationsPage = () => {
               </Card>
             ) : (
               <div className="space-y-3">
-                {reservations.map((reservation) => (
+                {filteredReservations.map((reservation) => (
                   <Card 
                     key={reservation.id} 
                     className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
@@ -574,7 +599,7 @@ const MyReservationsPage = () => {
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
               </div>
-            ) : seminarApplications.length === 0 ? (
+            ) : filteredSeminarApplications.length === 0 ? (
               <Card className="shadow-card border-border">
                 <CardContent className="p-6 text-center">
                   <Calendar className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
@@ -591,7 +616,7 @@ const MyReservationsPage = () => {
               </Card>
             ) : (
               <div className="space-y-3">
-                {seminarApplications.map((app) => (
+                {filteredSeminarApplications.map((app) => (
                   <Card 
                     key={app.id} 
                     className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
@@ -614,10 +639,10 @@ const MyReservationsPage = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge 
-                            variant={getEffectiveSeminarStatus(app.seminar) === "recruiting" ? "default" : "secondary"}
-                            className="text-xs"
+                            variant="secondary"
+                            className="text-xs bg-green-100 text-green-700"
                           >
-                            {getEffectiveSeminarStatus(app.seminar) === "recruiting" ? "모집중" : "마감"}
+                            신청 완료
                           </Badge>
                           <button
                             onClick={(e) => {

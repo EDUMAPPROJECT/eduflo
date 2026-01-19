@@ -191,7 +191,7 @@ const MyPage = () => {
               <MenuItemButton 
                 icon={Sparkles} 
                 label="성향 테스트" 
-                onClick={() => navigate("/learning-style")} 
+                onClick={() => navigate("/preference-test")} 
               />
             </>
           )}
