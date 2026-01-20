@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ const CLASS_COLORS = [
 
 const MyClassList = () => {
   const navigate = useNavigate();
+  const prefix = useRoutePrefix();
   const [enrollments, setEnrollments] = useState<EnrolledClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -138,7 +140,7 @@ const MyClassList = () => {
             variant="outline"
             size="sm"
             className="mt-3"
-            onClick={() => navigate("/explore")}
+            onClick={() => navigate(`${prefix}/explore`)}
           >
             학원 둘러보기
           </Button>
@@ -164,7 +166,7 @@ const MyClassList = () => {
                   <div className="flex items-start justify-between gap-2">
                     <div 
                       className="flex-1 cursor-pointer"
-                      onClick={() => enrollment.class?.academy?.id && navigate(`/academy/${enrollment.class.academy.id}`)}
+                      onClick={() => enrollment.class?.academy?.id && navigate(`${prefix}/academy/${enrollment.class.academy.id}`)}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-medium text-foreground text-sm line-clamp-1">

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useChatMessages } from "@/hooks/useChatMessages";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Send, GraduationCap } from "lucide-react";
@@ -17,6 +18,7 @@ const formatTime = (dateStr: string) => {
 const ChatRoomPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const prefix = useRoutePrefix();
   const { messages, roomInfo, loading, userId, isAdmin, sendMessage } = useChatMessages(id);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -50,7 +52,7 @@ const ChatRoomPage = () => {
     if (isAdmin) {
       navigate("/admin/chats");
     } else {
-      navigate("/chats");
+      navigate(`${prefix}/chats`);
     }
   };
 
@@ -80,7 +82,7 @@ const ChatRoomPage = () => {
           </Button>
           <button 
             className="flex items-center gap-2 flex-1 min-w-0"
-            onClick={() => navigate(`/academy/${roomInfo.academy.id}`)}
+            onClick={() => navigate(`${prefix}/academy/${roomInfo.academy.id}`)}
           >
             <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0">
               {roomInfo.academy.profile_image ? (

@@ -8,6 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import ImageViewer from "@/components/ImageViewer";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 
 interface FeedPost {
   id: string;
@@ -42,6 +43,7 @@ const typeConfig = {
 
 const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedPostCardProps) => {
   const navigate = useNavigate();
+  const prefix = useRoutePrefix();
   const config = typeConfig[post.type];
   const TypeIcon = config.icon;
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -49,7 +51,7 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedP
 
   const handleSeminarClick = () => {
     if (post.seminar_id) {
-      navigate(`/seminar/${post.seminar_id}`);
+      navigate(`${prefix}/seminar/${post.seminar_id}`);
     }
   };
 

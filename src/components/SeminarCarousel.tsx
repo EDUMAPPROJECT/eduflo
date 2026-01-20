@@ -4,6 +4,7 @@ import { ko } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight } from "lucide-react";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 
 interface Seminar {
   id: string;
@@ -22,6 +23,7 @@ interface SeminarCarouselProps {
 
 const SeminarCarousel = ({ seminars, loading }: SeminarCarouselProps) => {
   const navigate = useNavigate();
+  const prefix = useRoutePrefix();
 
   const getDDay = (dateStr: string) => {
     const targetDate = new Date(dateStr);
@@ -66,7 +68,7 @@ const SeminarCarousel = ({ seminars, loading }: SeminarCarouselProps) => {
       <div className="flex items-center justify-between mb-4 px-4">
         <h3 className="font-bold text-foreground">🎯 지금 신청 가능한 설명회</h3>
         <button 
-          onClick={() => navigate("/explore?tab=seminars")}
+          onClick={() => navigate(`${prefix}/explore?tab=seminars`)}
           className="flex items-center text-sm text-primary font-medium"
         >
           전체보기
@@ -82,7 +84,7 @@ const SeminarCarousel = ({ seminars, loading }: SeminarCarouselProps) => {
             <Card
               key={seminar.id}
               className="flex-shrink-0 w-40 overflow-hidden cursor-pointer hover:shadow-lg transition-shadow border-border"
-              onClick={() => navigate(`/seminar/${seminar.id}`)}
+              onClick={() => navigate(`${prefix}/seminar/${seminar.id}`)}
             >
               {/* Thumbnail */}
               <div className="relative aspect-square bg-muted">

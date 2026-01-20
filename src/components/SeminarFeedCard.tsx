@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 
 interface SeminarFeedCardProps {
   id: string;
@@ -40,6 +41,7 @@ const SeminarFeedCard = ({
   academy,
 }: SeminarFeedCardProps) => {
   const navigate = useNavigate();
+  const prefix = useRoutePrefix();
   const [isLiked, setIsLiked] = useState(false);
 
   // Calculate D-Day
@@ -101,7 +103,7 @@ const SeminarFeedCard = ({
 
   const handleDetail = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/seminar/${id}`);
+    navigate(`${prefix}/seminar/${id}`);
   };
 
   // Generate tags
@@ -112,7 +114,7 @@ const SeminarFeedCard = ({
   return (
     <article
       className="bg-card border border-border rounded-2xl overflow-hidden shadow-card hover:shadow-soft transition-all duration-300 cursor-pointer animate-fade-up"
-      onClick={() => navigate(`/seminar/${id}`)}
+      onClick={() => navigate(`${prefix}/seminar/${id}`)}
     >
       {/* Hero Image with Badge */}
       <div className="relative aspect-[4/3] bg-gradient-to-br from-primary/20 via-accent/10 to-secondary/30 overflow-hidden">

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Sparkles, ArrowRight, AlertCircle } from "lucide-react";
 import { calculateMatchScore, getTagLabel, MatchResult } from "@/lib/tagDictionary";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 
 interface Academy {
   id: string;
@@ -28,6 +29,7 @@ interface Props {
 
 const RecommendedAcademies = ({ profileTags, childName, maxCount = 3 }: Props) => {
   const navigate = useNavigate();
+  const prefix = useRoutePrefix();
   const [rankedAcademies, setRankedAcademies] = useState<RankedAcademy[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasProfileTags, setHasProfileTags] = useState(false);
@@ -130,7 +132,7 @@ const RecommendedAcademies = ({ profileTags, childName, maxCount = 3 }: Props) =
                 자녀에게 딱 맞는 학원을 찾아드려요
               </p>
               <Button 
-                onClick={() => navigate("/preference-test")}
+                onClick={() => navigate(`${prefix}/preference-test`)}
                 size="sm"
                 className="gap-2"
               >
@@ -161,7 +163,7 @@ const RecommendedAcademies = ({ profileTags, childName, maxCount = 3 }: Props) =
             variant="outline" 
             size="sm" 
             className="mt-3"
-            onClick={() => navigate("/explore")}
+            onClick={() => navigate(`${prefix}/explore`)}
           >
             전체 학원 보기
           </Button>
@@ -182,7 +184,7 @@ const RecommendedAcademies = ({ profileTags, childName, maxCount = 3 }: Props) =
         <Button 
           variant="ghost" 
           size="sm" 
-          onClick={() => navigate("/preference-test")}
+          onClick={() => navigate(`${prefix}/preference-test`)}
           className="text-xs text-muted-foreground"
         >
           성향 수정
@@ -194,7 +196,7 @@ const RecommendedAcademies = ({ profileTags, childName, maxCount = 3 }: Props) =
           <Card
             key={academy.id}
             className="flex-shrink-0 w-44 p-3 cursor-pointer hover:shadow-md transition-shadow border-border"
-            onClick={() => navigate(`/academy/${academy.id}`)}
+            onClick={() => navigate(`${prefix}/academy/${academy.id}`)}
           >
             {/* Image with score badge */}
             <div className="relative w-full aspect-square rounded-lg bg-muted mb-2 overflow-hidden">

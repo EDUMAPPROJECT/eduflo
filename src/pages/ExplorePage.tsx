@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useRegion } from "@/contexts/RegionContext";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 import BottomNavigation from "@/components/BottomNavigation";
 import Logo from "@/components/Logo";
 import AdminHeader from "@/components/AdminHeader";
@@ -37,6 +38,7 @@ const ExplorePage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { selectedRegion, selectedRegionName } = useRegion();
+  const prefix = useRoutePrefix();
   const initialTab = searchParams.get("tab") === "seminars" ? "seminars" : "academies";
   
   const [academies, setAcademies] = useState<Academy[]>([]);
@@ -320,7 +322,7 @@ const ExplorePage = () => {
                 {filteredAcademies.map((academy) => (
                   <div
                     key={academy.id}
-                    onClick={() => navigate(`/academy/${academy.id}`)}
+                    onClick={() => navigate(`${prefix}/academy/${academy.id}`)}
                     className="bg-card border border-border rounded-xl p-4 shadow-card hover:shadow-soft transition-all duration-200 cursor-pointer"
                   >
                     <div className="flex gap-4">
@@ -400,7 +402,7 @@ const ExplorePage = () => {
                 {filteredSeminars.map((seminar) => (
                   <div
                     key={seminar.id}
-                    onClick={() => navigate(`/seminar/${seminar.id}`)}
+                    onClick={() => navigate(`${prefix}/seminar/${seminar.id}`)}
                     className="bg-card border border-border rounded-xl p-4 shadow-card hover:shadow-soft transition-all duration-200 cursor-pointer"
                   >
                     <div className="flex gap-4">

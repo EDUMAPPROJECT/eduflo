@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BookOpen, ChevronRight, Sparkles } from "lucide-react";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 
 interface Academy {
   id: string;
@@ -35,6 +36,7 @@ const styleNameMap: Record<string, string> = {
 
 const CompactAcademyList = ({ academies, learningStyle, loading, title }: CompactAcademyListProps) => {
   const navigate = useNavigate();
+  const prefix = useRoutePrefix();
   const styleTags = learningStyle ? styleTagMap[learningStyle] || [] : [];
   const displayTitle = title || (learningStyle ? "내 성향 맞춤 추천 학원" : "추천 학원");
 
@@ -88,7 +90,7 @@ const CompactAcademyList = ({ academies, learningStyle, loading, title }: Compac
           <Card
             key={academy.id}
             className="p-3 cursor-pointer hover:shadow-md transition-all border-border"
-            onClick={() => navigate(`/academy/${academy.id}`)}
+            onClick={() => navigate(`${prefix}/academy/${academy.id}`)}
           >
             <div className="flex gap-3 items-center">
               {/* Logo/Thumbnail */}
@@ -141,7 +143,7 @@ const CompactAcademyList = ({ academies, learningStyle, loading, title }: Compac
       <Button
         variant="outline"
         className="w-full mt-4"
-        onClick={() => navigate("/explore")}
+        onClick={() => navigate(`${prefix}/explore`)}
       >
         맞춤 학원 더 보기
         <ChevronRight className="w-4 h-4 ml-1" />

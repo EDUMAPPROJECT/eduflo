@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ interface BookmarkWithAcademy extends Bookmark {
 
 const MyBookmarksPage = () => {
   const navigate = useNavigate();
+  const prefix = useRoutePrefix();
   const [bookmarks, setBookmarks] = useState<BookmarkWithAcademy[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -110,7 +112,7 @@ const MyBookmarksPage = () => {
                 variant="outline" 
                 size="sm" 
                 className="mt-3"
-                onClick={() => navigate("/explore")}
+                onClick={() => navigate(`${prefix}/explore`)}
               >
                 학원 둘러보기
               </Button>
@@ -122,7 +124,7 @@ const MyBookmarksPage = () => {
               <Card 
                 key={bookmark.id} 
                 className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
-                onClick={() => navigate(`/academy/${bookmark.academy_id}`)}
+                onClick={() => navigate(`${prefix}/academy/${bookmark.academy_id}`)}
               >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">

@@ -2,6 +2,7 @@ import { useEffect, useState, lazy, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrCreateChatRoom } from "@/hooks/useChatRooms";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 import Logo from "@/components/Logo";
 import BottomNavigation from "@/components/BottomNavigation";
 import AcademyNewsTab from "@/components/AcademyNewsTab";
@@ -159,6 +160,7 @@ const mockCourses: ClassInfo[] = [
 const AcademyDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const prefix = useRoutePrefix();
   const { getOrCreateChatRoom, loading: chatLoading } = useOrCreateChatRoom();
   const [academy, setAcademy] = useState<Academy | null>(null);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -187,7 +189,7 @@ const AcademyDetailPage = () => {
 
     const roomId = await getOrCreateChatRoom(id);
     if (roomId) {
-      navigate(`/chats/${roomId}`);
+      navigate(`${prefix}/chats/${roomId}`);
     } else {
       toast.error("채팅방 생성에 실패했습니다");
     }

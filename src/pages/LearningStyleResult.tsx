@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -93,6 +94,7 @@ interface Academy {
 const LearningStyleResult = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const prefix = useRoutePrefix();
   const { learningStyle } = location.state || { learningStyle: "balanced" };
   
   const [academies, setAcademies] = useState<Academy[]>([]);
@@ -269,7 +271,7 @@ const LearningStyleResult = () => {
                 <Card
                   key={academy.id}
                   className="p-4 cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => navigate(`/academy/${academy.id}`)}
+                  onClick={() => navigate(`${prefix}/academy/${academy.id}`)}
                 >
                   <div className="flex gap-3">
                     <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
@@ -315,7 +317,7 @@ const LearningStyleResult = () => {
           <Button 
             className="w-full gradient-primary text-primary-foreground" 
             size="lg"
-            onClick={() => navigate("/home")}
+            onClick={() => navigate(`${prefix}/home`)}
           >
             <Home className="w-4 h-4 mr-2" />
             홈으로 돌아가기

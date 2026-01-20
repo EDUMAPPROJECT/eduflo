@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRegion } from "@/contexts/RegionContext";
 import { useToast } from "@/hooks/use-toast";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 import BottomNavigation from "@/components/BottomNavigation";
 import Logo from "@/components/Logo";
 import GlobalRegionSelector from "@/components/GlobalRegionSelector";
@@ -54,6 +55,7 @@ const CommunityPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { selectedRegion } = useRegion();
+  const prefix = useRoutePrefix();
   
   const [activeFilter, setActiveFilter] = useState('all');
   const [userId, setUserId] = useState<string | null>(null);
@@ -272,7 +274,7 @@ const CommunityPage = () => {
             </p>
             <Button 
               variant="outline" 
-              onClick={() => navigate("/explore")}
+              onClick={() => navigate(`${prefix}/explore`)}
               className="gap-2"
             >
               <Search className="w-4 h-4" />
@@ -286,7 +288,7 @@ const CommunityPage = () => {
                 key={post.id}
                 post={post}
                 onLikeToggle={handleLikeToggle}
-                onAcademyClick={(id) => navigate(`/academy/${id}`)}
+                onAcademyClick={(id) => navigate(`${prefix}/academy/${id}`)}
                 onCardClick={() => setSelectedPost(post)}
               />
             ))}
@@ -323,8 +325,8 @@ const CommunityPage = () => {
             } : null);
           }
         }}
-        onAcademyClick={(id) => navigate(`/academy/${id}`)}
-        onSeminarClick={(seminarId) => navigate(`/seminar/${seminarId}`)}
+        onAcademyClick={(id) => navigate(`${prefix}/academy/${id}`)}
+        onSeminarClick={(seminarId) => navigate(`${prefix}/seminar/${seminarId}`)}
       />
 
       <BottomNavigation />
