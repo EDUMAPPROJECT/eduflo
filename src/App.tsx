@@ -16,6 +16,7 @@ import MyClassesPage from "./pages/MyClassesPage";
 import MyBookmarksPage from "./pages/MyBookmarksPage";
 import MyReservationsPage from "./pages/MyReservationsPage";
 import ChildConnectionPage from "./pages/ChildConnectionPage";
+import ParentConnectionPage from "./pages/ParentConnectionPage";
 import SettingsPage from "./pages/SettingsPage";
 import CustomerServicePage from "./pages/CustomerServicePage";
 import SeminarDetailPage from "./pages/SeminarDetailPage";
@@ -79,6 +80,7 @@ const App = () => {
               <Route path="/my/bookmarks" element={<MyBookmarksPage />} />
               <Route path="/my/reservations" element={<MyReservationsPage />} />
               <Route path="/child-connection" element={<ChildConnectionPage />} />
+              <Route path="/parent-connection" element={<ParentConnectionPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/customer-service" element={<CustomerServicePage />} />
               <Route path="/chats" element={<ChatListPage />} />

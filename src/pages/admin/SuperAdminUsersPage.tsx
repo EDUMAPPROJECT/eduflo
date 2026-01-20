@@ -41,7 +41,7 @@ import {
 interface UserWithRole {
   id: string;
   user_id: string;
-  role: 'parent' | 'admin';
+  role: 'parent' | 'admin' | 'student';
   is_super_admin: boolean;
   profile: {
     user_name: string | null;
@@ -103,7 +103,7 @@ const SuperAdminUsersPage = () => {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: 'parent' | 'admin') => {
+  const handleRoleChange = async (userId: string, newRole: 'parent' | 'admin' | 'student') => {
     try {
       const { error } = await supabase
         .from('user_roles')
@@ -112,7 +112,8 @@ const SuperAdminUsersPage = () => {
 
       if (error) throw error;
       
-      toast.success(`역할이 ${newRole === 'admin' ? '관리자' : '학부모'}로 변경되었습니다`);
+      const roleLabel = newRole === 'admin' ? '학원' : newRole === 'student' ? '학생' : '학부모';
+      toast.success(`역할이 ${roleLabel}로 변경되었습니다`);
       fetchUsers();
     } catch (error) {
       logError('SuperAdminUsers RoleChange', error);

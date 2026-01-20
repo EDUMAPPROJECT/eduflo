@@ -134,7 +134,7 @@ const MyPage = () => {
                 )}
               </div>
               <p className="text-sm text-primary-foreground/80">
-                {userRole === "parent" ? "일반 회원" : "학원 원장님"}
+                {userRole === "parent" ? "학부모 회원" : userRole === "student" ? "학생 회원" : "학원 원장님"}
               </p>
             </div>
             {!user ? (
@@ -196,11 +196,20 @@ const MyPage = () => {
         <div className="bg-card rounded-2xl shadow-card overflow-hidden mb-6">
           {user && (
             <>
-              <MenuItemButton 
-                icon={Users} 
-                label="자녀 연결" 
-                onClick={() => navigate("/child-connection")} 
-              />
+              {userRole === "parent" && (
+                <MenuItemButton 
+                  icon={Users} 
+                  label="자녀 연결" 
+                  onClick={() => navigate("/child-connection")} 
+                />
+              )}
+              {userRole === "student" && (
+                <MenuItemButton 
+                  icon={Users} 
+                  label="부모님 연결" 
+                  onClick={() => navigate("/parent-connection")} 
+                />
+              )}
               <MenuItemButton 
                 icon={FileText} 
                 label="성적 등록" 

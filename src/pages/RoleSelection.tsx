@@ -1,12 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/Logo";
-import { GraduationCap, Building2 } from "lucide-react";
+import { GraduationCap, Building2, User } from "lucide-react";
 
 const RoleSelection = () => {
   const navigate = useNavigate();
 
-  const handleRoleSelect = (role: "parent" | "owner") => {
+  const handleRoleSelect = (role: "parent" | "admin" | "student") => {
     // Navigate to auth with role preference
     navigate(`/auth?role=${role}`);
   };
@@ -53,7 +53,24 @@ const RoleSelection = () => {
             variant="role"
             size="xl"
             className="w-full flex items-center gap-4 h-auto py-5"
-            onClick={() => handleRoleSelect("owner")}
+            onClick={() => handleRoleSelect("student")}
+          >
+            <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+              <User className="w-6 h-6 text-blue-500" />
+            </div>
+            <div className="text-left flex-1">
+              <div className="font-semibold text-base">학생으로 시작하기</div>
+              <div className="text-xs text-muted-foreground font-normal">
+                내 학원 일정 관리
+              </div>
+            </div>
+          </Button>
+
+          <Button
+            variant="role"
+            size="xl"
+            className="w-full flex items-center gap-4 h-auto py-5"
+            onClick={() => handleRoleSelect("admin")}
           >
             <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
               <Building2 className="w-6 h-6 text-accent" />

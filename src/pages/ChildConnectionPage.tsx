@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Copy, RefreshCw, UserPlus, Clock, Check, X, Trash2 } from "lucide-react";
+import { ArrowLeft, Copy, RefreshCw, UserPlus, Clock, Check, Trash2, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +23,7 @@ interface ConnectionRequest {
   connection_code: string;
   status: string;
   child_id: string | null;
+  student_user_id: string | null;
   created_at: string;
   expires_at: string;
   child?: Child;
@@ -38,7 +39,6 @@ const ChildConnectionPage = () => {
   const [newChildName, setNewChildName] = useState("");
   const [newChildGrade, setNewChildGrade] = useState("");
   const [generatingCode, setGeneratingCode] = useState(false);
-  const [selectedChildForCode, setSelectedChildForCode] = useState<string | null>(null);
   const [showCodeDialog, setShowCodeDialog] = useState(false);
   const [currentCode, setCurrentCode] = useState<string | null>(null);
 
@@ -69,7 +69,7 @@ const ChildConnectionPage = () => {
       setChildren(childrenData || []);
     }
 
-    // Fetch connection requests with child info
+    // Fetch connection requests
     const { data: requestsData, error: requestsError } = await supabase
       .from("child_connections")
       .select(`
@@ -135,11 +135,10 @@ const ChildConnectionPage = () => {
     toast.success("자녀가 삭제되었습니다");
   };
 
-  const handleGenerateCode = async (childId: string) => {
+  const handleGenerateCode = async () => {
     if (!userId) return;
 
     setGeneratingCode(true);
-    setSelectedChildForCode(childId);
 
     try {
       // Generate code using database function
@@ -147,19 +146,15 @@ const ChildConnectionPage = () => {
 
       if (codeError) throw codeError;
 
-      // Create connection request
+      // Create connection request (without child_id, for student user to connect)
       const { data, error } = await supabase
         .from("child_connections")
         .insert({
           parent_id: userId,
-          child_id: childId,
           connection_code: codeData,
           status: "pending",
         })
-        .select(`
-          *,
-          child:children(*)
-        `)
+        .select()
         .single();
 
       if (error) throw error;
@@ -173,7 +168,6 @@ const ChildConnectionPage = () => {
       toast.error("코드 생성에 실패했습니다");
     } finally {
       setGeneratingCode(false);
-      setSelectedChildForCode(null);
     }
   };
 
@@ -222,6 +216,16 @@ const ChildConnectionPage = () => {
     return `${minutes}분 남음`;
   };
 
+  // Filter to get connected students (approved connections with student_user_id)
+  const connectedStudents = connectionRequests.filter(
+    r => r.status === "approved" && r.student_user_id
+  );
+
+  // Filter to get pending codes
+  const pendingCodes = connectionRequests.filter(
+    r => r.status === "pending" && !isExpired(r.expires_at)
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -243,135 +247,57 @@ const ChildConnectionPage = () => {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-6">
-        {/* Children Section */}
+        {/* Generate Code Section */}
         <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold">내 자녀</h2>
-            <Button
-              size="sm"
-              onClick={() => setShowAddChildDialog(true)}
-              className="gap-1"
-            >
-              <UserPlus className="w-4 h-4" />
-              자녀 추가
-            </Button>
-          </div>
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="font-semibold">연결 코드 생성</h2>
+                  <p className="text-sm text-muted-foreground">
+                    자녀(학생 계정)에게 코드를 전달하세요
+                  </p>
+                </div>
+                <Button
+                  onClick={handleGenerateCode}
+                  disabled={generatingCode}
+                  className="gap-2"
+                >
+                  {generatingCode ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                  코드 생성
+                </Button>
+              </div>
 
-          {children.length === 0 ? (
-            <Card className="bg-muted/30">
-              <CardContent className="py-8 text-center">
-                <p className="text-muted-foreground text-sm">
-                  등록된 자녀가 없습니다.
-                </p>
-                <p className="text-muted-foreground text-xs mt-1">
-                  자녀를 추가하고 시간표와 수업을 관리하세요.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {children.map((child) => (
-                <Card key={child.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
+              {pendingCodes.length > 0 && (
+                <div className="space-y-2 mt-4 pt-4 border-t">
+                  <p className="text-xs text-muted-foreground mb-2">대기 중인 코드</p>
+                  {pendingCodes.map((request) => (
+                    <div 
+                      key={request.id}
+                      className="flex items-center justify-between bg-muted/50 rounded-lg p-3"
+                    >
                       <div>
-                        <p className="font-medium">{child.name}</p>
-                        {child.grade && (
-                          <p className="text-sm text-muted-foreground">{child.grade}</p>
-                        )}
+                        <p className="font-mono text-lg font-bold tracking-wider">
+                          {request.connection_code}
+                        </p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatExpiryTime(request.expires_at)}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleGenerateCode(child.id)}
-                          disabled={generatingCode && selectedChildForCode === child.id}
-                          className="gap-1"
-                        >
-                          {generatingCode && selectedChildForCode === child.id ? (
-                            <RefreshCw className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
-                          코드 생성
-                        </Button>
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => handleDeleteChild(child.id)}
+                          className="h-8 w-8"
+                          onClick={() => handleCopyCode(request.connection_code)}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Copy className="w-4 h-4" />
                         </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Connection Requests Section */}
-        <section>
-          <h2 className="text-base font-semibold mb-4">연결 코드 현황</h2>
-
-          {connectionRequests.length === 0 ? (
-            <Card className="bg-muted/30">
-              <CardContent className="py-8 text-center">
-                <p className="text-muted-foreground text-sm">
-                  생성된 연결 코드가 없습니다.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {connectionRequests.map((request) => (
-                <Card key={request.id} className={isExpired(request.expires_at) ? "opacity-60" : ""}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-mono text-lg font-bold tracking-wider">
-                            {request.connection_code}
-                          </p>
-                          <Badge 
-                            variant={
-                              request.status === "approved" 
-                                ? "default" 
-                                : isExpired(request.expires_at) 
-                                  ? "secondary" 
-                                  : "outline"
-                            }
-                          >
-                            {request.status === "approved" 
-                              ? "승인됨" 
-                              : isExpired(request.expires_at) 
-                                ? "만료" 
-                                : "대기 중"}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {request.child?.name || "자녀 정보 없음"}
-                        </p>
-                        {!isExpired(request.expires_at) && request.status === "pending" && (
-                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {formatExpiryTime(request.expires_at)}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {!isExpired(request.expires_at) && request.status === "pending" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleCopyCode(request.connection_code)}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -381,6 +307,101 @@ const ChildConnectionPage = () => {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Connected Students Section */}
+        <section>
+          <h2 className="text-base font-semibold mb-4">연결된 자녀</h2>
+
+          {connectedStudents.length === 0 ? (
+            <Card className="bg-muted/30">
+              <CardContent className="py-8 text-center">
+                <p className="text-muted-foreground text-sm">
+                  아직 연결된 자녀가 없습니다.
+                </p>
+                <p className="text-muted-foreground text-xs mt-1">
+                  연결 코드를 생성하여 자녀에게 전달하세요.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {connectedStudents.map((connection) => (
+                <Card key={connection.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                        <User className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">
+                          {connection.child?.name || "학생"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(connection.created_at).toLocaleDateString("ko-KR")} 연결됨
+                        </p>
+                      </div>
+                      <Badge variant="default" className="gap-1">
+                        <Check className="w-3 h-3" />
+                        연결됨
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Children Management Section */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold">내 자녀 (프로필)</h2>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowAddChildDialog(true)}
+              className="gap-1"
+            >
+              <UserPlus className="w-4 h-4" />
+              추가
+            </Button>
+          </div>
+
+          {children.length === 0 ? (
+            <Card className="bg-muted/30">
+              <CardContent className="py-6 text-center">
+                <p className="text-muted-foreground text-sm">
+                  등록된 자녀 프로필이 없습니다.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {children.map((child) => (
+                <Card key={child.id}>
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">{child.name}</p>
+                        {child.grade && (
+                          <p className="text-xs text-muted-foreground">{child.grade}</p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => handleDeleteChild(child.id)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -394,8 +415,8 @@ const ChildConnectionPage = () => {
           <CardContent className="py-4">
             <p className="text-xs text-muted-foreground">
               • 연결 코드는 생성 후 24시간 동안 유효합니다.<br />
-              • 다른 기기에서 이 코드를 입력하면 자녀의 시간표와 수업을 함께 관리할 수 있습니다.<br />
-              • 연결된 기기에서는 시간표, MY CLASS, 성향 테스트 등을 자녀별로 볼 수 있습니다.
+              • 자녀(학생 계정)가 이 코드를 입력하면 자동으로 연결됩니다.<br />
+              • 연결되면 자녀의 시간표, MY CLASS, 성향 테스트 등을 함께 확인할 수 있습니다.
             </p>
           </CardContent>
         </Card>
@@ -405,7 +426,7 @@ const ChildConnectionPage = () => {
       <Dialog open={showAddChildDialog} onOpenChange={setShowAddChildDialog}>
         <DialogContent className="w-[calc(100vw-2rem)] max-w-sm">
           <DialogHeader>
-            <DialogTitle>자녀 추가</DialogTitle>
+            <DialogTitle>자녀 프로필 추가</DialogTitle>
             <DialogDescription>
               자녀의 정보를 입력해주세요.
             </DialogDescription>
@@ -445,7 +466,7 @@ const ChildConnectionPage = () => {
           <DialogHeader>
             <DialogTitle>연결 코드 생성 완료</DialogTitle>
             <DialogDescription>
-              아래 코드를 다른 기기에서 입력하세요.
+              아래 코드를 자녀(학생 계정)에게 전달하세요.
             </DialogDescription>
           </DialogHeader>
           <div className="py-6 text-center">

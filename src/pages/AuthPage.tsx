@@ -19,8 +19,8 @@ const AuthPage = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<"parent" | "admin">(
-    (searchParams.get("role") as "parent" | "admin") || "parent"
+  const [selectedRole, setSelectedRole] = useState<"parent" | "admin" | "student">(
+    (searchParams.get("role") as "parent" | "admin" | "student") || "parent"
   );
   const [showPassword, setShowPassword] = useState(false);
 
@@ -48,6 +48,8 @@ const AuthPage = () => {
       
       if (roleData.role === "admin") {
         navigate("/admin/home");
+      } else if (roleData.role === "student") {
+        navigate("/home");
       } else {
         navigate("/home");
       }
@@ -194,17 +196,24 @@ const AuthPage = () => {
             </p>
 
             {/* Role Selection */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="grid grid-cols-3 gap-2 mb-6">
               <Button
                 variant={selectedRole === "parent" ? "default" : "outline"}
-                className="h-12"
+                className="h-12 text-sm px-2"
                 onClick={() => setSelectedRole("parent")}
               >
                 학부모
               </Button>
               <Button
+                variant={selectedRole === "student" ? "default" : "outline"}
+                className="h-12 text-sm px-2"
+                onClick={() => setSelectedRole("student")}
+              >
+                학생
+              </Button>
+              <Button
                 variant={selectedRole === "admin" ? "default" : "outline"}
-                className="h-12"
+                className="h-12 text-sm px-2"
                 onClick={() => setSelectedRole("admin")}
               >
                 학원

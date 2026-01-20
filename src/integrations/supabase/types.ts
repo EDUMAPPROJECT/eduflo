@@ -308,6 +308,7 @@ export type Database = {
           id: string
           parent_id: string
           status: string
+          student_user_id: string | null
         }
         Insert: {
           child_id?: string | null
@@ -317,6 +318,7 @@ export type Database = {
           id?: string
           parent_id: string
           status?: string
+          student_user_id?: string | null
         }
         Update: {
           child_id?: string | null
@@ -326,6 +328,7 @@ export type Database = {
           id?: string
           parent_id?: string
           status?: string
+          student_user_id?: string | null
         }
         Relationships: [
           {
@@ -1032,7 +1035,7 @@ export type Database = {
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "parent" | "admin"
+      app_role: "parent" | "admin" | "student"
       consultation_status: "pending" | "completed"
       seminar_status: "recruiting" | "closed"
       verification_status: "pending" | "approved" | "rejected"
@@ -1163,7 +1166,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["parent", "admin"],
+      app_role: ["parent", "admin", "student"],
       consultation_status: ["pending", "completed"],
       seminar_status: ["recruiting", "closed"],
       verification_status: ["pending", "approved", "rejected"],
