@@ -16,6 +16,10 @@ export interface EnrolledClassWithDetails {
       id: string;
       name: string;
     };
+    teacher?: {
+      id: string;
+      name: string;
+    };
   };
 }
 
@@ -139,6 +143,10 @@ export function useClassEnrollments() {
             academy:academies (
               id,
               name
+            ),
+            teacher:teachers (
+              id,
+              name
             )
           )
         `)
@@ -197,6 +205,10 @@ export function useClassEnrollments() {
           fee,
           is_recruiting,
           academy:academies (
+            id,
+            name
+          ),
+          teacher:teachers (
             id,
             name
           )

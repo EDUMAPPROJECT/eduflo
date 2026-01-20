@@ -448,10 +448,10 @@ const TimetablePage = () => {
 
             {/* Additional Info */}
             <div className="space-y-2">
-              {selectedEnrollment?.class?.target_grade && (
+              {selectedEnrollment?.class?.teacher?.name && (
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="text-muted-foreground">대상:</span>
-                  <span>{selectedEnrollment.class.target_grade}</span>
+                  <span className="text-muted-foreground">강사:</span>
+                  <span>{selectedEnrollment.class.teacher.name}</span>
                 </div>
               )}
               {selectedEnrollment?.class?.fee && (
