@@ -2,7 +2,9 @@ import { ArrowLeft, Plus, MapPin, Clock, School } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import BottomNavigation from "@/components/BottomNavigation";
+import ChildSelector from "@/components/ChildSelector";
 import { useClassEnrollments, parseScheduleMultiple, CLASS_COLORS } from "@/hooks/useClassEnrollments";
+import { useChildren } from "@/hooks/useChildren";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -23,6 +25,7 @@ interface ScheduleBlock {
   colorIndex: number;
   isManual: boolean;
   academyId?: string;
+  childName?: string;
 }
 
 interface ManualSchedule {
@@ -32,11 +35,13 @@ interface ManualSchedule {
   start_time: string;
   end_time: string;
   color_index: number;
+  child_id: string | null;
 }
 
 const TimetablePage = () => {
   const navigate = useNavigate();
-  const { enrollments, loading: enrollmentsLoading, userId } = useClassEnrollments();
+  const { children, selectedChildId, hasChildren } = useChildren();
+  const { enrollments, loading: enrollmentsLoading, userId } = useClassEnrollments(hasChildren ? selectedChildId : undefined);
   const [manualSchedules, setManualSchedules] = useState<ManualSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -245,13 +250,7 @@ const TimetablePage = () => {
             </button>
             <h1 className="text-lg font-semibold">시간표</h1>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowAddDialog(true)}
-          >
-            <Plus className="w-5 h-5" />
-          </Button>
+          {hasChildren && <ChildSelector showAllOption={false} />}
         </div>
       </header>
 
@@ -405,12 +404,23 @@ const TimetablePage = () => {
           </div>
         )}
 
-        {/* Info Text */}
-        <p className="text-xs text-muted-foreground text-center mt-4">
-          {scheduleBlocks.length === 0 
-            ? "MY CLASS에 강좌를 등록하거나 일정을 추가해주세요"
-            : "강좌 클릭 시 상세 정보 확인, 수동 일정 클릭 시 삭제 가능"}
-        </p>
+        {/* Info Text and Add Button */}
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-xs text-muted-foreground">
+            {scheduleBlocks.length === 0 
+              ? "MY CLASS에 강좌를 등록하거나 일정을 추가해주세요"
+              : "강좌 클릭 시 상세 정보 확인, 수동 일정 클릭 시 삭제 가능"}
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAddDialog(true)}
+            className="gap-1 shrink-0 ml-2"
+          >
+            <Plus className="w-4 h-4" />
+            수동 추가
+          </Button>
+        </div>
       </main>
 
       {/* Class Detail Dialog */}

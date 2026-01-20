@@ -299,26 +299,101 @@ export type Database = {
           },
         ]
       }
+      child_connections: {
+        Row: {
+          child_id: string | null
+          connection_code: string
+          created_at: string
+          expires_at: string
+          id: string
+          parent_id: string
+          status: string
+        }
+        Insert: {
+          child_id?: string | null
+          connection_code: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          parent_id: string
+          status?: string
+        }
+        Update: {
+          child_id?: string | null
+          connection_code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          parent_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "child_connections_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      children: {
+        Row: {
+          created_at: string
+          grade: string | null
+          id: string
+          name: string
+          parent_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grade?: string | null
+          id?: string
+          name: string
+          parent_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grade?: string | null
+          id?: string
+          name?: string
+          parent_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       class_enrollments: {
         Row: {
+          child_id: string | null
           class_id: string
           created_at: string
           id: string
           user_id: string
         }
         Insert: {
+          child_id?: string | null
           class_id: string
           created_at?: string
           id?: string
           user_id: string
         }
         Update: {
+          child_id?: string | null
           class_id?: string
           created_at?: string
           id?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "class_enrollments_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "class_enrollments_class_id_fkey"
             columns: ["class_id"]
@@ -530,6 +605,7 @@ export type Database = {
       }
       manual_schedules: {
         Row: {
+          child_id: string | null
           color_index: number | null
           created_at: string
           day: string
@@ -541,6 +617,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          child_id?: string | null
           color_index?: number | null
           created_at?: string
           day: string
@@ -552,6 +629,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          child_id?: string | null
           color_index?: number | null
           created_at?: string
           day?: string
@@ -562,7 +640,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "manual_schedules_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -918,6 +1004,7 @@ export type Database = {
     }
     Functions: {
       generate_academy_join_code: { Args: never; Returns: string }
+      generate_connection_code: { Args: never; Returns: string }
       generate_random_nickname: { Args: never; Returns: string }
       get_user_role: {
         Args: { _user_id: string }

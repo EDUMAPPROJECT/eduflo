@@ -134,7 +134,7 @@ const MyPage = () => {
                 )}
               </div>
               <p className="text-sm text-primary-foreground/80">
-                {userRole === "parent" ? "학부모 회원" : "학원 원장님"}
+                {userRole === "parent" ? "일반 회원" : "학원 원장님"}
               </p>
             </div>
             {!user ? (
@@ -199,7 +199,7 @@ const MyPage = () => {
               <MenuItemButton 
                 icon={Users} 
                 label="자녀 연결" 
-                onClick={() => toast.info("자녀 연결 기능은 준비 중입니다")} 
+                onClick={() => navigate("/child-connection")} 
               />
               <MenuItemButton 
                 icon={FileText} 

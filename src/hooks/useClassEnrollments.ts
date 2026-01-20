@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface EnrolledClassWithDetails {
   id: string;
   class_id: string;
+  child_id: string | null;
   created_at: string;
   class?: {
     id: string;
@@ -20,6 +21,11 @@ export interface EnrolledClassWithDetails {
       id: string;
       name: string;
     };
+  };
+  child?: {
+    id: string;
+    name: string;
+    grade: string | null;
   };
 }
 
@@ -114,86 +120,13 @@ export function parseSchedule(schedule: string | null): ParsedSchedule | null {
   };
 }
 
-export function useClassEnrollments() {
+export function useClassEnrollments(childId?: string | null) {
   const [enrollments, setEnrollments] = useState<EnrolledClassWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchEnrollments = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        setLoading(false);
-        return;
-      }
-      
-      setUserId(session.user.id);
-
-      const { data, error } = await supabase
-        .from("class_enrollments")
-        .select(`
-          *,
-          class:classes (
-            id,
-            name,
-            schedule,
-            target_grade,
-            fee,
-            is_recruiting,
-            academy:academies (
-              id,
-              name
-            ),
-            teacher:teachers (
-              id,
-              name
-            )
-          )
-        `)
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        console.error("Error fetching enrollments:", error);
-      } else {
-        setEnrollments((data as any) || []);
-      }
-      setLoading(false);
-    };
-
-    fetchEnrollments();
-  }, []);
-
-  const checkEnrollment = async (classId: string): Promise<boolean> => {
-    if (!userId) return false;
-    
-    const { data } = await supabase
-      .from("class_enrollments")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("class_id", classId)
-      .maybeSingle();
-    
-    return !!data;
-  };
-
-  const enrollClass = async (classId: string): Promise<boolean> => {
-    if (!userId) return false;
-
-    const { error } = await supabase
-      .from("class_enrollments")
-      .insert({
-        user_id: userId,
-        class_id: classId,
-      });
-
-    if (error) {
-      console.error("Error enrolling class:", error);
-      return false;
-    }
-
-    // Refresh enrollments
-    const { data } = await supabase
+  const fetchEnrollments = useCallback(async (uid: string) => {
+    let query = supabase
       .from("class_enrollments")
       .select(`
         *,
@@ -212,10 +145,110 @@ export function useClassEnrollments() {
             id,
             name
           )
+        ),
+        child:children (
+          id,
+          name,
+          grade
+        )
+      `)
+      .eq("user_id", uid)
+      .order("created_at", { ascending: true });
+
+    // Filter by child if specified
+    if (childId) {
+      query = query.eq("child_id", childId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching enrollments:", error);
+    } else {
+      setEnrollments((data as any) || []);
+    }
+    setLoading(false);
+  }, [childId]);
+
+  useEffect(() => {
+    const initFetch = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        setLoading(false);
+        return;
+      }
+      
+      setUserId(session.user.id);
+      fetchEnrollments(session.user.id);
+    };
+
+    initFetch();
+  }, [fetchEnrollments]);
+
+  const checkEnrollment = async (classId: string): Promise<boolean> => {
+    if (!userId) return false;
+    
+    const { data } = await supabase
+      .from("class_enrollments")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("class_id", classId)
+      .maybeSingle();
+    
+    return !!data;
+  };
+
+  const enrollClass = async (classId: string, enrollChildId?: string | null): Promise<boolean> => {
+    if (!userId) return false;
+
+    const { error } = await supabase
+      .from("class_enrollments")
+      .insert({
+        user_id: userId,
+        class_id: classId,
+        child_id: enrollChildId || null,
+      });
+
+    if (error) {
+      console.error("Error enrolling class:", error);
+      return false;
+    }
+
+    // Refresh enrollments
+    let query = supabase
+      .from("class_enrollments")
+      .select(`
+        *,
+        class:classes (
+          id,
+          name,
+          schedule,
+          target_grade,
+          fee,
+          is_recruiting,
+          academy:academies (
+            id,
+            name
+          ),
+          teacher:teachers (
+            id,
+            name
+          )
+        ),
+        child:children (
+          id,
+          name,
+          grade
         )
       `)
       .eq("user_id", userId)
       .order("created_at", { ascending: true });
+
+    if (childId) {
+      query = query.eq("child_id", childId);
+    }
+
+    const { data } = await query;
 
     setEnrollments((data as any) || []);
     return true;
