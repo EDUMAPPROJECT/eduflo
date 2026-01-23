@@ -11,7 +11,7 @@ import TargetRegionSelector from "@/components/TargetRegionSelector";
 import AcademyTargetTagsEditor from "@/components/AcademyTargetTagsEditor";
 import AcademyMemberManagement from "@/components/AcademyMemberManagement";
 import CurriculumEditor from "@/components/CurriculumEditor";
-import ConsultationSettingsSection from "@/components/ConsultationSettingsSection";
+
 import ClassScheduleInput from "@/components/ClassScheduleInput";
 import AddressSearch from "@/components/AddressSearch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -948,8 +948,6 @@ const ProfileManagementPage = () => {
               </>
             )}
 
-            {/* Consultation Settings */}
-            <ConsultationSettingsSection academyId={academy.id} />
 
             <Button className="w-full gap-2" onClick={handleSaveProfile} disabled={saving}>
               <Save className="w-4 h-4" />

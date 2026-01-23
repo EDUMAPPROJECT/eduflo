@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
+import ConsultationSettingsSection from "@/components/ConsultationSettingsSection";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { GraduationCap, Clock, CheckCircle, Calendar, X, ArrowLeft } from "lucide-react";
+import { GraduationCap, Clock, CheckCircle, Calendar, X, ArrowLeft, Settings, ChevronDown, ChevronUp } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type ConsultationReservation = Database["public"]["Tables"]["consultation_reservations"]["Row"];
@@ -16,6 +18,8 @@ const ConsultationManagementPage = () => {
   const [reservations, setReservations] = useState<ConsultationReservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [academyId, setAcademyId] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -39,24 +43,26 @@ const ConsultationManagementPage = () => {
           .eq("status", "approved")
           .maybeSingle();
 
-        let academyId = memberData?.academy_id;
+        let fetchedAcademyId = memberData?.academy_id;
 
-        if (!academyId) {
+        if (!fetchedAcademyId) {
           // Fallback: check if user is owner
           const { data: academy } = await supabase
             .from("academies")
             .select("id")
             .eq("owner_id", user.id)
             .maybeSingle();
-          academyId = academy?.id;
+          fetchedAcademyId = academy?.id;
         }
 
-        if (academyId) {
+        if (fetchedAcademyId) {
+          setAcademyId(fetchedAcademyId);
+          
           // Fetch visit reservations
           const { data: reservationData } = await supabase
             .from("consultation_reservations")
             .select("*")
-            .eq("academy_id", academyId)
+            .eq("academy_id", fetchedAcademyId)
             .order("reservation_date", { ascending: false });
 
           setReservations(reservationData || []);
@@ -137,7 +143,26 @@ const ConsultationManagementPage = () => {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-6">
+      <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
+        {/* Settings Section */}
+        {academyId && (
+          <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <Settings className="w-4 h-4" />
+                  상담 예약 설정
+                </span>
+                {settingsOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4">
+              <ConsultationSettingsSection academyId={academyId} />
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        {/* Reservations List */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
