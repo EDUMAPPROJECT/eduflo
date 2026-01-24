@@ -316,7 +316,7 @@ const AuthPage = () => {
             </div>
             
             <h2 className="text-2xl font-bold text-foreground mb-2">
-              에듀맵에 오신 것을 환영합니다!
+              에듀플로에 오신 것을 환영합니다!
             </h2>
             <p className="text-muted-foreground mb-8">
               이제 우리 동네 학원을 쉽게 찾아보세요

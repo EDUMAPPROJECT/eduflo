@@ -263,7 +263,7 @@ const BusinessVerificationPage = () => {
                   <Label htmlFor="businessName">상호명 *</Label>
                   <Input
                     id="businessName"
-                    placeholder="예: 에듀맵 수학학원"
+                    placeholder="예: 에듀플로 수학학원"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
                     maxLength={100}

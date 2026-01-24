@@ -46,7 +46,7 @@ const faqData = [
   {
     id: "5",
     question: "알림이 오지 않아요.",
-    answer: "설정 > 알림 설정에서 푸시 알림이 활성화되어 있는지 확인해주세요. 또한 휴대폰 설정에서 에듀맵 앱의 알림 권한이 허용되어 있어야 합니다."
+    answer: "설정 > 알림 설정에서 푸시 알림이 활성화되어 있는지 확인해주세요. 또한 휴대폰 설정에서 에듀플로 앱의 알림 권한이 허용되어 있어야 합니다."
   }
 ];
 
@@ -93,7 +93,7 @@ const CustomerServicePage = () => {
                 <MessageCircle className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-medium text-foreground">에듀맵 고객센터</h3>
+                <h3 className="font-medium text-foreground">에듀플로 고객센터</h3>
                 <p className="text-xs text-muted-foreground">평일 09:00 - 18:00</p>
               </div>
             </div>

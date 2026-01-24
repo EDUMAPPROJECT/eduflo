@@ -222,7 +222,7 @@ const AdminHomePage = () => {
             안녕하세요, {userName || "관리자"} {userRole ? roleLabels[userRole] || "님" : "님"} 👋
           </h2>
           <p className="text-primary-foreground/80 text-sm">
-            오늘도 에듀맵과 함께 학원을 운영해보세요
+            오늘도 에듀플로와 함께 학원을 운영해보세요
           </p>
         </div>
 

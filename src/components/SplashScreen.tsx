@@ -37,7 +37,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         />
         <div className="text-3xl font-bold text-primary-foreground">
           <span>에듀</span>
-          <span className="opacity-80">맵</span>
+          <span className="opacity-80">플로</span>
         </div>
         <p className="text-primary-foreground/70 text-sm mt-2">
           우리 동네 학원 탐색 플랫폼

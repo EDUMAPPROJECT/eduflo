@@ -28,7 +28,7 @@ const Logo = ({ size = "md", showText = true }: LogoProps) => {
       {showText && (
         <div className={cn("font-bold text-foreground", textSizeClasses[size])}>
           <span className="text-primary">에듀</span>
-          <span className="text-primary/80">맵</span>
+          <span className="text-primary/80">플로</span>
         </div>
       )}
     </div>
