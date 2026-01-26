@@ -48,6 +48,7 @@ import { toast } from "sonner";
 import { logError } from "@/lib/errorLogger";
 
 const LocationMap = lazy(() => import("@/components/LocationMap"));
+const AcademyDetailMap = lazy(() => import("@/components/AcademyDetailMap"));
 
 interface Academy {
   id: string;
@@ -55,6 +56,8 @@ interface Academy {
   subject: string;
   description: string | null;
   address: string | null;
+  latitude: number | null;
+  longitude: number | null;
   profile_image: string | null;
   banner_image: string | null;
   tags: string[] | null;
@@ -506,9 +509,17 @@ const AcademyDetailPage = () => {
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
                     </div>
                   }>
-                    <LocationMap address={academy.address} name={academy.name} />
+                    {academy.latitude != null && academy.longitude != null ? (
+                      <AcademyDetailMap
+                        name={academy.name}
+                        address={academy.address}
+                        latitude={academy.latitude}
+                        longitude={academy.longitude}
+                      />
+                    ) : (
+                      <LocationMap address={academy.address} name={academy.name} />
+                    )}
                   </Suspense>
-                  <p className="text-sm text-muted-foreground mt-3">{academy.address}</p>
                 </CardContent>
               </Card>
             )}

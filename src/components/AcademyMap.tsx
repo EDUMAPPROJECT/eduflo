@@ -3,6 +3,7 @@ import { loadNaverMapScript } from "@/utils/naverMap";
 import { MapPin, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import markerIcon from "@/assets/marker.png";
 
 interface Academy {
   id: string;
@@ -71,18 +72,9 @@ const AcademyMap = () => {
                 map: map,
                 title: academy.name,
                 icon: {
-                  content: `
-                    <div style="
-                      width: 24px;
-                      height: 24px;
-                      background: #0ea5e9;
-                      border: 3px solid white;
-                      border-radius: 50%;
-                      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                      cursor: pointer;
-                    "></div>
-                  `,
-                  anchor: new window.naver.maps.Point(12, 12),
+                  url: markerIcon,
+                  scaledSize: new window.naver.maps.Size(36, 36),
+                  anchor: new window.naver.maps.Point(18, 36),
                 },
               });
 
