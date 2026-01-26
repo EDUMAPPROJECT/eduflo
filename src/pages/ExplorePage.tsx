@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useRegion } from "@/contexts/RegionContext";
@@ -10,14 +10,14 @@ import GlobalRegionSelector from "@/components/GlobalRegionSelector";
 import AcademyMap from "@/components/AcademyMap";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Search, MapPin, Filter, Heart, Calendar, Clock, Users, Building2, X } from "lucide-react";
+import { Search, Filter, Heart, Calendar, Clock, Users, Building2, X } from "lucide-react";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -44,7 +44,7 @@ interface Seminar {
 const ExplorePage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { selectedRegion, selectedRegionName } = useRegion();
+  const { selectedRegion } = useRegion();
   const prefix = useRoutePrefix();
   const initialTab = searchParams.get("tab") === "seminars" ? "seminars" : "academies";
   
@@ -328,6 +328,7 @@ const ExplorePage = () => {
                       }
                     : null
                 }
+                onAcademyInfoClick={(id) => navigate(`${prefix}/academy/${id}`)}
               />
               <Button
                 variant="secondary"
@@ -344,17 +345,15 @@ const ExplorePage = () => {
             </div>
           </div>
         ) : (
-          <AcademyMap onMapClick={() => setMapExpanded(true)} />
+          <AcademyMap
+            onMapClick={() => setMapExpanded(true)}
+            onAcademyInfoClick={(id) => navigate(`${prefix}/academy/${id}`)}
+          />
         ))}
 
       {/* 검색 결과 Drawer (확대된 지도에서만) */}
       {activeTab === "academies" && mapExpanded && (
-        <Drawer
-          open={searchResultDrawerOpen}
-          onOpenChange={(open) => {
-            if (!open) setSearchResultDrawerOpen(false);
-          }}
-        >
+        <Drawer open={searchResultDrawerOpen} onOpenChange={setSearchResultDrawerOpen}>
           <DrawerContent
             className="max-w-lg mx-auto max-h-[85vh] flex flex-col"
             overlayClassName="bg-transparent pointer-events-none"

@@ -24,21 +24,30 @@ interface AcademyMapProps {
   expanded?: boolean;
   /** 검색 결과 Drawer에서 첫 번째 학원으로 지도 확대 및 마커 강조 시 사용 */
   focusedAcademy?: FocusedAcademy | null;
+  /** 정보창(학원 정보) 클릭 시 상세 페이지로 이동용 콜백 */
+  onAcademyInfoClick?: (academyId: string) => void;
 }
 
 const DEFAULT_MARKER_SIZE = 36;
 const FOCUSED_MARKER_SIZE = 72;
 
-const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null }: AcademyMapProps) => {
+const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null, onAcademyInfoClick }: AcademyMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<{ marker: any; academyId: string }[]>([]);
+  const infoWindowsRef = useRef<{ iw: any; contentEl: HTMLElement }[]>([]);
   const academiesDataRef = useRef<{ latitude: number; longitude: number }[]>([]);
   const onMapClickRef = useRef(onMapClick);
   onMapClickRef.current = onMapClick;
+  const onAcademyInfoClickRef = useRef(onAcademyInfoClick);
+  onAcademyInfoClickRef.current = onAcademyInfoClick;
   const [isLoading, setIsLoading] = useState(true);
   const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasOpenInfoWindow, setHasOpenInfoWindow] = useState(false);
+  const setHasOpenInfoWindowRef = useRef(setHasOpenInfoWindow);
+  setHasOpenInfoWindowRef.current = setHasOpenInfoWindow;
+  const closeAllInfoWindowsRef = useRef<(() => void) | null>(null);
 
   const clientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
 
@@ -69,6 +78,7 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null }: Aca
         });
 
         mapInstanceRef.current = map;
+        const naver = window.naver.maps;
 
         // 학원 데이터 가져오기
         const { data: academies, error: fetchError } = await supabase
@@ -84,7 +94,6 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null }: Aca
         }
 
         if (academies && academies.length > 0) {
-          const naver = window.naver.maps;
           academiesDataRef.current = (academies as Academy[])
             .filter((a) => a.latitude != null && a.longitude != null)
             .map((a) => ({ latitude: a.latitude!, longitude: a.longitude! }));
@@ -103,21 +112,29 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null }: Aca
                 },
               });
 
-              // 마커 클릭 시 정보창 표시
-              const infoWindow = new naver.InfoWindow({
-                content: `
-                  <div style="padding: 12px; min-width: 200px;">
-                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 6px;">${academy.name}</h3>
-                    <p style="font-size: 12px; color: #666; margin: 0;">${academy.address || "주소 정보 없음"}</p>
-                  </div>
-                `,
+              // 마커 클릭 시 정보창 표시 (클릭하면 상세 페이지로 이동)
+              const contentEl = document.createElement("div");
+              contentEl.className = "academy-info-window-content";
+              contentEl.style.cssText = "padding: 12px; min-width: 200px; cursor: pointer;";
+              contentEl.innerHTML = `
+                <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 6px;">${academy.name}</h3>
+                <p style="font-size: 12px; color: #666; margin: 0;">${academy.address || "주소 정보 없음"}</p>
+                <p style="font-size: 11px; color: #2563eb; margin: 6px 0 0;">상세보기 →</p>
+              `;
+              contentEl.addEventListener("click", () => {
+                onAcademyInfoClickRef.current?.(academy.id);
               });
+
+              const infoWindow = new naver.InfoWindow({ content: contentEl });
+              infoWindowsRef.current.push({ iw: infoWindow, contentEl });
 
               naver.Event.addListener(marker, "click", () => {
                 if (infoWindow.getMap()) {
                   infoWindow.close();
+                  setHasOpenInfoWindowRef.current(false);
                 } else {
                   infoWindow.open(map, marker);
+                  setHasOpenInfoWindowRef.current(true);
                 }
               });
 
@@ -125,7 +142,7 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null }: Aca
             }
           });
 
-          // 모든 마커가 보이도록 지도 범위 조정 (포커스 없을 때만, 나중에 포커스 해제 시에도 사용)
+          // 모든 마커가 보이도록 지도 범위 조정
           if (markersRef.current.length > 0) {
             const bounds = new naver.LatLngBounds();
             academiesDataRef.current.forEach(({ latitude, longitude }) => {
@@ -135,12 +152,17 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null }: Aca
           }
         }
 
-        // 지도(마커 제외) 클릭 시 콜백
-        if (onMapClickRef.current) {
-          window.naver.maps.Event.addListener(map, "click", () => {
-            onMapClickRef.current?.();
+        const closeAllInfoWindows = () => {
+          setHasOpenInfoWindowRef.current(false);
+          infoWindowsRef.current.forEach(({ iw }) => {
+            if (iw.getMap()) iw.close();
           });
-        }
+          onMapClickRef.current?.();
+        };
+        closeAllInfoWindowsRef.current = closeAllInfoWindows;
+
+        naver.Event.addListener(map, "click", closeAllInfoWindows);
+        naver.Event.addListener(map, "tap", closeAllInfoWindows);
 
         setMapReady(true);
         setIsLoading(false);
@@ -155,6 +177,11 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null }: Aca
     // Cleanup
     return () => {
       setMapReady(false);
+      closeAllInfoWindowsRef.current = null;
+      infoWindowsRef.current.forEach(({ iw }) => {
+        if (iw.getMap()) iw.close();
+      });
+      infoWindowsRef.current = [];
       markersRef.current.forEach(({ marker }) => marker.setMap(null));
       markersRef.current = [];
       academiesDataRef.current = [];
@@ -191,6 +218,18 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null }: Aca
       });
     }
   }, [focusedAcademy, mapReady]);
+
+  const isClickInsideOpenInfoWindow = (clientX: number, clientY: number) => {
+    const openEntry = infoWindowsRef.current.find(({ iw }) => iw.getMap());
+    if (!openEntry) return false;
+    const r = openEntry.contentEl.getBoundingClientRect();
+    return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
+  };
+
+  const handleCloseOverlayPointer = (clientX: number, clientY: number) => {
+    if (isClickInsideOpenInfoWindow(clientX, clientY)) return;
+    closeAllInfoWindowsRef.current?.();
+  };
 
   if (error) {
     return (
@@ -238,6 +277,17 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null }: Aca
           className={`w-full relative z-0 ${expanded ? "h-full min-h-0" : "h-64"}`}
           style={expanded ? {} : { minHeight: "256px" }}
         />
+        {hasOpenInfoWindow && (
+          <div
+            className="absolute inset-0 z-[100] cursor-default"
+            aria-label="지도 다른 곳 클릭 시 정보창 닫기"
+            onClick={(e) => handleCloseOverlayPointer(e.clientX, e.clientY)}
+            onTouchEnd={(e) => {
+              const t = e.changedTouches?.[0];
+              if (t) handleCloseOverlayPointer(t.clientX, t.clientY);
+            }}
+          />
+        )}
       </div>
     </div>
   );
