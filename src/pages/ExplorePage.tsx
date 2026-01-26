@@ -314,7 +314,21 @@ const ExplorePage = () => {
             style={{ top: aboveMapHeight }}
           >
             <div className="relative w-full h-full">
-              <AcademyMap expanded />
+              <AcademyMap
+                expanded
+                focusedAcademy={
+                  searchResultDrawerOpen &&
+                  filteredAcademies.length > 0 &&
+                  filteredAcademies[0].latitude != null &&
+                  filteredAcademies[0].longitude != null
+                    ? {
+                        id: filteredAcademies[0].id,
+                        latitude: filteredAcademies[0].latitude,
+                        longitude: filteredAcademies[0].longitude,
+                      }
+                    : null
+                }
+              />
               <Button
                 variant="secondary"
                 size="icon"

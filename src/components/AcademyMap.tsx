@@ -13,18 +13,31 @@ interface Academy {
   longitude: number | null;
 }
 
+export interface FocusedAcademy {
+  id: string;
+  latitude: number;
+  longitude: number;
+}
+
 interface AcademyMapProps {
   onMapClick?: () => void;
   expanded?: boolean;
+  /** 검색 결과 Drawer에서 첫 번째 학원으로 지도 확대 및 마커 강조 시 사용 */
+  focusedAcademy?: FocusedAcademy | null;
 }
 
-const AcademyMap = ({ onMapClick, expanded = false }: AcademyMapProps) => {
+const DEFAULT_MARKER_SIZE = 36;
+const FOCUSED_MARKER_SIZE = 72;
+
+const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null }: AcademyMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const markersRef = useRef<{ marker: any; academyId: string }[]>([]);
+  const academiesDataRef = useRef<{ latitude: number; longitude: number }[]>([]);
   const onMapClickRef = useRef(onMapClick);
   onMapClickRef.current = onMapClick;
   const [isLoading, setIsLoading] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const clientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
@@ -71,22 +84,27 @@ const AcademyMap = ({ onMapClick, expanded = false }: AcademyMapProps) => {
         }
 
         if (academies && academies.length > 0) {
-          // 마커 추가
+          const naver = window.naver.maps;
+          academiesDataRef.current = (academies as Academy[])
+            .filter((a) => a.latitude != null && a.longitude != null)
+            .map((a) => ({ latitude: a.latitude!, longitude: a.longitude! }));
+
+          // 마커 추가 (academyId 저장해서 포커스 시 크기 변경에 사용)
           academies.forEach((academy: Academy) => {
             if (academy.latitude && academy.longitude) {
-              const marker = new window.naver.maps.Marker({
-                position: new window.naver.maps.LatLng(academy.latitude, academy.longitude),
+              const marker = new naver.Marker({
+                position: new naver.LatLng(academy.latitude, academy.longitude),
                 map: map,
                 title: academy.name,
                 icon: {
                   url: markerIcon,
-                  scaledSize: new window.naver.maps.Size(36, 36),
-                  anchor: new window.naver.maps.Point(18, 36),
+                  scaledSize: new naver.Size(DEFAULT_MARKER_SIZE, DEFAULT_MARKER_SIZE),
+                  anchor: new naver.Point(DEFAULT_MARKER_SIZE / 2, DEFAULT_MARKER_SIZE),
                 },
               });
 
               // 마커 클릭 시 정보창 표시
-              const infoWindow = new window.naver.maps.InfoWindow({
+              const infoWindow = new naver.InfoWindow({
                 content: `
                   <div style="padding: 12px; min-width: 200px;">
                     <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 6px;">${academy.name}</h3>
@@ -95,7 +113,7 @@ const AcademyMap = ({ onMapClick, expanded = false }: AcademyMapProps) => {
                 `,
               });
 
-              window.naver.maps.Event.addListener(marker, "click", () => {
+              naver.Event.addListener(marker, "click", () => {
                 if (infoWindow.getMap()) {
                   infoWindow.close();
                 } else {
@@ -103,17 +121,15 @@ const AcademyMap = ({ onMapClick, expanded = false }: AcademyMapProps) => {
                 }
               });
 
-              markersRef.current.push(marker);
+              markersRef.current.push({ marker, academyId: academy.id });
             }
           });
 
-          // 모든 마커가 보이도록 지도 범위 조정
+          // 모든 마커가 보이도록 지도 범위 조정 (포커스 없을 때만, 나중에 포커스 해제 시에도 사용)
           if (markersRef.current.length > 0) {
-            const bounds = new window.naver.maps.LatLngBounds();
-            academies.forEach((academy: Academy) => {
-              if (academy.latitude && academy.longitude) {
-                bounds.extend(new window.naver.maps.LatLng(academy.latitude, academy.longitude));
-              }
+            const bounds = new naver.LatLngBounds();
+            academiesDataRef.current.forEach(({ latitude, longitude }) => {
+              bounds.extend(new naver.LatLng(latitude, longitude));
             });
             map.fitBounds(bounds, { padding: 50 });
           }
@@ -126,6 +142,7 @@ const AcademyMap = ({ onMapClick, expanded = false }: AcademyMapProps) => {
           });
         }
 
+        setMapReady(true);
         setIsLoading(false);
       } catch (err: any) {
         setError(err?.message || "지도를 불러오는 중 오류가 발생했습니다.");
@@ -137,10 +154,43 @@ const AcademyMap = ({ onMapClick, expanded = false }: AcademyMapProps) => {
 
     // Cleanup
     return () => {
-      markersRef.current.forEach((marker) => marker.setMap(null));
+      setMapReady(false);
+      markersRef.current.forEach(({ marker }) => marker.setMap(null));
       markersRef.current = [];
+      academiesDataRef.current = [];
     };
   }, [clientId]);
+
+  // 검색 결과 Drawer 첫 번째 학원으로 확대 + 해당 마커 크기 확대
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !mapReady || !window.naver?.maps) return;
+
+    const naver = window.naver.maps;
+
+    if (focusedAcademy) {
+      map.setCenter(new naver.LatLng(focusedAcademy.latitude, focusedAcademy.longitude));
+      map.setZoom(17);
+      markersRef.current.forEach(({ marker, academyId }) => {
+        const isFocused = academyId === focusedAcademy.id;
+        const size = isFocused ? FOCUSED_MARKER_SIZE : DEFAULT_MARKER_SIZE;
+        marker.setIcon({
+          url: markerIcon,
+          scaledSize: new naver.Size(size, size),
+          anchor: new naver.Point(size / 2, size),
+        });
+      });
+    } else {
+      // Drawer 닫혀도 지도 위치/줌은 그대로 두고, 마커 크기만 기본으로 복구
+      markersRef.current.forEach(({ marker }) => {
+        marker.setIcon({
+          url: markerIcon,
+          scaledSize: new naver.Size(DEFAULT_MARKER_SIZE, DEFAULT_MARKER_SIZE),
+          anchor: new naver.Point(DEFAULT_MARKER_SIZE / 2, DEFAULT_MARKER_SIZE),
+        });
+      });
+    }
+  }, [focusedAcademy, mapReady]);
 
   if (error) {
     return (
