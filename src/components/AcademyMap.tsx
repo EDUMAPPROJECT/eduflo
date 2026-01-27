@@ -35,7 +35,7 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null, onAca
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<{ marker: any; academyId: string }[]>([]);
-  const infoWindowsRef = useRef<{ iw: any; contentEl: HTMLElement }[]>([]);
+  const infoWindowsRef = useRef<any[]>([]);
   const academiesDataRef = useRef<{ latitude: number; longitude: number }[]>([]);
   const onMapClickRef = useRef(onMapClick);
   onMapClickRef.current = onMapClick;
@@ -44,10 +44,6 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null, onAca
   const [isLoading, setIsLoading] = useState(true);
   const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasOpenInfoWindow, setHasOpenInfoWindow] = useState(false);
-  const setHasOpenInfoWindowRef = useRef(setHasOpenInfoWindow);
-  setHasOpenInfoWindowRef.current = setHasOpenInfoWindow;
-  const closeAllInfoWindowsRef = useRef<(() => void) | null>(null);
 
   const clientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
 
@@ -119,22 +115,20 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null, onAca
               contentEl.innerHTML = `
                 <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 6px;">${academy.name}</h3>
                 <p style="font-size: 12px; color: #666; margin: 0;">${academy.address || "주소 정보 없음"}</p>
-                <p style="font-size: 11px; color: #2563eb; margin: 6px 0 0;">상세보기 →</p>
+                <p style="font-size: 11px; color: #2563eb; margin: 6px 0 0;">학원 프로필 바로가기 →</p>
               `;
               contentEl.addEventListener("click", () => {
                 onAcademyInfoClickRef.current?.(academy.id);
               });
 
               const infoWindow = new naver.InfoWindow({ content: contentEl });
-              infoWindowsRef.current.push({ iw: infoWindow, contentEl });
+              infoWindowsRef.current.push(infoWindow);
 
               naver.Event.addListener(marker, "click", () => {
                 if (infoWindow.getMap()) {
                   infoWindow.close();
-                  setHasOpenInfoWindowRef.current(false);
                 } else {
                   infoWindow.open(map, marker);
-                  setHasOpenInfoWindowRef.current(true);
                 }
               });
 
@@ -153,13 +147,11 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null, onAca
         }
 
         const closeAllInfoWindows = () => {
-          setHasOpenInfoWindowRef.current(false);
-          infoWindowsRef.current.forEach(({ iw }) => {
+          infoWindowsRef.current.forEach((iw) => {
             if (iw.getMap()) iw.close();
           });
           onMapClickRef.current?.();
         };
-        closeAllInfoWindowsRef.current = closeAllInfoWindows;
 
         naver.Event.addListener(map, "click", closeAllInfoWindows);
         naver.Event.addListener(map, "tap", closeAllInfoWindows);
@@ -177,8 +169,7 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null, onAca
     // Cleanup
     return () => {
       setMapReady(false);
-      closeAllInfoWindowsRef.current = null;
-      infoWindowsRef.current.forEach(({ iw }) => {
+      infoWindowsRef.current.forEach((iw) => {
         if (iw.getMap()) iw.close();
       });
       infoWindowsRef.current = [];
@@ -218,18 +209,6 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null, onAca
       });
     }
   }, [focusedAcademy, mapReady]);
-
-  const isClickInsideOpenInfoWindow = (clientX: number, clientY: number) => {
-    const openEntry = infoWindowsRef.current.find(({ iw }) => iw.getMap());
-    if (!openEntry) return false;
-    const r = openEntry.contentEl.getBoundingClientRect();
-    return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
-  };
-
-  const handleCloseOverlayPointer = (clientX: number, clientY: number) => {
-    if (isClickInsideOpenInfoWindow(clientX, clientY)) return;
-    closeAllInfoWindowsRef.current?.();
-  };
 
   if (error) {
     return (
@@ -277,17 +256,6 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null, onAca
           className={`w-full relative z-0 ${expanded ? "h-full min-h-0" : "h-64"}`}
           style={expanded ? {} : { minHeight: "256px" }}
         />
-        {hasOpenInfoWindow && (
-          <div
-            className="absolute inset-0 z-[100] cursor-default"
-            aria-label="지도 다른 곳 클릭 시 정보창 닫기"
-            onClick={(e) => handleCloseOverlayPointer(e.clientX, e.clientY)}
-            onTouchEnd={(e) => {
-              const t = e.changedTouches?.[0];
-              if (t) handleCloseOverlayPointer(t.clientX, t.clientY);
-            }}
-          />
-        )}
       </div>
     </div>
   );
