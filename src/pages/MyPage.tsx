@@ -217,7 +217,7 @@ const MyPage = () => {
               {userRole === "parent" && (
                 <MenuItemButton 
                   icon={Users} 
-                  label="자녀 연결" 
+                  label="자녀 관리" 
                   onClick={() => navigate("/p/child-connection")} 
                 />
               )}
