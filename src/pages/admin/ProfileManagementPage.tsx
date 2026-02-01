@@ -73,6 +73,18 @@ interface Teacher {
   subject: string | null;
   bio: string | null;
   image_url: string | null;
+  member_id: string | null;
+}
+
+interface AcademyMemberWithProfile {
+  id: string;
+  user_id: string;
+  role: string;
+  grade: string | null;
+  status: string;
+  profile: {
+    user_name: string | null;
+  } | null;
 }
 
 interface CurriculumStep {
@@ -119,6 +131,7 @@ const ProfileManagementPage = () => {
 
   // Teachers & Classes state
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [academyMembers, setAcademyMembers] = useState<AcademyMemberWithProfile[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
 
   // Dialog state
@@ -134,6 +147,7 @@ const ProfileManagementPage = () => {
   const [teacherSubject, setTeacherSubject] = useState("");
   const [teacherBio, setTeacherBio] = useState("");
   const [teacherImage, setTeacherImage] = useState("");
+  const [teacherMemberId, setTeacherMemberId] = useState("");
 
   // Class form
   const [className, setClassName] = useState("");
@@ -240,6 +254,7 @@ const ProfileManagementPage = () => {
           setIsProfileLocked((academyData as any).is_profile_locked || false);
           fetchTeachers(academyData.id);
           fetchClasses(academyData.id);
+          fetchAcademyMembers(academyData.id);
         }
       } else {
         // Fallback: check if user is owner (for backwards compatibility)
@@ -264,6 +279,7 @@ const ProfileManagementPage = () => {
           setIsProfileLocked((ownerData as any).is_profile_locked || false);
           fetchTeachers(ownerData.id);
           fetchClasses(ownerData.id);
+          fetchAcademyMembers(ownerData.id);
         }
       }
     } catch (error) {
@@ -280,6 +296,43 @@ const ProfileManagementPage = () => {
       .eq("academy_id", academyId)
       .order("created_at");
     setTeachers((data as Teacher[]) || []);
+  };
+
+  const fetchAcademyMembers = async (academyId: string) => {
+    try {
+      // Fetch approved academy members
+      const { data: memberData, error } = await supabase
+        .from("academy_members")
+        .select("*")
+        .eq("academy_id", academyId)
+        .eq("status", "approved")
+        .order("created_at");
+
+      if (error) throw error;
+
+      if (memberData && memberData.length > 0) {
+        const userIds = memberData.map(m => m.user_id);
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, user_name")
+          .in("id", userIds);
+
+        const membersWithProfiles = memberData.map(member => ({
+          id: member.id,
+          user_id: member.user_id,
+          role: member.role,
+          grade: (member as any).grade || null,
+          status: member.status,
+          profile: profiles?.find(p => p.id === member.user_id) || null,
+        }));
+
+        setAcademyMembers(membersWithProfiles);
+      } else {
+        setAcademyMembers([]);
+      }
+    } catch (error) {
+      logError("fetch-academy-members", error);
+    }
   };
 
   const fetchClasses = async (academyId: string) => {
@@ -360,6 +413,7 @@ const ProfileManagementPage = () => {
     setTeacherSubject("");
     setTeacherBio("");
     setTeacherImage("");
+    setTeacherMemberId("");
     setEditingTeacher(null);
   };
 
@@ -370,18 +424,57 @@ const ProfileManagementPage = () => {
       setTeacherSubject(teacher.subject || "");
       setTeacherBio(teacher.bio || "");
       setTeacherImage(teacher.image_url || "");
+      setTeacherMemberId(teacher.member_id || "");
     } else {
       resetTeacherForm();
     }
     setIsTeacherDialogOpen(true);
   };
 
+  // Get member display name (name + grade)
+  const getMemberDisplayName = (member: AcademyMemberWithProfile): string => {
+    const name = member.profile?.user_name || "이름 없음";
+    const grade = member.role === "owner" ? "원장" : getGradeLabel(member.grade);
+    return `${name} ${grade}`;
+  };
+
+  const getGradeLabel = (grade: string | null): string => {
+    switch (grade) {
+      case "vice_owner": return "부원장";
+      case "teacher": return "강사";
+      case "admin": return "관리자";
+      default: return "관리자";
+    }
+  };
+
+  // Get teacher display name with grade from linked member
+  const getTeacherDisplayInfo = (teacher: Teacher): { name: string; grade: string } => {
+    if (teacher.member_id) {
+      const member = academyMembers.find(m => m.id === teacher.member_id);
+      if (member) {
+        const name = member.profile?.user_name || teacher.name;
+        const grade = member.role === "owner" ? "원장" : getGradeLabel(member.grade);
+        return { name, grade };
+      }
+    }
+    return { name: teacher.name, grade: "" };
+  };
+
   const handleSaveTeacher = async () => {
     if (!academy) return;
 
+    // Get name from member if linked
+    let finalName = teacherName;
+    if (teacherMemberId) {
+      const member = academyMembers.find(m => m.id === teacherMemberId);
+      if (member?.profile?.user_name) {
+        finalName = member.profile.user_name;
+      }
+    }
+
     // Validate input
     const validation = validateInput(teacherSchema, {
-      name: teacherName,
+      name: finalName,
       subject: teacherSubject || null,
       bio: teacherBio || null,
       image_url: teacherImage || null,
@@ -403,6 +496,7 @@ const ProfileManagementPage = () => {
             subject: validatedData.subject,
             bio: validatedData.bio,
             image_url: validatedData.image_url,
+            member_id: teacherMemberId || null,
           })
           .eq("id", editingTeacher.id);
       } else {
@@ -412,6 +506,7 @@ const ProfileManagementPage = () => {
           subject: validatedData.subject,
           bio: validatedData.bio,
           image_url: validatedData.image_url,
+          member_id: teacherMemberId || null,
         });
       }
 
@@ -964,14 +1059,52 @@ const ProfileManagementPage = () => {
                   강사 추가
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-sm">
+              <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingTeacher ? "강사 수정" : "강사 추가"}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
+                  {/* Link to Academy Member */}
+                  <div className="space-y-2">
+                    <Label>관리자 연동</Label>
+                    <Select 
+                      value={teacherMemberId} 
+                      onValueChange={(value) => {
+                        setTeacherMemberId(value);
+                        // Auto-fill name from member
+                        if (value) {
+                          const member = academyMembers.find(m => m.id === value);
+                          if (member?.profile?.user_name) {
+                            setTeacherName(member.profile.user_name);
+                          }
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="관리자 선택 (선택사항)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">연동 안함</SelectItem>
+                        {academyMembers.map((member) => (
+                          <SelectItem key={member.id} value={member.id}>
+                            {getMemberDisplayName(member)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      관리자와 연동하면 이름과 등급이 자동으로 표시됩니다
+                    </p>
+                  </div>
+
                   <div className="space-y-2">
                     <Label>이름 *</Label>
-                    <Input value={teacherName} onChange={(e) => setTeacherName(e.target.value)} />
+                    <Input 
+                      value={teacherName} 
+                      onChange={(e) => setTeacherName(e.target.value)} 
+                      disabled={!!teacherMemberId}
+                      placeholder={teacherMemberId ? "관리자 이름이 자동 적용됩니다" : "강사 이름"}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>담당 과목</Label>
@@ -1001,37 +1134,53 @@ const ProfileManagementPage = () => {
                 <CardContent className="p-6 text-center">
                   <Users className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">등록된 강사가 없습니다</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    관리자 탭에서 등록된 멤버를 강사로 추가할 수 있습니다
+                  </p>
                 </CardContent>
               </Card>
             ) : (
               <div className="space-y-3">
-                {teachers.map((teacher) => (
-                  <Card key={teacher.id} className="shadow-card">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0">
-                          {teacher.image_url ? (
-                            <img src={teacher.image_url} alt={teacher.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <GraduationCap className="w-6 h-6 text-primary" />
-                          )}
+                {teachers.map((teacher) => {
+                  const displayInfo = getTeacherDisplayInfo(teacher);
+                  return (
+                    <Card key={teacher.id} className="shadow-card">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0">
+                            {teacher.image_url ? (
+                              <img src={teacher.image_url} alt={displayInfo.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <GraduationCap className="w-6 h-6 text-primary" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-medium text-foreground">{displayInfo.name}</h4>
+                              {displayInfo.grade && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {displayInfo.grade}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">{teacher.subject || "과목 미지정"}</p>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => openTeacherDialog(teacher)}>
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteTeacher(teacher.id)}>
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-foreground">{teacher.name}</h4>
-                          <p className="text-xs text-muted-foreground">{teacher.subject || "과목 미지정"}</p>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openTeacherDialog(teacher)}>
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteTeacher(teacher.id)}>
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        {teacher.bio && (
+                          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{teacher.bio}</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </TabsContent>

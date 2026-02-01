@@ -1061,6 +1061,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          member_id: string | null
           name: string
           subject: string | null
           updated_at: string
@@ -1071,6 +1072,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          member_id?: string | null
           name: string
           subject?: string | null
           updated_at?: string
@@ -1081,6 +1083,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          member_id?: string | null
           name?: string
           subject?: string | null
           updated_at?: string
@@ -1091,6 +1094,13 @@ export type Database = {
             columns: ["academy_id"]
             isOneToOne: false
             referencedRelation: "academies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teachers_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "academy_members"
             referencedColumns: ["id"]
           },
         ]
