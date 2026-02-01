@@ -1068,12 +1068,13 @@ const ProfileManagementPage = () => {
                   <div className="space-y-2">
                     <Label>관리자 연동</Label>
                     <Select 
-                      value={teacherMemberId} 
+                      value={teacherMemberId || "none"} 
                       onValueChange={(value) => {
-                        setTeacherMemberId(value);
+                        const newValue = value === "none" ? "" : value;
+                        setTeacherMemberId(newValue);
                         // Auto-fill name from member
-                        if (value) {
-                          const member = academyMembers.find(m => m.id === value);
+                        if (newValue) {
+                          const member = academyMembers.find(m => m.id === newValue);
                           if (member?.profile?.user_name) {
                             setTeacherName(member.profile.user_name);
                           }
@@ -1084,7 +1085,7 @@ const ProfileManagementPage = () => {
                         <SelectValue placeholder="관리자 선택 (선택사항)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">연동 안함</SelectItem>
+                        <SelectItem value="none">연동 안함</SelectItem>
                         {academyMembers.map((member) => (
                           <SelectItem key={member.id} value={member.id}>
                             {getMemberDisplayName(member)}
