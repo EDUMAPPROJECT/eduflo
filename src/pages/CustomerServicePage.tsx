@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import BottomNavigation from "@/components/BottomNavigation";
+import AdminBottomNavigation from "@/components/AdminBottomNavigation";
+import StudentBottomNavigation from "@/components/StudentBottomNavigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,9 +54,14 @@ const faqData = [
 
 const CustomerServicePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [inquirySubject, setInquirySubject] = useState("");
   const [inquiryContent, setInquiryContent] = useState("");
   const [sending, setSending] = useState(false);
+
+  // Determine which navigation to show based on current path
+  const isAdminRoute = location.pathname.startsWith("/admin");
+  const isStudentRoute = location.pathname.startsWith("/s/");
 
   const handleSubmitInquiry = async () => {
     if (!inquirySubject.trim() || !inquiryContent.trim()) {
@@ -183,7 +190,13 @@ const CustomerServicePage = () => {
         </Card>
       </main>
 
-      <BottomNavigation />
+      {isAdminRoute ? (
+        <AdminBottomNavigation />
+      ) : isStudentRoute ? (
+        <StudentBottomNavigation />
+      ) : (
+        <BottomNavigation />
+      )}
     </div>
   );
 };

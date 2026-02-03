@@ -159,6 +159,9 @@ const App = () => {
               <Route path="/admin/super/academies/create" element={<ProtectedAdminRoute><SuperAdminAcademyCreatePage /></ProtectedAdminRoute>} />
               <Route path="/admin/super/academies/:id/edit" element={<ProtectedAdminRoute><SuperAdminAcademyEditPage /></ProtectedAdminRoute>} />
               <Route path="/admin/my" element={<ProtectedAdminRoute><AdminMyPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/my/profile" element={<ProtectedAdminRoute><MyProfilePage /></ProtectedAdminRoute>} />
+              <Route path="/admin/settings" element={<ProtectedAdminRoute><SettingsPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/customer-service" element={<ProtectedAdminRoute><CustomerServicePage /></ProtectedAdminRoute>} />
               <Route path="/admin/members" element={<ProtectedAdminRoute><MemberManagementPage /></ProtectedAdminRoute>} />
               <Route path="/admin/chat-management" element={<ProtectedAdminRoute><ChatManagementPage /></ProtectedAdminRoute>} />
               <Route path="*" element={<NotFound />} />

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,12 +8,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, User } from "lucide-react";
 import { toast } from "sonner";
 import BottomNavigation from "@/components/BottomNavigation";
+import AdminBottomNavigation from "@/components/AdminBottomNavigation";
+import StudentBottomNavigation from "@/components/StudentBottomNavigation";
 
 const MyProfilePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Determine which navigation to show based on current path
+  const isAdminRoute = location.pathname.startsWith("/admin");
+  const isStudentRoute = location.pathname.startsWith("/s/");
   
   const [formData, setFormData] = useState({
     user_name: "",
@@ -178,7 +185,13 @@ const MyProfilePage = () => {
         </Button>
       </main>
 
-      <BottomNavigation />
+      {isAdminRoute ? (
+        <AdminBottomNavigation />
+      ) : isStudentRoute ? (
+        <StudentBottomNavigation />
+      ) : (
+        <BottomNavigation />
+      )}
     </div>
   );
 };
