@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNavigation from "@/components/BottomNavigation";
+import AdminBottomNavigation from "@/components/AdminBottomNavigation";
+import StudentBottomNavigation from "@/components/StudentBottomNavigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -19,10 +21,15 @@ import { toast } from "sonner";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<any>(null);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [marketingEnabled, setMarketingEnabled] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+
+  // Determine which navigation to show based on current path
+  const isAdminRoute = location.pathname.startsWith("/admin");
+  const isStudentRoute = location.pathname.startsWith("/s/");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -158,7 +165,13 @@ const SettingsPage = () => {
         </Card>
       </main>
 
-      <BottomNavigation />
+      {isAdminRoute ? (
+        <AdminBottomNavigation />
+      ) : isStudentRoute ? (
+        <StudentBottomNavigation />
+      ) : (
+        <BottomNavigation />
+      )}
     </div>
   );
 };

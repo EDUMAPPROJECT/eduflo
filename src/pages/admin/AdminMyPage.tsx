@@ -250,7 +250,7 @@ const AdminMyPage = () => {
           {/* Profile Management */}
           <Card
             className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all duration-200"
-            onClick={() => navigate("/my/profile")}
+            onClick={() => navigate("/admin/my/profile")}
           >
             <CardContent className="p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
@@ -268,7 +268,7 @@ const AdminMyPage = () => {
           {/* Settings */}
           <Card
             className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all duration-200"
-            onClick={() => navigate("/settings")}
+            onClick={() => navigate("/admin/settings")}
           >
             <CardContent className="p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
@@ -286,7 +286,7 @@ const AdminMyPage = () => {
           {/* Customer Service */}
           <Card
             className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all duration-200"
-            onClick={() => navigate("/customer-service")}
+            onClick={() => navigate("/admin/customer-service")}
           >
             <CardContent className="p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
