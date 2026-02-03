@@ -50,6 +50,8 @@ import SuperAdminAcademiesPage from "./pages/admin/SuperAdminAcademiesPage";
 import SuperAdminAcademyCreatePage from "./pages/admin/SuperAdminAcademyCreatePage";
 import SuperAdminAcademyEditPage from "./pages/admin/SuperAdminAcademyEditPage";
 import AdminMyPage from "./pages/admin/AdminMyPage";
+import MemberManagementPage from "./pages/admin/MemberManagementPage";
+import ChatManagementPage from "./pages/admin/ChatManagementPage";
 import AcademySetupPage from "./pages/academy/AcademySetupPage";
 import AcademyOnboardingPage from "./pages/academy/AcademyOnboardingPage";
 import AcademyDashboardPage from "./pages/academy/AcademyDashboardPage";
@@ -157,6 +159,8 @@ const App = () => {
               <Route path="/admin/super/academies/create" element={<ProtectedAdminRoute><SuperAdminAcademyCreatePage /></ProtectedAdminRoute>} />
               <Route path="/admin/super/academies/:id/edit" element={<ProtectedAdminRoute><SuperAdminAcademyEditPage /></ProtectedAdminRoute>} />
               <Route path="/admin/my" element={<ProtectedAdminRoute><AdminMyPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/members" element={<ProtectedAdminRoute><MemberManagementPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/chat-management" element={<ProtectedAdminRoute><ChatManagementPage /></ProtectedAdminRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

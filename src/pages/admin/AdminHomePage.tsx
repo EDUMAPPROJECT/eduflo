@@ -183,6 +183,11 @@ const AdminHomePage = () => {
       requiresEditPermission: true
     },
     {
+      icon: Users,
+      label: "학원 멤버 관리",
+      path: "/admin/members"
+    },
+    {
       icon: CalendarCheck,
       label: "상담 예약 관리",
       path: "/admin/consultations"
@@ -196,6 +201,12 @@ const AdminHomePage = () => {
       icon: CalendarDays,
       label: "설명회 관리",
       path: "/admin/seminars"
+    },
+    {
+      icon: MessageSquare,
+      label: "학원 채팅 관리",
+      path: "/admin/chat-management",
+      disabled: true
     }
   ];
 
@@ -296,19 +307,30 @@ const AdminHomePage = () => {
             {/* Quick Actions Section Title */}
             <h3 className="text-sm font-semibold text-muted-foreground mb-3">학원 관리 탭</h3>
             
-            {/* Quick Actions - 2x2 Grid */}
+            {/* Quick Actions - 2x3 Grid */}
             <div className="grid grid-cols-2 gap-4">
               {quickActions.map((action) => (
                 <Card
                   key={action.path}
-                  className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all"
-                  onClick={() => handleQuickActionClick(action.path, action.requiresEditPermission)}
+                  className={`shadow-card border-border transition-all ${
+                    action.disabled 
+                      ? 'opacity-50 cursor-not-allowed' 
+                      : 'cursor-pointer hover:shadow-soft'
+                  }`}
+                  onClick={() => !action.disabled && handleQuickActionClick(action.path, action.requiresEditPermission)}
                 >
                   <CardContent className="p-6 flex flex-col items-center justify-center text-center">
-                    <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center mb-3">
-                      <action.icon className="w-7 h-7 text-primary" />
+                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-3 ${
+                      action.disabled ? 'bg-muted' : 'bg-secondary'
+                    }`}>
+                      <action.icon className={`w-7 h-7 ${action.disabled ? 'text-muted-foreground' : 'text-primary'}`} />
                     </div>
-                    <span className="font-medium text-foreground text-sm">{action.label}</span>
+                    <span className={`font-medium text-sm ${action.disabled ? 'text-muted-foreground' : 'text-foreground'}`}>
+                      {action.label}
+                    </span>
+                    {action.disabled && (
+                      <span className="text-xs text-muted-foreground mt-1">준비 중</span>
+                    )}
                   </CardContent>
                 </Card>
               ))}

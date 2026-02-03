@@ -11,7 +11,6 @@ import { toast } from "sonner";
 import NicknameSettingsDialog from "@/components/NicknameSettingsDialog";
 import { useAcademyMembership } from "@/hooks/useAcademyMembership";
 import { useBusinessVerification } from "@/hooks/useBusinessVerification";
-import AcademyMemberManagement from "@/components/AcademyMemberManagement";
 
 const AdminMyPage = () => {
   const navigate = useNavigate();
@@ -21,7 +20,7 @@ const AdminMyPage = () => {
   const [joinCode, setJoinCode] = useState("");
   const [joining, setJoining] = useState(false);
 
-  const { memberships, loading: membershipLoading, primaryAcademy, joinByCode, isOwner } = useAcademyMembership();
+  const { memberships, loading: membershipLoading, joinByCode } = useAcademyMembership();
   const { isVerified, isPending } = useBusinessVerification();
 
   const hasAcademy = memberships.length > 0;
@@ -242,11 +241,6 @@ const AdminMyPage = () => {
               </Card>
             )}
           </div>
-        )}
-
-        {/* Academy Member Management - Only for academy owners */}
-        {primaryAcademy && isOwner(primaryAcademy.id) && (
-          <AcademyMemberManagement academyId={primaryAcademy.id} />
         )}
 
         {/* Menu Items */}
