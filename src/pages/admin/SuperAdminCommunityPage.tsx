@@ -111,7 +111,7 @@ const SuperAdminCommunityPage = () => {
 
       setPosts((data || []).map(post => ({
         ...post,
-        author: { user_name: post.author_id ? authorsMap[post.author_id] || '운영자' : '운영자' }
+        author: { user_name: post.author_id ? (authorsMap[post.author_id] || null) : null }
       })));
     } catch (error) {
       console.error('Error fetching posts:', error);

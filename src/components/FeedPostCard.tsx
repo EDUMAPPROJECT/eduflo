@@ -97,7 +97,7 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedP
   // Check if this is a super admin post (no academy)
   const isSuperAdminPost = !post.academy_id || !post.academy;
   const displayName = isSuperAdminPost 
-    ? (post.author?.user_name || '관리자') 
+    ? (post.author?.user_name || '운영자') 
     : (post.academy?.name || '학원');
   const displayInitial = displayName.charAt(0);
   const profileImage = isSuperAdminPost ? null : post.academy?.profile_image;

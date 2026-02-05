@@ -415,7 +415,7 @@ const AcademyDetailPage = () => {
       </header>
 
       {/* Hero Image - Use banner_image for hero, fallback to profile_image */}
-      <div className="h-48 bg-gradient-to-br from-primary/20 to-accent/20">
+      <div className="max-w-lg mx-auto h-48 bg-gradient-to-br from-primary/20 to-accent/20">
         {academy.banner_image ? (
           <img
             src={academy.banner_image}

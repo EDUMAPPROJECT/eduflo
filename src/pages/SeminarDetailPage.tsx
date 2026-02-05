@@ -333,7 +333,7 @@ const SeminarDetailPage = () => {
       </header>
 
       {/* Hero Image */}
-      <div className="relative bg-gradient-to-br from-primary/20 via-accent/10 to-secondary/30 flex items-center justify-center">
+      <div className="max-w-lg mx-auto relative bg-gradient-to-br from-primary/20 via-accent/10 to-secondary/30 flex items-center justify-center">
         {seminar.image_url ? (
           <img
             src={seminar.image_url}

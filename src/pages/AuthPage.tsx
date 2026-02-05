@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { logError } from "@/lib/errorLogger";
 import { sendIdTokenToBackend, type AuthRole } from "@/lib/sendIdTokenToBackend";
 import { formatPhoneWithDash, getDigitsOnly } from "@/lib/formatPhone";
+import { supabase } from "@/integrations/supabase/client";
 
 type AuthStep = "login" | "signup";
 
@@ -28,6 +29,43 @@ const AuthPage = () => {
     setLoginShowVerification(false);
     setLoginVerificationCode("");
     confirmationResultRef.current = null;
+  };
+
+  // Navigate based on server-side role from database
+  const navigateByDatabaseRole = async (userId: string) => {
+    try {
+      const { data: roleData, error } = await supabase
+        .from('user_roles')
+        .select('role, is_super_admin')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (error) {
+        logError('role-fetch', error);
+        navigate("/p/home");
+        return;
+      }
+      
+      // If no role found, default to parent
+      if (!roleData) {
+        navigate("/p/home");
+        return;
+      }
+      
+      // Check super admin first
+      if (roleData.is_super_admin) {
+        navigate("/super/home");
+      } else if (roleData.role === "admin") {
+        navigate("/admin/home");
+      } else if (roleData.role === "student") {
+        navigate("/s/home");
+      } else {
+        navigate("/p/home");
+      }
+    } catch (error) {
+      logError('navigate-by-role', error);
+      navigate("/p/home");
+    }
   };
 
 
