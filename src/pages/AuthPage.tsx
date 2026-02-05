@@ -29,13 +29,12 @@ const AuthPage = () => {
     try {
       const { data: roleData, error } = await supabase
         .from('user_roles')
-        .select('role')
+        .select('role, is_super_admin')
         .eq('user_id', userId)
         .maybeSingle();
       
       if (error) {
         logError('role-fetch', error);
-        // Default to parent home if role check fails
         navigate("/p/home");
         return;
       }
@@ -46,7 +45,10 @@ const AuthPage = () => {
         return;
       }
       
-      if (roleData.role === "admin") {
+      // Check super admin first
+      if (roleData.is_super_admin) {
+        navigate("/super/home");
+      } else if (roleData.role === "admin") {
         navigate("/admin/home");
       } else if (roleData.role === "student") {
         navigate("/s/home");

@@ -58,11 +58,20 @@ import AcademySetupPage from "./pages/academy/AcademySetupPage";
 import AcademyOnboardingPage from "./pages/academy/AcademyOnboardingPage";
 import AcademyDashboardPage from "./pages/academy/AcademyDashboardPage";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
+import ProtectedSuperAdminRoute from "./components/ProtectedSuperAdminRoute";
 import NotFound from "./pages/NotFound";
 
 // Student Pages
 import StudentHomePage from "./pages/student/StudentHomePage";
 import StudentMyPage from "./pages/student/StudentMyPage";
+
+// Super Admin Pages
+import SuperAdminHomePage from "./pages/super/SuperAdminHomePage";
+import SuperAdminCenterPage from "./pages/super/SuperAdminCenterPage";
+import SuperAdminCustomerServicePage from "./pages/super/SuperAdminCustomerServicePage";
+import SuperAdminExplorePage from "./pages/super/SuperAdminExplorePage";
+import SuperAdminCommunityViewPage from "./pages/super/SuperAdminCommunityViewPage";
+import SuperAdminMyPage from "./pages/super/SuperAdminMyPage";
 
 // Shared Pages
 import AnnouncementsPage from "./pages/AnnouncementsPage";
@@ -168,6 +177,27 @@ const App = () => {
               <Route path="/admin/customer-service" element={<ProtectedAdminRoute><CustomerServicePage /></ProtectedAdminRoute>} />
               <Route path="/admin/members" element={<ProtectedAdminRoute><MemberManagementPage /></ProtectedAdminRoute>} />
               <Route path="/admin/chat-management" element={<ProtectedAdminRoute><ChatManagementPage /></ProtectedAdminRoute>} />
+              
+              {/* Super Admin Routes (/super prefix) */}
+              <Route path="/super/home" element={<ProtectedSuperAdminRoute><SuperAdminHomePage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/center" element={<ProtectedSuperAdminRoute><SuperAdminCenterPage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/customer-service" element={<ProtectedSuperAdminRoute><SuperAdminCustomerServicePage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/explore" element={<ProtectedSuperAdminRoute><SuperAdminExplorePage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/community" element={<ProtectedSuperAdminRoute><SuperAdminCommunityViewPage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/my" element={<ProtectedSuperAdminRoute><SuperAdminMyPage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/my/profile" element={<ProtectedSuperAdminRoute><MyProfilePage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/settings" element={<ProtectedSuperAdminRoute><SettingsPage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/academy/:id" element={<ProtectedSuperAdminRoute><AcademyDetailPage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/seminar/:id" element={<ProtectedSuperAdminRoute><SeminarDetailPage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/verification-review" element={<ProtectedSuperAdminRoute><VerificationReviewPage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/users" element={<ProtectedSuperAdminRoute><SuperAdminUsersPage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/posts/create" element={<ProtectedSuperAdminRoute><SuperAdminCommunityPage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/seminars/manage" element={<ProtectedSuperAdminRoute><SuperAdminSeminarPage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/academies" element={<ProtectedSuperAdminRoute><SuperAdminAcademiesPage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/academies/create" element={<ProtectedSuperAdminRoute><SuperAdminAcademyCreatePage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/academies/:id/edit" element={<ProtectedSuperAdminRoute><SuperAdminAcademyEditPage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/posts" element={<ProtectedSuperAdminRoute><SuperAdminPostsPage /></ProtectedSuperAdminRoute>} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
