@@ -49,6 +49,8 @@ import SuperAdminPostsPage from "./pages/admin/SuperAdminPostsPage";
 import SuperAdminAcademiesPage from "./pages/admin/SuperAdminAcademiesPage";
 import SuperAdminAcademyCreatePage from "./pages/admin/SuperAdminAcademyCreatePage";
 import SuperAdminAcademyEditPage from "./pages/admin/SuperAdminAcademyEditPage";
+import SuperAdminCommunityPage from "./pages/admin/SuperAdminCommunityPage";
+import SuperAdminSeminarPage from "./pages/admin/SuperAdminSeminarPage";
 import AdminMyPage from "./pages/admin/AdminMyPage";
 import MemberManagementPage from "./pages/admin/MemberManagementPage";
 import ChatManagementPage from "./pages/admin/ChatManagementPage";
@@ -158,6 +160,8 @@ const App = () => {
               <Route path="/admin/super/academies" element={<ProtectedAdminRoute><SuperAdminAcademiesPage /></ProtectedAdminRoute>} />
               <Route path="/admin/super/academies/create" element={<ProtectedAdminRoute><SuperAdminAcademyCreatePage /></ProtectedAdminRoute>} />
               <Route path="/admin/super/academies/:id/edit" element={<ProtectedAdminRoute><SuperAdminAcademyEditPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/super/community" element={<ProtectedAdminRoute><SuperAdminCommunityPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/super/seminars" element={<ProtectedAdminRoute><SuperAdminSeminarPage /></ProtectedAdminRoute>} />
               <Route path="/admin/my" element={<ProtectedAdminRoute><AdminMyPage /></ProtectedAdminRoute>} />
               <Route path="/admin/my/profile" element={<ProtectedAdminRoute><MyProfilePage /></ProtectedAdminRoute>} />
               <Route path="/admin/settings" element={<ProtectedAdminRoute><SettingsPage /></ProtectedAdminRoute>} />

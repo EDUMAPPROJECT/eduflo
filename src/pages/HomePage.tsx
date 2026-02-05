@@ -21,8 +21,12 @@ interface Seminar {
   title: string;
   date: string;
   image_url: string | null;
+  academy_id?: string | null;
   academy?: {
     name: string;
+  } | null;
+  author?: {
+    user_name: string | null;
   } | null;
 }
 
@@ -58,43 +62,59 @@ const HomePage = () => {
     try {
       setLoadingSeminars(true);
 
-      // Calculate 3 weeks from now
       const threeWeeksFromNow = new Date();
       threeWeeksFromNow.setDate(threeWeeksFromNow.getDate() + 21);
 
-      const { data, error } = await supabase
+      // Fetch academy seminars
+      const { data: academySeminars } = await supabase
         .from("seminars")
         .select(`
-          id,
-          title,
-          date,
-          image_url,
-          location,
-          academy:academies!inner (
-            name,
-            target_regions
-          )
+          id, title, date, image_url, academy_id, author_id,
+          academy:academies!inner (name, target_regions)
         `)
         .eq("status", "recruiting")
         .gte("date", new Date().toISOString())
         .lte("date", threeWeeksFromNow.toISOString())
-        .order("date", { ascending: true });
+        .not("academy_id", "is", null);
 
-      if (error) throw error;
+      // Fetch super admin seminars
+      const { data: superAdminSeminars } = await supabase
+        .from("seminars")
+        .select("id, title, date, image_url, academy_id, author_id")
+        .eq("status", "recruiting")
+        .gte("date", new Date().toISOString())
+        .lte("date", threeWeeksFromNow.toISOString())
+        .is("academy_id", null);
 
-      // Filter by target_regions
-      const filtered = (data || []).filter((seminar: any) => {
-        const regions = seminar.academy?.target_regions || [];
-        return regions.includes(regionId);
+      // Filter academy seminars by region
+      const filteredAcademy = (academySeminars || []).filter((s: any) => {
+        return s.academy?.target_regions?.includes(regionId);
       });
 
-      setSeminars(filtered.map((s: any) => ({
-        id: s.id,
-        title: s.title,
-        date: s.date,
-        image_url: s.image_url,
-        academy: s.academy ? { name: s.academy.name } : null,
-      })));
+      // Get author names for super admin seminars
+      let superAdminWithAuthors: any[] = [];
+      if (superAdminSeminars && superAdminSeminars.length > 0) {
+        const authorIds = [...new Set(superAdminSeminars.filter(s => s.author_id).map(s => s.author_id))];
+        let authorsMap: Record<string, string> = {};
+        if (authorIds.length > 0) {
+          const { data: profiles } = await supabase.from("profiles").select("id, user_name").in("id", authorIds);
+          if (profiles) authorsMap = profiles.reduce((acc, p) => { acc[p.id] = p.user_name || '관리자'; return acc; }, {} as Record<string, string>);
+        }
+        superAdminWithAuthors = superAdminSeminars.map(s => ({
+          ...s, author: { user_name: s.author_id ? authorsMap[s.author_id] || '관리자' : '관리자' }
+        }));
+      }
+
+      const allSeminars = [...filteredAcademy, ...superAdminWithAuthors]
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .map((s: any) => ({
+          id: s.id, title: s.title, date: s.date, image_url: s.image_url,
+          academy_id: s.academy_id,
+          academy: s.academy ? { name: s.academy.name } : null,
+          author: s.author || null,
+        }));
+
+      setSeminars(allSeminars);
     } catch (error) {
       console.error("Error fetching seminars:", error);
     } finally {

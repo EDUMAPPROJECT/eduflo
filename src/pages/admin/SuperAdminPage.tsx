@@ -124,11 +124,18 @@ const SuperAdminPage = () => {
       color: "text-chart-2"
     },
     {
-      title: "게시물 관리",
-      description: "모든 커뮤니티 게시물을 관리합니다",
+      title: "커뮤니티 게시물",
+      description: "슈퍼관리자 명의로 소식을 등록합니다",
       icon: MessageSquare,
-      path: "/admin/super/posts",
+      path: "/admin/super/community",
       color: "text-chart-4"
+    },
+    {
+      title: "설명회 관리",
+      description: "슈퍼관리자 명의로 설명회를 등록합니다",
+      icon: Calendar,
+      path: "/admin/super/seminars",
+      color: "text-chart-1"
     },
     {
       title: "등록 학원 관리",
@@ -136,6 +143,13 @@ const SuperAdminPage = () => {
       icon: Building2,
       path: "/admin/super/academies",
       color: "text-chart-5"
+    },
+    {
+      title: "전체 게시물 관리",
+      description: "모든 커뮤니티 게시물을 관리합니다",
+      icon: MessageSquare,
+      path: "/admin/super/posts",
+      color: "text-muted-foreground"
     },
     {
       title: "시스템 설정",

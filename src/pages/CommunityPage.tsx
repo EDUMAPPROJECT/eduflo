@@ -26,7 +26,7 @@ import {
 
 interface FeedPost {
   id: string;
-  academy_id: string;
+  academy_id: string | null;
   type: 'notice' | 'seminar' | 'event' | 'admission';
   title: string;
   body: string | null;
@@ -35,11 +35,15 @@ interface FeedPost {
   like_count: number;
   created_at: string;
   seminar_id?: string | null;
-  academy: {
+  author_id?: string | null;
+  academy?: {
     id: string;
     name: string;
     profile_image: string | null;
-  };
+  } | null;
+  author?: {
+    user_name: string | null;
+  } | null;
   is_liked?: boolean;
 }
 
@@ -75,32 +79,83 @@ const CommunityPage = () => {
 
       const academyIds = academiesInRegion?.map(a => a.id) || [];
 
-      if (academyIds.length === 0) {
-        return { data: [], hasMore: false };
-      }
-
-      let query = supabase
+      // Build queries for both academy posts and super admin posts
+      let academyQuery = supabase
         .from("feed_posts")
         .select(`
           *,
-          academy:academies!inner(id, name, profile_image, target_regions)
+          academy:academies(id, name, profile_image, target_regions)
         `)
-        .in("academy_id", academyIds)
-        .order("created_at", { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-      if (activeFilter !== 'all' && activeFilter !== 'bookmarked') {
-        query = query.eq("type", activeFilter);
+        .not("academy_id", "is", null);
+      
+      if (academyIds.length > 0) {
+        academyQuery = academyQuery.in("academy_id", academyIds);
+      } else {
+        // If no academies in region, only get super admin posts
+        academyQuery = academyQuery.eq("academy_id", "00000000-0000-0000-0000-000000000000"); // impossible match
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
+      // Super admin posts (no academy_id)
+      let superAdminQuery = supabase
+        .from("feed_posts")
+        .select("*")
+        .is("academy_id", null);
 
-      let posts = (data || []) as unknown as FeedPost[];
+      if (activeFilter !== 'all' && activeFilter !== 'bookmarked') {
+        academyQuery = academyQuery.eq("type", activeFilter);
+        superAdminQuery = superAdminQuery.eq("type", activeFilter);
+      }
+
+      const [academyResult, superAdminResult] = await Promise.all([
+        academyQuery.order("created_at", { ascending: false }),
+        superAdminQuery.order("created_at", { ascending: false })
+      ]);
+
+      let allPosts: FeedPost[] = [];
+      
+      // Add academy posts
+      if (academyResult.data) {
+        allPosts = [...(academyResult.data as unknown as FeedPost[])];
+      }
+
+      // Add super admin posts with author info
+      if (superAdminResult.data && superAdminResult.data.length > 0) {
+        const authorIds = [...new Set(superAdminResult.data.filter(p => p.author_id).map(p => p.author_id))];
+        let authorsMap: Record<string, string> = {};
+        
+        if (authorIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, user_name")
+            .in("id", authorIds);
+          
+          if (profiles) {
+            authorsMap = profiles.reduce((acc, p) => {
+              acc[p.id] = p.user_name || '관리자';
+              return acc;
+            }, {} as Record<string, string>);
+          }
+        }
+
+        const superAdminPosts = superAdminResult.data.map(post => ({
+          ...post,
+          academy: null,
+          author: { user_name: post.author_id ? authorsMap[post.author_id] || '관리자' : '관리자' }
+        })) as unknown as FeedPost[];
+
+        allPosts = [...allPosts, ...superAdminPosts];
+      }
+
+      // Sort by created_at
+      allPosts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      // Paginate
+      const paginatedPosts = allPosts.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
       // Filter by bookmarked academies if needed
+      let posts = paginatedPosts;
       if (activeFilter === 'bookmarked') {
-        posts = posts.filter(post => bookmarkedAcademies.includes(post.academy_id));
+        posts = posts.filter(post => post.academy_id && bookmarkedAcademies.includes(post.academy_id));
       }
 
       // Check which posts the user has liked
