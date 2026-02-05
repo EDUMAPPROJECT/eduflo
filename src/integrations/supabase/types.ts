@@ -601,7 +601,7 @@ export type Database = {
       }
       feed_posts: {
         Row: {
-          academy_id: string
+          academy_id: string | null
           author_id: string | null
           body: string | null
           created_at: string
@@ -615,7 +615,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          academy_id: string
+          academy_id?: string | null
           author_id?: string | null
           body?: string | null
           created_at?: string
@@ -629,7 +629,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          academy_id?: string
+          academy_id?: string | null
           author_id?: string | null
           body?: string | null
           created_at?: string
@@ -970,7 +970,7 @@ export type Database = {
       }
       seminars: {
         Row: {
-          academy_id: string
+          academy_id: string | null
           author_id: string | null
           capacity: number | null
           created_at: string
@@ -986,7 +986,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          academy_id: string
+          academy_id?: string | null
           author_id?: string | null
           capacity?: number | null
           created_at?: string
@@ -1002,7 +1002,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          academy_id?: string
+          academy_id?: string | null
           author_id?: string | null
           capacity?: number | null
           created_at?: string
