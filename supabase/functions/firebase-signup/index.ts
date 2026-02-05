@@ -112,10 +112,29 @@ serve(async (req: Request) => {
       console.error("user_roles upsert:", roleError);
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+    // 클라이언트에서 Supabase 세션을 만들 수 있도록 매직 링크 토큰 생성
+    const email = newUser.user.email ?? "";
+    let token_hash: string | undefined;
+    if (email) {
+      const { data: linkData } = await supabase.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+      });
+      const actionLink = linkData?.properties?.action_link;
+      if (actionLink) {
+        try {
+          const url = new URL(actionLink);
+          token_hash = url.searchParams.get("token") ?? undefined;
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true, ...(token_hash && { token_hash }) }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    );
   } catch (e) {
     console.error("firebase-signup error:", e);
     return new Response(

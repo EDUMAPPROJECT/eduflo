@@ -129,13 +129,30 @@ const AuthPage = () => {
       const userCredential = await confirmation.confirm(loginVerificationCode.trim());
       const user = userCredential.user;
       const idToken = await user.getIdToken();
-      const { ok, error: backendError } = await sendIdTokenToBackend(idToken, selectedRole, false);
+      const { ok, error: backendError, token_hash } = await sendIdTokenToBackend(idToken, selectedRole, false);
       if (!ok) {
         toast.error(backendError ?? "서버 인증 처리에 실패했습니다");
         return;
       }
+      if (token_hash) {
+        const { data, error: otpError } = await supabase.auth.verifyOtp({
+          token_hash,
+          type: "magiclink",
+        });
+        if (otpError) {
+          logError("supabase-verify-otp", otpError);
+          toast.error("세션 설정에 실패했습니다. 다시 로그인해주세요.");
+          return;
+        }
+        if (data?.session?.user?.id) {
+          await navigateByDatabaseRole(data.session.user.id);
+        } else {
+          navigate("/p/home");
+        }
+      } else {
+        navigate("/p/home");
+      }
       toast.success("로그인되었습니다");
-      navigate("/p/home");
     } catch (error: unknown) {
       logError("firebase-phone-confirm", error);
       const msg = error && typeof error === "object" && "message" in error ? String((error as { message: string }).message) : "인증에 실패했습니다";
@@ -156,13 +173,30 @@ const AuthPage = () => {
       const userCredential = await confirmation.confirm(loginVerificationCode.trim());
       const user = userCredential.user;
       const idToken = await user.getIdToken();
-      const { ok, error: backendError } = await sendIdTokenToBackend(idToken, selectedRole, true);
+      const { ok, error: backendError, token_hash } = await sendIdTokenToBackend(idToken, selectedRole, true);
       if (!ok) {
         toast.error(backendError ?? "회원가입 처리에 실패했습니다");
         return;
       }
+      if (token_hash) {
+        const { data, error: otpError } = await supabase.auth.verifyOtp({
+          token_hash,
+          type: "magiclink",
+        });
+        if (otpError) {
+          logError("supabase-verify-otp", otpError);
+          toast.error("세션 설정에 실패했습니다. 로그인해주세요.");
+          return;
+        }
+        if (data?.session?.user?.id) {
+          await navigateByDatabaseRole(data.session.user.id);
+        } else {
+          navigate("/p/home");
+        }
+      } else {
+        navigate("/p/home");
+      }
       toast.success("회원가입이 완료되었습니다");
-      navigate("/p/home");
     } catch (error: unknown) {
       logError("firebase-signup-confirm", error);
       const msg = error && typeof error === "object" && "message" in error ? String((error as { message: string }).message) : "인증에 실패했습니다";
