@@ -187,7 +187,10 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null, onAca
     const naver = window.naver.maps;
 
     if (focusedAcademy) {
-      map.setCenter(new naver.LatLng(focusedAcademy.latitude, focusedAcademy.longitude));
+      // 지도 중심을 위로 이동시켜서 마커가 지도 상단에 오도록 조정
+      // 위도를 약간 증가시키면 지도에서 위로 이동 (약 0.003도 = 약 300m 위로)
+      const offsetLatitude = focusedAcademy.latitude - 0.001;
+      map.setCenter(new naver.LatLng(offsetLatitude, focusedAcademy.longitude));
       map.setZoom(17);
       markersRef.current.forEach(({ marker, academyId }) => {
         const isFocused = academyId === focusedAcademy.id;

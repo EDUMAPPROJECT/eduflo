@@ -63,8 +63,8 @@ const AcademyDetailMap = ({
           title: name,
           icon: {
             url: markerIcon,
-            scaledSize: new window.naver.maps.Size(36, 36),
-            anchor: new window.naver.maps.Point(18, 36),
+            scaledSize: new window.naver.maps.Size(54, 54),
+            anchor: new window.naver.maps.Point(27, 54),
           },
         });
 

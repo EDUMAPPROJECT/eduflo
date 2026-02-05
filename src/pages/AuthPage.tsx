@@ -1,180 +1,120 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { firebaseAuth } from "@/integrations/firebase/client";
+import { signInWithPhoneNumber, RecaptchaVerifier, type ConfirmationResult } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Logo from "@/components/Logo";
-import { Mail, Lock, ArrowRight, CheckCircle, Eye, EyeOff } from "lucide-react";
+import { Lock, ArrowRight, Phone } from "lucide-react";
 import { toast } from "sonner";
-import { logError, getUserFriendlyMessage } from "@/lib/errorLogger";
+import { logError } from "@/lib/errorLogger";
+import { sendIdTokenToBackend, type AuthRole } from "@/lib/sendIdTokenToBackend";
+import { formatPhoneWithDash, getDigitsOnly } from "@/lib/formatPhone";
 
-type AuthStep = "login" | "signup" | "welcome";
+type AuthStep = "login" | "signup";
 
 const AuthPage = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [step, setStep] = useState<AuthStep>("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isNewUser, setIsNewUser] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<"parent" | "admin" | "student">(
-    (searchParams.get("role") as "parent" | "admin" | "student") || "parent"
-  );
-  const [showPassword, setShowPassword] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<AuthRole>("parent");
+  const [loginPhone, setLoginPhone] = useState("");
+  const [loginShowVerification, setLoginShowVerification] = useState(false);
+  const [loginVerificationCode, setLoginVerificationCode] = useState("");
+  const confirmationResultRef = useRef<ConfirmationResult | null>(null);
+  const recaptchaContainerRef = useRef<HTMLDivElement>(null);
 
-  // Navigate based on server-side role from database
-  const navigateByDatabaseRole = async (userId: string) => {
-    try {
-      const { data: roleData, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      if (error) {
-        logError('role-fetch', error);
-        // Default to parent home if role check fails
-        navigate("/p/home");
-        return;
-      }
-      
-      // If no role found, default to parent
-      if (!roleData) {
-        navigate("/p/home");
-        return;
-      }
-      
-      if (roleData.role === "admin") {
-        navigate("/admin/home");
-      } else if (roleData.role === "student") {
-        navigate("/s/home");
-      } else {
-        navigate("/p/home");
-      }
-    } catch (error) {
-      logError('navigate-by-role', error);
-      navigate("/p/home");
-    }
+  const resetVerificationState = () => {
+    setLoginShowVerification(false);
+    setLoginVerificationCode("");
+    confirmationResultRef.current = null;
   };
 
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user && step !== "welcome") {
-          if (event === "SIGNED_IN" && isNewUser) {
-            setStep("welcome");
-          } else if (event === "SIGNED_IN") {
-            await navigateByDatabaseRole(session.user.id);
-          }
-        }
-      }
-    );
-
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user && step === "login") {
-        await navigateByDatabaseRole(session.user.id);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate, step, isNewUser]);
-
-
-  const handleLogin = async () => {
-    if (!email || !password) {
-      toast.error("이메일과 비밀번호를 입력해주세요");
+  const handleLoginRequestCode = async () => {
+    if (!loginPhone.trim()) {
+      toast.error("휴대폰 번호를 입력해주세요");
       return;
     }
-
+    const container = recaptchaContainerRef.current;
+    if (!container) {
+      toast.error("인증 준비에 실패했습니다. 새로고침 후 다시 시도해주세요.");
+      return;
+    }
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const digits = getDigitsOnly(loginPhone.trim());
+      const phone = digits.startsWith("82") ? `+${digits}` : `+82${digits.replace(/^0/, "")}`;
+      container.innerHTML = "";
+      const verifier = new RecaptchaVerifier(firebaseAuth, container, {
+        size: "invisible",
       });
+      const result = await signInWithPhoneNumber(firebaseAuth, phone, verifier);
+      confirmationResultRef.current = result;
+      setLoginShowVerification(true);
+      toast.success("인증번호가 발송되었습니다. SMS를 확인해주세요.");
+    } catch (error: unknown) {
+      logError("firebase-phone-request", error);
+      const msg = error && typeof error === "object" && "message" in error ? String((error as { message: string }).message) : "인증번호 발송에 실패했습니다";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      if (error) {
-        toast.error(getUserFriendlyMessage(error, "로그인에 실패했습니다"));
+  const handleLoginConfirm = async () => {
+    const confirmation = confirmationResultRef.current;
+    if (!confirmation || !loginVerificationCode.trim()) {
+      toast.error("인증번호를 입력해주세요");
+      return;
+    }
+    setLoading(true);
+    try {
+      const userCredential = await confirmation.confirm(loginVerificationCode.trim());
+      const user = userCredential.user;
+      const idToken = await user.getIdToken();
+      const { ok, error: backendError } = await sendIdTokenToBackend(idToken, selectedRole, false);
+      if (!ok) {
+        toast.error(backendError ?? "서버 인증 처리에 실패했습니다");
         return;
       }
-
       toast.success("로그인되었습니다");
-      if (data.user) {
-        await navigateByDatabaseRole(data.user.id);
-      }
+      navigate("/p/home");
     } catch (error: unknown) {
-      logError('login', error);
-      toast.error("로그인에 실패했습니다");
+      logError("firebase-phone-confirm", error);
+      const msg = error && typeof error === "object" && "message" in error ? String((error as { message: string }).message) : "인증에 실패했습니다";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignup = async () => {
-    if (!email || !password) {
-      toast.error("이메일과 비밀번호를 입력해주세요");
+  const handleSignupConfirm = async () => {
+    const confirmation = confirmationResultRef.current;
+    if (!confirmation || !loginVerificationCode.trim()) {
+      toast.error("인증번호를 입력해주세요");
       return;
     }
-
-    if (password.length < 6) {
-      toast.error("비밀번호는 6자 이상이어야 합니다");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      toast.error("비밀번호가 일치하지 않습니다");
-      return;
-    }
-
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            role: selectedRole,
-          },
-          emailRedirectTo: `${window.location.origin}/auth`,
-        },
-      });
-
-      if (error) {
-        if (error.message.includes("User already registered")) {
-          toast.error("이미 가입된 이메일입니다");
-        } else {
-          toast.error(error.message);
-        }
+      const userCredential = await confirmation.confirm(loginVerificationCode.trim());
+      const user = userCredential.user;
+      const idToken = await user.getIdToken();
+      const { ok, error: backendError } = await sendIdTokenToBackend(idToken, selectedRole, true);
+      if (!ok) {
+        toast.error(backendError ?? "회원가입 처리에 실패했습니다");
         return;
       }
-
-      // Auto-confirmed signup
-      if (data.session) {
-        setIsNewUser(true);
-        setStep("welcome");
-        toast.success("회원가입이 완료되었습니다");
-      }
+      toast.success("회원가입이 완료되었습니다");
+      navigate("/p/home");
     } catch (error: unknown) {
-      logError('signup', error);
-      toast.error("회원가입에 실패했습니다");
+      logError("firebase-signup-confirm", error);
+      const msg = error && typeof error === "object" && "message" in error ? String((error as { message: string }).message) : "인증에 실패했습니다";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
-
-
-  const handleContinue = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      await navigateByDatabaseRole(session.user.id);
-    } else {
-      navigate("/p/home");
-    }
-  };
-
 
   return (
     <div className="min-h-screen gradient-hero flex flex-col">
@@ -184,19 +124,17 @@ const AuthPage = () => {
           <Logo size="lg" />
         </div>
 
-        {(step === "login" || step === "signup") && (
-          <div className="w-full max-w-sm animate-fade-up">
-            <h2 className="text-xl font-semibold text-foreground text-center mb-2">
-              {step === "login" ? "로그인" : "회원가입"}
-            </h2>
-            <p className="text-muted-foreground text-sm text-center mb-8">
-              {step === "login" 
-                ? "이메일로 로그인하세요" 
-                : "새 계정을 만들어주세요"}
-            </p>
+        <div className="w-full max-w-sm animate-fade-up">
+          <h2 className="text-xl font-semibold text-foreground text-center mb-2">
+            {step === "login" ? "로그인" : "회원가입"}
+          </h2>
+          <p className="text-muted-foreground text-sm text-center mb-6">
+            {step === "login"
+              ? "휴대폰 번호로 로그인하세요"
+              : "가입 유형을 선택한 뒤 휴대폰 인증을 진행해주세요"}
+          </p>
 
-            {/* Role Selection */}
-            <div className="grid grid-cols-3 gap-2 mb-6">
+          <div className="grid grid-cols-3 gap-2 mb-6">
               <Button
                 variant={selectedRole === "parent" ? "default" : "outline"}
                 className="h-12 text-sm px-2"
@@ -220,118 +158,96 @@ const AuthPage = () => {
               </Button>
             </div>
 
-            <div className="space-y-4">
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  type="email"
-                  placeholder="이메일 주소"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-12 h-14 text-lg"
-                />
-              </div>
-
+          <div className="space-y-4">
+            <div ref={recaptchaContainerRef} id="firebase-recaptcha" className="sr-only" aria-hidden />
+            <div className="relative">
+              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                type="tel"
+                placeholder="휴대폰 번호"
+                value={loginPhone}
+                onChange={(e) => setLoginPhone(formatPhoneWithDash(e.target.value))}
+                className="pl-12 h-14 text-lg"
+                disabled={loginShowVerification}
+              />
+            </div>
+            {loginShowVerification && (
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="비밀번호"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-12 pr-12 h-14 text-lg"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="SMS 인증 코드"
+                  value={loginVerificationCode}
+                  onChange={(e) => setLoginVerificationCode(e.target.value)}
+                  className="pl-12 h-14 text-lg"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5 text-muted-foreground" />
-                  ) : (
-                    <Eye className="w-5 h-5 text-muted-foreground" />
-                  )}
-                </button>
               </div>
+            )}
 
-              {step === "signup" && (
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="비밀번호 확인"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-12 h-14 text-lg"
-                  />
-                </div>
-              )}
-
+            {!loginShowVerification ? (
               <Button
-                onClick={step === "login" ? handleLogin : handleSignup}
+                onClick={handleLoginRequestCode}
                 disabled={loading}
                 className="w-full h-14 text-base"
                 size="xl"
               >
-                {loading 
-                  ? "처리 중..." 
-                  : step === "login" 
-                    ? "로그인" 
-                    : "가입하기"}
+                {loading ? "발송 중..." : "인증번호 받기"}
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
-            </div>
-
-            <div className="mt-6 text-center">
-              {step === "login" ? (
-                <p className="text-sm text-muted-foreground">
-                  계정이 없으신가요?{" "}
-                  <button
-                    onClick={() => setStep("signup")}
-                    className="text-primary font-medium hover:underline"
-                  >
-                    회원가입
-                  </button>
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  이미 계정이 있으신가요?{" "}
-                  <button
-                    onClick={() => setStep("login")}
-                    className="text-primary font-medium hover:underline"
-                  >
-                    로그인
-                  </button>
-                </p>
-              )}
-            </div>
+            ) : step === "login" ? (
+              <Button
+                onClick={handleLoginConfirm}
+                disabled={loading}
+                className="w-full h-14 text-base"
+                size="xl"
+              >
+                {loading ? "처리 중..." : "로그인"}
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSignupConfirm}
+                disabled={loading}
+                className="w-full h-14 text-base"
+                size="xl"
+              >
+                {loading ? "처리 중..." : "가입하기"}
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            )}
           </div>
-        )}
 
-
-        {step === "welcome" && (
-          <div className="w-full max-w-sm animate-fade-up text-center">
-            <div className="w-20 h-20 rounded-full gradient-primary flex items-center justify-center mx-auto mb-6 shadow-soft">
-              <CheckCircle className="w-10 h-10 text-primary-foreground" />
-            </div>
-            
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              에듀플로에 오신 것을 환영합니다!
-            </h2>
-            <p className="text-muted-foreground mb-8">
-              이제 우리 동네 학원을 쉽게 찾아보세요
-            </p>
-
-            <Button
-              onClick={handleContinue}
-              className="w-full h-14 text-base"
-              size="xl"
-            >
-              시작하기
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
+          <div className="mt-6 text-center">
+            {step === "login" ? (
+              <p className="text-sm text-muted-foreground">
+                계정이 없으신가요?{" "}
+                <button
+                  onClick={() => {
+                    setStep("signup");
+                    resetVerificationState();
+                  }}
+                  className="text-primary font-medium hover:underline"
+                >
+                  회원가입
+                </button>
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                이미 계정이 있으신가요?{" "}
+                <button
+                  onClick={() => {
+                    setStep("login");
+                    resetVerificationState();
+                  }}
+                  className="text-primary font-medium hover:underline"
+                >
+                  로그인
+                </button>
+              </p>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Footer */}
