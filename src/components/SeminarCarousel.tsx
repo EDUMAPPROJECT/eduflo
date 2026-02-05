@@ -11,8 +11,12 @@ interface Seminar {
   title: string;
   date: string;
   image_url: string | null;
+  academy_id?: string | null;
   academy?: {
     name: string;
+  } | null;
+  author?: {
+    user_name: string | null;
   } | null;
 }
 
@@ -114,7 +118,9 @@ const SeminarCarousel = ({ seminars, loading }: SeminarCarouselProps) => {
               {/* Content */}
               <div className="p-3">
                 <p className="text-xs text-muted-foreground mb-1 truncate">
-                  {seminar.academy?.name || "학원"}
+                  {seminar.academy_id && seminar.academy 
+                    ? seminar.academy.name 
+                    : (seminar.author?.user_name || "관리자")}
                 </p>
                 <h4 className="font-medium text-foreground text-sm line-clamp-2 leading-tight mb-2">
                   {seminar.title}

@@ -12,7 +12,7 @@ import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 
 interface FeedPost {
   id: string;
-  academy_id: string;
+  academy_id: string | null;
   type: 'notice' | 'seminar' | 'event' | 'admission';
   title: string;
   body: string | null;
@@ -20,11 +20,15 @@ interface FeedPost {
   like_count: number;
   created_at: string;
   seminar_id?: string | null;
-  academy: {
+  author_id?: string | null;
+  academy?: {
     id: string;
     name: string;
     profile_image: string | null;
-  };
+  } | null;
+  author?: {
+    user_name: string | null;
+  } | null;
   is_liked?: boolean;
 }
 
@@ -90,33 +94,41 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedP
     }
   };
 
+  // Check if this is a super admin post (no academy)
+  const isSuperAdminPost = !post.academy_id || !post.academy;
+  const displayName = isSuperAdminPost 
+    ? (post.author?.user_name || '관리자') 
+    : (post.academy?.name || '학원');
+  const displayInitial = displayName.charAt(0);
+  const profileImage = isSuperAdminPost ? null : post.academy?.profile_image;
+
   return (
     <Card className="overflow-hidden border-border">
       {/* Header */}
       <div 
-        className="flex items-center gap-3 p-4 cursor-pointer hover:bg-secondary/50 transition-colors"
-        onClick={() => onAcademyClick(post.academy.id)}
+        className={`flex items-center gap-3 p-4 ${!isSuperAdminPost ? 'cursor-pointer hover:bg-secondary/50' : ''} transition-colors`}
+        onClick={() => !isSuperAdminPost && post.academy && onAcademyClick(post.academy.id)}
       >
-        <div className="w-10 h-10 rounded-full bg-secondary overflow-hidden shrink-0">
-          {post.academy.profile_image ? (
+        <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 ${isSuperAdminPost ? 'bg-primary/20' : 'bg-secondary'}`}>
+          {profileImage ? (
             <img
-              src={post.academy.profile_image}
-              alt={post.academy.name}
+              src={profileImage}
+              alt={displayName}
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-primary font-bold">
-              {post.academy.name.charAt(0)}
+            <div className={`w-full h-full flex items-center justify-center font-bold ${isSuperAdminPost ? 'text-primary' : 'text-primary'}`}>
+              {displayInitial}
             </div>
           )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm text-foreground truncate">
-              {post.academy.name}
+              {displayName}
             </span>
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary shrink-0">
-              학원작성
+            <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 shrink-0 ${isSuperAdminPost ? 'bg-amber-500/20 text-amber-600' : 'bg-primary/10 text-primary'}`}>
+              {isSuperAdminPost ? '관리자' : '학원'}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">

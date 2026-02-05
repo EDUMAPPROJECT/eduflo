@@ -23,7 +23,7 @@ import { toast } from "sonner";
 
 interface FeedPost {
   id: string;
-  academy_id: string;
+  academy_id: string | null;
   type: 'notice' | 'seminar' | 'event' | 'admission';
   title: string;
   body: string | null;
@@ -31,11 +31,15 @@ interface FeedPost {
   like_count: number;
   created_at: string;
   seminar_id?: string | null;
-  academy: {
+  author_id?: string | null;
+  academy?: {
     id: string;
     name: string;
     profile_image: string | null;
-  };
+  } | null;
+  author?: {
+    user_name: string | null;
+  } | null;
   is_liked?: boolean;
 }
 
@@ -78,13 +82,21 @@ const FeedPostDetailSheet = ({
       if (!post) return;
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        const { data: academy } = await supabase
-          .from("academies")
-          .select("id")
-          .eq("id", post.academy_id)
-          .eq("owner_id", session.user.id)
-          .maybeSingle();
-        setIsOwner(!!academy);
+        // Check if user is the author (for super admin posts)
+        if (post.author_id === session.user.id) {
+          setIsOwner(true);
+          return;
+        }
+        // Check if user is academy owner
+        if (post.academy_id) {
+          const { data: academy } = await supabase
+            .from("academies")
+            .select("id")
+            .eq("id", post.academy_id)
+            .eq("owner_id", session.user.id)
+            .maybeSingle();
+          setIsOwner(!!academy);
+        }
       }
     };
     checkOwnership();
@@ -158,7 +170,16 @@ const FeedPostDetailSheet = ({
     }
   };
 
+  // Check if this is a super admin post
+  const isSuperAdminPost = !post.academy_id || !post.academy;
+  const displayName = isSuperAdminPost 
+    ? (post.author?.user_name || '관리자') 
+    : (post.academy?.name || '학원');
+  const displayInitial = displayName.charAt(0);
+  const profileImage = isSuperAdminPost ? null : post.academy?.profile_image;
+
   const handleAcademyClick = () => {
+    if (isSuperAdminPost || !post.academy) return;
     onClose();
     onAcademyClick(post.academy.id);
   };
@@ -179,24 +200,29 @@ const FeedPostDetailSheet = ({
             <SheetHeader className="p-4">
               <div className="flex items-center justify-between">
                 <div 
-                  className="flex items-center gap-3 cursor-pointer"
+                  className={`flex items-center gap-3 ${!isSuperAdminPost ? 'cursor-pointer' : ''}`}
                   onClick={handleAcademyClick}
                 >
-                  <div className="w-10 h-10 rounded-full bg-secondary overflow-hidden shrink-0">
-                    {post.academy.profile_image ? (
+                  <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 ${isSuperAdminPost ? 'bg-primary/20' : 'bg-secondary'}`}>
+                    {profileImage ? (
                       <img
-                        src={post.academy.profile_image}
-                        alt={post.academy.name}
+                        src={profileImage}
+                        alt={displayName}
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-primary font-bold">
-                        {post.academy.name.charAt(0)}
+                        {displayInitial}
                       </div>
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">{post.academy.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">{displayName}</p>
+                      {isSuperAdminPost && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600">관리자</span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {format(new Date(post.created_at), "yyyy년 M월 d일 HH:mm", { locale: ko })}
                     </p>
