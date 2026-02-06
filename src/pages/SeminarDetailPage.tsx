@@ -335,36 +335,46 @@ const SeminarDetailPage = () => {
 
       {/* Hero Image(s) */}
       {(() => {
-        // Parse image URLs
+        // Parse image URLs with improved logic
         let imageUrls: string[] = [];
         if (seminar.image_url) {
-          try {
-            const parsed = JSON.parse(seminar.image_url);
-            imageUrls = Array.isArray(parsed) ? parsed : [seminar.image_url];
-          } catch {
+          // Check if it's already a valid URL
+          if (seminar.image_url.startsWith('http://') || seminar.image_url.startsWith('https://')) {
             imageUrls = [seminar.image_url];
+          } else {
+            try {
+              const parsed = JSON.parse(seminar.image_url);
+              imageUrls = Array.isArray(parsed) ? parsed : [seminar.image_url];
+            } catch {
+              imageUrls = [seminar.image_url];
+            }
           }
         }
 
         if (imageUrls.length > 1) {
           return (
             <div className="max-w-lg mx-auto relative">
-              <ScrollArea className="w-full whitespace-nowrap">
-                <div className="flex gap-2 p-2">
-                  {imageUrls.map((url, idx) => (
-                    <div key={idx} className="relative shrink-0 w-[85%] first:ml-2 last:mr-2">
-                      <div className="bg-gradient-to-br from-primary/20 via-accent/10 to-secondary/30 rounded-xl overflow-hidden">
-                        <img
-                          src={url}
-                          alt={`${seminar.title} - ${idx + 1}`}
-                          className="w-full h-auto max-h-[70vh] object-contain"
-                        />
-                      </div>
+              {/* Horizontal scroll with snap */}
+              <div 
+                className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+                style={{ scrollSnapType: 'x mandatory' }}
+              >
+                {imageUrls.map((url, idx) => (
+                  <div 
+                    key={idx} 
+                    className="shrink-0 w-full snap-center px-4"
+                    style={{ scrollSnapAlign: 'center' }}
+                  >
+                    <div className="bg-gradient-to-br from-primary/20 via-accent/10 to-secondary/30 rounded-xl overflow-hidden">
+                      <img
+                        src={url}
+                        alt={`${seminar.title} - ${idx + 1}`}
+                        className="w-full h-auto max-h-[70vh] object-contain"
+                      />
                     </div>
-                  ))}
-                </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
+                  </div>
+                ))}
+              </div>
               
               {/* Image Counter */}
               <div className="absolute bottom-4 right-4 bg-card/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium text-foreground">

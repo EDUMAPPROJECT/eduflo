@@ -114,13 +114,21 @@ const SeminarFeedCard = ({
   // Parse image URL - could be JSON array or single URL
   const getFirstImageUrl = (): string | null => {
     if (!imageUrl) return null;
+    
+    // First, check if it's already a valid URL (not JSON)
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+    
     try {
       const parsed = JSON.parse(imageUrl);
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed[0];
       }
-      return imageUrl;
+      // If parsed but not array, return original
+      return typeof parsed === 'string' ? parsed : imageUrl;
     } catch {
+      // Not JSON, return as-is
       return imageUrl;
     }
   };
