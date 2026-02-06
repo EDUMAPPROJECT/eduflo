@@ -22,6 +22,7 @@ function buildSchema(fields: SurveyField[]) {
   const shape: Record<string, z.ZodTypeAny> = {};
 
   for (const field of fields) {
+    if (field.type === 'static_text') continue; // no validation needed
     switch (field.type) {
       case 'text':
         if (field.required) {
@@ -51,6 +52,7 @@ function buildSchema(fields: SurveyField[]) {
 function getDefaults(fields: SurveyField[]): Record<string, any> {
   const defaults: Record<string, any> = {};
   for (const field of fields) {
+    if (field.type === 'static_text') continue;
     switch (field.type) {
       case 'text':
         defaults[field.id] = '';
@@ -91,6 +93,7 @@ const SurveyFormRenderer = ({ fields, onSubmit, submitting, renderOnly, formRef 
           const values = getValues();
           const answers: Record<string, SurveyAnswer> = {};
           for (const field of fields) {
+            if (field.type === 'static_text') continue;
             answers[field.id] = { fieldId: field.id, value: values[field.id] };
           }
           onSubmit(answers);
@@ -101,6 +104,7 @@ const SurveyFormRenderer = ({ fields, onSubmit, submitting, renderOnly, formRef 
         const values = getValues();
         const answers: Record<string, SurveyAnswer> = {};
         for (const field of fields) {
+          if (field.type === 'static_text') continue;
           answers[field.id] = { fieldId: field.id, value: values[field.id] };
         }
         return answers;
@@ -111,6 +115,7 @@ const SurveyFormRenderer = ({ fields, onSubmit, submitting, renderOnly, formRef 
   const onFormSubmit = (data: any) => {
     const answers: Record<string, SurveyAnswer> = {};
     for (const field of fields) {
+      if (field.type === 'static_text') continue;
       answers[field.id] = { fieldId: field.id, value: data[field.id] };
     }
     onSubmit(answers);
@@ -163,7 +168,7 @@ const SurveyFormRenderer = ({ fields, onSubmit, submitting, renderOnly, formRef 
                 )}
                 {field.required && <span className="text-destructive ml-1">*</span>}
               </Label>
-              <p className="text-xs text-muted-foreground">복수 선택 가능</p>
+              
               <Controller
                 name={field.id}
                 control={control}
@@ -242,6 +247,17 @@ const SurveyFormRenderer = ({ fields, onSubmit, submitting, renderOnly, formRef 
                 <p className="text-xs text-destructive">{(errors[field.id] as any)?.message}</p>
               )}
             </>
+          )}
+
+          {/* Static text field */}
+          {field.type === 'static_text' && (
+            <div className="text-sm text-muted-foreground whitespace-pre-wrap py-1">
+              {field.label.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+                part.startsWith('**') && part.endsWith('**')
+                  ? <strong key={i} className="text-foreground">{part.slice(2, -2)}</strong>
+                  : part
+              )}
+            </div>
           )}
         </div>
       ))}

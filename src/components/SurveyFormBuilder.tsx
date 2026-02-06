@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, X, GripVertical, FileText, ListChecks, ShieldCheck } from "lucide-react";
+import { Plus, X, GripVertical, FileText, ListChecks, ShieldCheck, Type } from "lucide-react";
 import { toast } from "sonner";
 import type { SurveyField, SurveyFieldType } from "@/types/surveyField";
 
@@ -28,12 +28,14 @@ const fieldTypeLabels: Record<SurveyFieldType, string> = {
   text: '주관식',
   multiple_choice: '객관식 (복수선택)',
   consent: '필수 동의',
+  static_text: '안내 텍스트',
 };
 
 const fieldTypeIcons: Record<SurveyFieldType, React.ReactNode> = {
   text: <FileText className="w-4 h-4" />,
   multiple_choice: <ListChecks className="w-4 h-4" />,
   consent: <ShieldCheck className="w-4 h-4" />,
+  static_text: <Type className="w-4 h-4" />,
 };
 
 const SurveyFormBuilder = ({ fields, onChange, maxFields = 20 }: SurveyFormBuilderProps) => {
@@ -52,6 +54,7 @@ const SurveyFormBuilder = ({ fields, onChange, maxFields = 20 }: SurveyFormBuild
       required: type === 'consent',
       ...(type === 'multiple_choice' ? { options: ['', ''] } : {}),
       ...(type === 'consent' ? { consentText: '', consentLink: '' } : {}),
+      ...(type === 'static_text' ? { required: false } : {}),
     };
 
     onChange([...fields, newField]);
@@ -94,7 +97,7 @@ const SurveyFormBuilder = ({ fields, onChange, maxFields = 20 }: SurveyFormBuild
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-semibold">설문 항목 (최대 {maxFields}개)</Label>
         <span className="text-xs text-muted-foreground">{fields.length}/{maxFields}</span>
@@ -239,6 +242,22 @@ const SurveyFormBuilder = ({ fields, onChange, maxFields = 20 }: SurveyFormBuild
                 </p>
               </>
             )}
+            {/* Static text field */}
+            {field.type === 'static_text' && (
+              <div className="space-y-1">
+                <Label className="text-xs">안내 텍스트</Label>
+                <Textarea
+                  placeholder="예: 아래 내용을 확인 후 신청해주세요"
+                  value={field.label}
+                  onChange={(e) => updateField(field.id, { label: e.target.value })}
+                  rows={3}
+                  maxLength={500}
+                />
+                <p className="text-xs text-muted-foreground">
+                  ※ 입력란 없이 안내 문구만 표시됩니다. **텍스트**로 볼드 처리 가능
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       ))}
@@ -277,6 +296,17 @@ const SurveyFormBuilder = ({ fields, onChange, maxFields = 20 }: SurveyFormBuild
         >
           <ShieldCheck className="w-3 h-3" />
           동의 항목 추가
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 text-xs gap-1"
+          onClick={() => addField('static_text')}
+          disabled={fields.length >= maxFields}
+        >
+          <Type className="w-3 h-3" />
+          안내 텍스트 추가
         </Button>
       </div>
     </div>

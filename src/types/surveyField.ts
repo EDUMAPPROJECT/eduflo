@@ -1,4 +1,4 @@
-export type SurveyFieldType = 'text' | 'multiple_choice' | 'consent';
+export type SurveyFieldType = 'text' | 'multiple_choice' | 'consent' | 'static_text';
 
 export interface SurveyField {
   id: string;
