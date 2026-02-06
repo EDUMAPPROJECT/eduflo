@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import ImageCarouselWithIndicators from "@/components/ImageCarouselWithIndicators";
 import {
   Dialog,
   DialogContent,
@@ -353,69 +353,15 @@ const SeminarDetailPage = () => {
 
         if (imageUrls.length > 1) {
           return (
-            <div className="max-w-lg mx-auto relative">
-              {/* Horizontal scroll with snap */}
-              <div 
-                className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
-                style={{ scrollSnapType: 'x mandatory' }}
-              >
-                {imageUrls.map((url, idx) => (
-                  <div 
-                    key={idx} 
-                    className="shrink-0 w-full snap-center px-4"
-                    style={{ scrollSnapAlign: 'center' }}
-                  >
-                    <div className="bg-gradient-to-br from-primary/20 via-accent/10 to-secondary/30 rounded-xl overflow-hidden">
-                      <img
-                        src={url}
-                        alt={`${seminar.title} - ${idx + 1}`}
-                        className="w-full h-auto max-h-[70vh] object-contain"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Image Counter */}
-              <div className="absolute bottom-4 right-4 bg-card/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium text-foreground">
-                {imageUrls.length}장
-              </div>
-              
-              {/* D-Day Badge */}
-              {dDay && (
-                <div className="absolute top-6 right-6">
-                  <Badge
-                    className={`${
-                      dDay === "D-Day" || isUrgent
-                        ? "bg-destructive text-destructive-foreground animate-pulse"
-                        : "bg-card/90 text-foreground"
-                    } px-4 py-1.5 text-sm font-bold shadow-lg backdrop-blur-sm`}
-                  >
-                    {dDay}
-                  </Badge>
-                </div>
-              )}
-
-              {/* Status Badge */}
-              <div className="absolute top-6 left-6">
-                <Badge
-                  className={`${
-                    seminar.status === "recruiting"
-                      ? isUrgent
-                        ? "bg-destructive text-destructive-foreground"
-                        : "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
-                  } px-4 py-1.5 text-sm font-semibold shadow-lg`}
-                >
-                  {seminar.status === "recruiting" ? (isUrgent ? "마감임박" : "모집중") : "마감"}
-                </Badge>
-              </div>
-            </div>
+            <ImageCarouselWithIndicators 
+              imageUrls={imageUrls} 
+              title={seminar.title} 
+            />
           );
         } else {
           // Single or no image
           return (
-            <div className="max-w-lg mx-auto relative bg-gradient-to-br from-primary/20 via-accent/10 to-secondary/30 flex items-center justify-center">
+            <div className="max-w-lg mx-auto bg-gradient-to-br from-primary/20 via-accent/10 to-secondary/30 flex items-center justify-center">
               {imageUrls.length === 1 ? (
                 <img
                   src={imageUrls[0]}
@@ -430,36 +376,6 @@ const SeminarDetailPage = () => {
                   <p className="text-sm text-muted-foreground font-medium">설명회 포스터</p>
                 </div>
               )}
-
-              {/* D-Day Badge */}
-              {dDay && (
-                <div className="absolute top-4 right-4">
-                  <Badge
-                    className={`${
-                      dDay === "D-Day" || isUrgent
-                        ? "bg-destructive text-destructive-foreground animate-pulse"
-                        : "bg-card/90 text-foreground"
-                    } px-4 py-1.5 text-sm font-bold shadow-lg backdrop-blur-sm`}
-                  >
-                    {dDay}
-                  </Badge>
-                </div>
-              )}
-
-              {/* Status Badge */}
-              <div className="absolute top-4 left-4">
-                <Badge
-                  className={`${
-                    seminar.status === "recruiting"
-                      ? isUrgent
-                        ? "bg-destructive text-destructive-foreground"
-                        : "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
-                  } px-4 py-1.5 text-sm font-semibold shadow-lg`}
-                >
-                  {seminar.status === "recruiting" ? (isUrgent ? "마감임박" : "모집중") : "마감"}
-                </Badge>
-              </div>
             </div>
           );
         }
@@ -493,9 +409,35 @@ const SeminarDetailPage = () => {
         )}
 
         {/* Title */}
-        <h1 className="text-2xl font-bold text-foreground mb-4 leading-tight">
+        <h1 className="text-2xl font-bold text-foreground mb-3 leading-tight">
           {seminar.title}
         </h1>
+
+        {/* Status & D-Day Badges - moved from image */}
+        <div className="flex items-center gap-2 mb-4">
+          <Badge
+            className={`${
+              seminar.status === "recruiting"
+                ? isUrgent
+                  ? "bg-destructive text-destructive-foreground"
+                  : "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
+            } px-3 py-1 text-xs font-semibold`}
+          >
+            {seminar.status === "recruiting" ? (isUrgent ? "마감임박" : "모집중") : "마감"}
+          </Badge>
+          {dDay && (
+            <Badge
+              className={`${
+                dDay === "D-Day" || isUrgent
+                  ? "bg-destructive/20 text-destructive border border-destructive/30"
+                  : "bg-secondary text-secondary-foreground"
+              } px-3 py-1 text-xs font-bold`}
+            >
+              {dDay}
+            </Badge>
+          )}
+        </div>
 
         {/* Tags */}
         {tags.length > 0 && (

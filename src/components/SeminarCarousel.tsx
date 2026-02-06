@@ -84,6 +84,28 @@ const SeminarCarousel = ({ seminars, loading }: SeminarCarouselProps) => {
           const dDay = getDDay(seminar.date);
           const isUrgent = dDay === "D-Day" || (dDay.startsWith("D-") && parseInt(dDay.slice(2)) <= 3);
 
+          // Parse image URL - could be JSON array or single URL
+          const getFirstImageUrl = (): string | null => {
+            if (!seminar.image_url) return null;
+            
+            // First, check if it's already a valid URL (not JSON)
+            if (seminar.image_url.startsWith('http://') || seminar.image_url.startsWith('https://')) {
+              return seminar.image_url;
+            }
+            
+            try {
+              const parsed = JSON.parse(seminar.image_url);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed[0];
+              }
+              return typeof parsed === 'string' ? parsed : seminar.image_url;
+            } catch {
+              return seminar.image_url;
+            }
+          };
+
+          const thumbnailUrl = getFirstImageUrl();
+
           return (
             <Card
               key={seminar.id}
@@ -92,9 +114,9 @@ const SeminarCarousel = ({ seminars, loading }: SeminarCarouselProps) => {
             >
               {/* Thumbnail */}
               <div className="relative aspect-square bg-muted">
-                {seminar.image_url ? (
+                {thumbnailUrl ? (
                   <img
-                    src={seminar.image_url}
+                    src={thumbnailUrl}
                     alt={seminar.title}
                     className="w-full h-full object-cover"
                   />
