@@ -38,6 +38,7 @@ import {
 import { toast } from "sonner";
 import { logError } from "@/lib/errorLogger";
 import { seminarApplicationSchema, validateInput } from "@/lib/validation";
+import LoginRequiredDialog from "@/components/LoginRequiredDialog";
 
 interface Seminar {
   id: string;
@@ -75,6 +76,7 @@ const SeminarDetailPage = () => {
   const [hasApplied, setHasApplied] = useState(false);
   const [myApplication, setMyApplication] = useState<any>(null);
   const [isLiked, setIsLiked] = useState(false);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
 
   // Form state
   const [studentName, setStudentName] = useState("");
@@ -170,8 +172,7 @@ const SeminarDetailPage = () => {
 
   const handleApply = async () => {
     if (!user) {
-      toast.error("로그인이 필요합니다. 로그인 페이지로 이동합니다.");
-      navigate("/auth");
+      setShowLoginDialog(true);
       return;
     }
 
@@ -551,8 +552,7 @@ const SeminarDetailPage = () => {
               disabled={seminar.status === "closed" || remainingSpots <= 0}
               onClick={() => {
                 if (!user) {
-                  toast.error("로그인이 필요합니다. 로그인 페이지로 이동합니다.");
-                  navigate("/auth");
+                  setShowLoginDialog(true);
                   return;
                 }
                 setIsDialogOpen(true);
@@ -656,6 +656,7 @@ const SeminarDetailPage = () => {
           </div>
         </DialogContent>
       </Dialog>
+      <LoginRequiredDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
     </div>
   );
 };

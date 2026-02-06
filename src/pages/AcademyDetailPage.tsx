@@ -8,6 +8,7 @@ import Logo from "@/components/Logo";
 import BottomNavigation from "@/components/BottomNavigation";
 import AcademyNewsTab from "@/components/AcademyNewsTab";
 import ConsultationReservationDialog from "@/components/ConsultationReservationDialog";
+import LoginRequiredDialog from "@/components/LoginRequiredDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -182,13 +183,13 @@ const AcademyDetailPage = () => {
     classInfo: ClassInfo | null;
   }>({ isOpen: false, classInfo: null });
   const [selectedChildForEnroll, setSelectedChildForEnroll] = useState<string | null>(null);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
 
   // Removed old consultation form state - using new ConsultationReservationDialog
 
   const handleStartChat = async () => {
     if (!user) {
-      toast.error("로그인이 필요합니다");
-      navigate("/auth");
+      setShowLoginDialog(true);
       return;
     }
 
@@ -922,14 +923,7 @@ const AcademyDetailPage = () => {
           <Button
             variant="outline"
             className="flex-1 h-11 text-sm gap-1.5"
-            onClick={() => {
-              if (!user) {
-                toast.error("로그인이 필요합니다. 로그인 페이지로 이동합니다.");
-                navigate("/auth");
-                return;
-              }
-              handleStartChat();
-            }}
+            onClick={handleStartChat}
             disabled={chatLoading}
           >
             <MessageCircle className="w-4 h-4" />
@@ -939,8 +933,7 @@ const AcademyDetailPage = () => {
             className="flex-1 h-11 text-sm"
             onClick={() => {
               if (!user) {
-                toast.error("로그인이 필요합니다. 로그인 페이지로 이동합니다.");
-                navigate("/auth");
+                setShowLoginDialog(true);
                 return;
               }
               setIsDialogOpen(true);
@@ -961,6 +954,7 @@ const AcademyDetailPage = () => {
         />
       )}
 
+      <LoginRequiredDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
       <BottomNavigation />
     </div>
   );
