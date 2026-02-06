@@ -985,6 +985,7 @@ export type Database = {
           location: string | null
           status: Database["public"]["Enums"]["seminar_status"]
           subject: string | null
+          survey_fields: Json | null
           target_grade: string | null
           title: string
           updated_at: string
@@ -1002,6 +1003,7 @@ export type Database = {
           location?: string | null
           status?: Database["public"]["Enums"]["seminar_status"]
           subject?: string | null
+          survey_fields?: Json | null
           target_grade?: string | null
           title: string
           updated_at?: string
@@ -1019,6 +1021,7 @@ export type Database = {
           location?: string | null
           status?: Database["public"]["Enums"]["seminar_status"]
           subject?: string | null
+          survey_fields?: Json | null
           target_grade?: string | null
           title?: string
           updated_at?: string

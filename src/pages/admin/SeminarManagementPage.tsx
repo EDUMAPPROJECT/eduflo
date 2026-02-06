@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
+import SurveyFormBuilder from "@/components/SurveyFormBuilder";
 import MultiImageUpload from "@/components/MultiImageUpload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,8 +44,8 @@ import {
   Pencil,
   Trash2,
   X,
-  HelpCircle,
 } from "lucide-react";
+import type { SurveyField } from "@/types/surveyField";
 import AddressSearch from "@/components/AddressSearch";
 import { toast } from "sonner";
 
@@ -105,7 +106,7 @@ const SeminarManagementPage = () => {
   const [subject, setSubject] = useState("");
   const [targetGrade, setTargetGrade] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [customQuestions, setCustomQuestions] = useState<string[]>([]);
+  const [surveyFields, setSurveyFields] = useState<SurveyField[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -227,7 +228,7 @@ const SeminarManagementPage = () => {
     setSubject("");
     setTargetGrade("");
     setImageUrls([]);
-    setCustomQuestions([]);
+    setSurveyFields([]);
     setEditingSeminar(null);
   };
 
@@ -255,31 +256,15 @@ const SeminarManagementPage = () => {
     } catch {
       setImageUrls(seminar.image_url ? [seminar.image_url] : []);
     }
-    setCustomQuestions(seminar.custom_questions || []);
+    // Load survey_fields from seminar (cast from Json)
+    const rawFields = (seminar as any).survey_fields;
+    setSurveyFields(Array.isArray(rawFields) ? rawFields : []);
     setIsDialogOpen(true);
   };
 
   const openCreateDialog = () => {
     resetForm();
     setIsDialogOpen(true);
-  };
-
-  const handleAddQuestion = () => {
-    if (customQuestions.length >= 20) {
-      toast.error('질문은 최대 20개까지 추가할 수 있습니다');
-      return;
-    }
-    setCustomQuestions([...customQuestions, '']);
-  };
-
-  const handleQuestionChange = (index: number, value: string) => {
-    const updated = [...customQuestions];
-    updated[index] = value;
-    setCustomQuestions(updated);
-  };
-
-  const handleRemoveQuestion = (index: number) => {
-    setCustomQuestions(customQuestions.filter((_, i) => i !== index));
   };
 
   const handleSaveSeminar = async () => {
@@ -297,8 +282,8 @@ const SeminarManagementPage = () => {
     try {
       const dateTime = new Date(`${date}T${hour}:${minute}`).toISOString();
 
-      // Filter out empty questions
-      const validQuestions = customQuestions.filter(q => q.trim());
+      // Filter survey fields with labels
+      const validFields = surveyFields.filter(f => f.label?.trim() || f.consentText?.trim());
 
       const seminarData = {
         title,
@@ -309,7 +294,7 @@ const SeminarManagementPage = () => {
         subject: subject || null,
         target_grade: targetGrade || null,
         image_url: imageUrls.length > 0 ? JSON.stringify(imageUrls) : null,
-        custom_questions: validQuestions.length > 0 ? validQuestions : null,
+        survey_fields: (validFields.length > 0 ? validFields : null) as any,
       };
 
       if (editingSeminar) {
@@ -653,47 +638,13 @@ const SeminarManagementPage = () => {
               />
             </div>
 
-            {/* Custom Questions Section */}
-            <div className="space-y-3 pt-2 border-t border-border">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-2">
-                  <HelpCircle className="w-4 h-4" />
-                  추가 질문 (최대 20개)
-                </Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddQuestion}
-                  disabled={customQuestions.length >= 20}
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  추가
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                학부모가 신청 시 답변해야 할 질문을 추가할 수 있습니다. **텍스트**로 볼드체를 적용할 수 있습니다.
-              </p>
-              {customQuestions.map((question, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <Textarea
-                    placeholder={`질문 ${index + 1}`}
-                    value={question}
-                    onChange={(e) => handleQuestionChange(index, e.target.value)}
-                    maxLength={200}
-                    rows={2}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveQuestion(index)}
-                    className="shrink-0 text-destructive hover:text-destructive mt-1"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
+            {/* Survey Fields Section */}
+            <div className="pt-2 border-t border-border">
+              <SurveyFormBuilder
+                fields={surveyFields}
+                onChange={setSurveyFields}
+                maxFields={20}
+              />
             </div>
 
             <Button

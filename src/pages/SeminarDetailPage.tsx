@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import type { SurveyField, SurveyAnswer } from "@/types/surveyField";
 import { supabase } from "@/integrations/supabase/client";
 import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import { toast } from "sonner";
 import { logError } from "@/lib/errorLogger";
 import { seminarApplicationSchema, validateInput } from "@/lib/validation";
 import LoginRequiredDialog from "@/components/LoginRequiredDialog";
+import SurveyFormRenderer from "@/components/SurveyFormRenderer";
 
 interface Seminar {
   id: string;
@@ -84,6 +86,7 @@ const SeminarDetailPage = () => {
   const [attendeeCount, setAttendeeCount] = useState(1);
   const [message, setMessage] = useState("");
   const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({});
+  const surveyFormRef = useRef<{ triggerSubmit: () => void; isValid: () => boolean; getAnswers: () => Record<string, SurveyAnswer> } | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -190,6 +193,18 @@ const SeminarDetailPage = () => {
     }
 
     const validatedData = (validation as { success: true; data: { student_name: string; student_grade?: string | null; message?: string | null; attendee_count: number } }).data;
+    // Collect survey answers
+    const surveyFields: SurveyField[] = (seminar as any).survey_fields || [];
+    let surveyAnswers: Record<string, SurveyAnswer> = {};
+    if (surveyFields.length > 0 && surveyFormRef.current) {
+      // Trigger survey form validation
+      const isValid = surveyFormRef.current.isValid();
+      if (!isValid) {
+        toast.error('설문 항목을 모두 확인해주세요');
+        return;
+      }
+      surveyAnswers = surveyFormRef.current.getAnswers();
+    }
 
     setSubmitting(true);
     try {
@@ -200,7 +215,7 @@ const SeminarDetailPage = () => {
         student_grade: validatedData.student_grade,
         attendee_count: validatedData.attendee_count,
         message: validatedData.message,
-        custom_answers: Object.keys(customAnswers).length > 0 ? customAnswers : null,
+        custom_answers: (Object.keys(surveyAnswers).length > 0 ? surveyAnswers : (Object.keys(customAnswers).length > 0 ? customAnswers : null)) as any,
       });
 
       if (error) throw error;
@@ -632,18 +647,31 @@ const SeminarDetailPage = () => {
               />
             </div>
 
-            {/* Custom Questions from Seminar */}
-            {seminar.custom_questions && seminar.custom_questions.length > 0 && (
+            {/* Survey Fields from Seminar */}
+            {(() => {
+              const surveyFields: SurveyField[] = (seminar as any).survey_fields || [];
+              if (surveyFields.length === 0) return null;
+              return (
+                <div className="pt-3 border-t border-border space-y-2">
+                  <p className="text-sm font-medium text-foreground">추가 설문</p>
+                  <SurveyFormRenderer
+                    fields={surveyFields}
+                    onSubmit={() => {}}
+                    renderOnly
+                    formRef={surveyFormRef}
+                  />
+                </div>
+              );
+            })()}
+
+            {/* Legacy custom questions fallback */}
+            {seminar.custom_questions && seminar.custom_questions.length > 0 && !((seminar as any).survey_fields?.length > 0) && (
               <div className="space-y-3 pt-3 border-t border-border">
                 <p className="text-sm font-medium text-foreground">추가 질문</p>
                 {seminar.custom_questions.map((question, index) => (
                   <div key={index} className="space-y-1">
                     <Label className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {question.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
-                        part.startsWith('**') && part.endsWith('**')
-                          ? <strong key={i}>{part.slice(2, -2)}</strong>
-                          : part
-                      )}
+                      {question}
                     </Label>
                     <Input
                       placeholder="답변을 입력하세요"
