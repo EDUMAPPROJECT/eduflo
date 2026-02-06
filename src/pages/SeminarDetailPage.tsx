@@ -508,9 +508,15 @@ const SeminarDetailPage = () => {
         <div className="mb-6">
           <h2 className="font-bold text-foreground text-lg mb-3">설명회 안내</h2>
           <div className="bg-card border border-border rounded-xl p-5 shadow-card">
-            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-              {seminar.description || "상세 내용이 없습니다."}
-            </p>
+            <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+              {seminar.description
+                ? seminar.description.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+                    part.startsWith('**') && part.endsWith('**')
+                      ? <strong key={i}>{part.slice(2, -2)}</strong>
+                      : part
+                  )
+                : "상세 내용이 없습니다."}
+            </div>
           </div>
         </div>
 
