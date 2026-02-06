@@ -127,7 +127,9 @@ const SuperAdminSeminarPage = () => {
   const [date, setDate] = useState('');
   const [hour, setHour] = useState('10');
   const [minute, setMinute] = useState('00');
-  const [location, setLocation] = useState('');
+  const [locationName, setLocationName] = useState('');
+  const [locationDetail, setLocationDetail] = useState('');
+  const [locationAddress, setLocationAddress] = useState('');
   const [capacity, setCapacity] = useState(30);
   const [subject, setSubject] = useState('');
   const [targetGrade, setTargetGrade] = useState('');
@@ -234,7 +236,9 @@ const SuperAdminSeminarPage = () => {
     setDate('');
     setHour('10');
     setMinute('00');
-    setLocation('');
+    setLocationName('');
+    setLocationDetail('');
+    setLocationAddress('');
     setCapacity(30);
     setSubject('');
     setTargetGrade('');
@@ -256,7 +260,22 @@ const SuperAdminSeminarPage = () => {
         Math.abs(parseInt(curr) - mins) < Math.abs(parseInt(prev) - mins) ? curr : prev
       );
       setMinute(roundedMins);
-      setLocation(seminar.location || '');
+      if (seminar.location) {
+        try {
+          const parsed = JSON.parse(seminar.location);
+          setLocationName(parsed.name || '');
+          setLocationDetail(parsed.detail || '');
+          setLocationAddress(parsed.address || '');
+        } catch {
+          setLocationName(seminar.location);
+          setLocationDetail('');
+          setLocationAddress('');
+        }
+      } else {
+        setLocationName('');
+        setLocationDetail('');
+        setLocationAddress('');
+      }
       setCapacity(seminar.capacity || 30);
       setSubject(seminar.subject || '');
       setTargetGrade(seminar.target_grade || '');
@@ -296,7 +315,9 @@ const SuperAdminSeminarPage = () => {
         title: title.trim(),
         description: description.trim() || null,
         date: seminarDate.toISOString(),
-        location: location.trim() || null,
+        location: (locationName.trim() || locationDetail.trim() || locationAddress.trim())
+          ? JSON.stringify({ name: locationName.trim(), detail: locationDetail.trim(), address: locationAddress.trim() })
+          : null,
         capacity,
         subject: subject.trim() || null,
         target_grade: targetGrade || null,
@@ -579,10 +600,26 @@ const SuperAdminSeminarPage = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>장소</Label>
+              <Label>위치</Label>
+              <Input
+                placeholder="예) 서울역 컨벤션홀"
+                value={locationName}
+                onChange={(e) => setLocationName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>위치 상세</Label>
+              <Input
+                placeholder="예) 3층 성심홀"
+                value={locationDetail}
+                onChange={(e) => setLocationDetail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>도로명주소</Label>
               <AddressSearch
-                value={location}
-                onChange={setLocation}
+                value={locationAddress}
+                onChange={setLocationAddress}
                 placeholder="주소를 입력하세요"
               />
             </div>

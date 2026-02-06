@@ -489,15 +489,38 @@ const SeminarDetailPage = () => {
               {formatTime(seminar.date)}
             </p>
           </div>
-          <div className="bg-card border border-border rounded-xl p-4 col-span-2 shadow-card">
-            <div className="flex items-center gap-2 text-primary mb-2">
-              <MapPin className="w-5 h-5" />
-              <span className="text-xs font-semibold">장소</span>
-            </div>
-            <p className="text-sm font-medium text-foreground">
-              {seminar.location || "장소 미정"}
-            </p>
-          </div>
+          {(() => {
+            let locName = "";
+            let locDetail = "";
+            let locAddress = "";
+            if (seminar.location) {
+              try {
+                const parsed = JSON.parse(seminar.location);
+                locName = parsed.name || "";
+                locDetail = parsed.detail || "";
+                locAddress = parsed.address || "";
+              } catch {
+                locName = seminar.location;
+              }
+            }
+            return (
+              <div className="bg-card border border-border rounded-xl p-4 col-span-2 shadow-card">
+                <div className="flex items-center gap-2 text-primary mb-2">
+                  <MapPin className="w-5 h-5" />
+                  <span className="text-xs font-semibold">장소</span>
+                </div>
+                {locName || locDetail || locAddress ? (
+                  <div className="space-y-1">
+                    {locName && <p className="text-sm font-bold text-foreground">{locName}</p>}
+                    {locDetail && <p className="text-sm text-muted-foreground">{locDetail}</p>}
+                    {locAddress && <p className="text-xs text-muted-foreground">{locAddress}</p>}
+                  </div>
+                ) : (
+                  <p className="text-sm font-medium text-foreground">장소 미정</p>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Capacity with Progress */}
@@ -589,11 +612,11 @@ const SeminarDetailPage = () => {
 
       {/* Application Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-sm mx-auto">
+        <DialogContent className="max-w-sm mx-auto max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="text-lg">설명회 참가 신청</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0 pr-1">
             <div className="space-y-2">
               <Label htmlFor="studentName">학생 이름 *</Label>
               <Input
