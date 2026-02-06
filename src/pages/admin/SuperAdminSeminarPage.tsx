@@ -22,8 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import ImageUpload from "@/components/ImageUpload";
-import AddressSearch from "@/components/AddressSearch";
+import MultiImageUpload from "@/components/MultiImageUpload";
 import { 
   ArrowLeft, 
   Shield, 
@@ -64,6 +63,17 @@ const gradeOptions = [
   { value: '중등', label: '중학생' },
   { value: '고등', label: '고등학생' },
   { value: '전체', label: '전체' },
+  { value: '기타', label: '기타' },
+];
+
+const subjectOptions = [
+  { value: '수학', label: '수학' },
+  { value: '영어', label: '영어' },
+  { value: '국어', label: '국어' },
+  { value: '과학', label: '과학' },
+  { value: '코딩', label: '코딩' },
+  { value: '입시설명회', label: '입시설명회' },
+  { value: '기타', label: '기타' },
 ];
 
 const hourOptions = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
@@ -84,11 +94,10 @@ const SuperAdminSeminarPage = () => {
   const [hour, setHour] = useState('10');
   const [minute, setMinute] = useState('00');
   const [location, setLocation] = useState('');
-  const [locationDetail, setLocationDetail] = useState('');
   const [capacity, setCapacity] = useState(30);
   const [subject, setSubject] = useState('');
   const [targetGrade, setTargetGrade] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [customQuestions, setCustomQuestions] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -145,11 +154,10 @@ const SuperAdminSeminarPage = () => {
     setHour('10');
     setMinute('00');
     setLocation('');
-    setLocationDetail('');
     setCapacity(30);
     setSubject('');
     setTargetGrade('');
-    setImageUrl('');
+    setImageUrls([]);
     setCustomQuestions([]);
     setEditingSeminar(null);
   };
@@ -163,19 +171,17 @@ const SuperAdminSeminarPage = () => {
       setDate(format(seminarDate, 'yyyy-MM-dd'));
       setHour(format(seminarDate, 'HH'));
       setMinute(format(seminarDate, 'mm'));
-      // Parse location
-      if (seminar.location) {
-        const parts = seminar.location.split(' | ');
-        setLocation(parts[0] || '');
-        setLocationDetail(parts[1] || '');
-      } else {
-        setLocation('');
-        setLocationDetail('');
-      }
+      setLocation(seminar.location || '');
       setCapacity(seminar.capacity || 30);
       setSubject(seminar.subject || '');
       setTargetGrade(seminar.target_grade || '');
-      setImageUrl(seminar.image_url || '');
+      // Parse image_url - could be JSON array or single URL
+      try {
+        const parsed = seminar.image_url ? JSON.parse(seminar.image_url) : [];
+        setImageUrls(Array.isArray(parsed) ? parsed : seminar.image_url ? [seminar.image_url] : []);
+      } catch {
+        setImageUrls(seminar.image_url ? [seminar.image_url] : []);
+      }
       setCustomQuestions(seminar.custom_questions || []);
     } else {
       resetForm();
@@ -216,9 +222,6 @@ const SuperAdminSeminarPage = () => {
       }
 
       const seminarDate = new Date(`${date}T${hour}:${minute}`);
-      const fullLocation = locationDetail 
-        ? `${location} | ${locationDetail}` 
-        : location;
 
       // Filter out empty questions
       const validQuestions = customQuestions.filter(q => q.trim());
@@ -227,11 +230,11 @@ const SuperAdminSeminarPage = () => {
         title: title.trim(),
         description: description.trim() || null,
         date: seminarDate.toISOString(),
-        location: fullLocation.trim() || null,
+        location: location.trim() || null,
         capacity,
         subject: subject.trim() || null,
         target_grade: targetGrade || null,
-        image_url: imageUrl || null,
+        image_url: imageUrls.length > 0 ? JSON.stringify(imageUrls) : null,
         author_id: session.user.id,
         academy_id: null,
         status: 'recruiting' as const,
@@ -453,20 +456,11 @@ const SuperAdminSeminarPage = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>장소 (기본 주소)</Label>
-              <AddressSearch
-                value={location}
-                onChange={setLocation}
-                placeholder="주소를 검색하세요"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>상세 주소</Label>
+              <Label>장소</Label>
               <Input
-                placeholder="상세 주소 (예: 3층 세미나실)"
-                value={locationDetail}
-                onChange={(e) => setLocationDetail(e.target.value)}
+                placeholder="장소 (예: 서울시 강남구 역삼동 123-45, 3층)"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
               />
             </div>
 
@@ -499,11 +493,18 @@ const SuperAdminSeminarPage = () => {
 
             <div className="space-y-2">
               <Label>과목/주제</Label>
-              <Input
-                placeholder="예: 수학, 영어, 입시설명회"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-              />
+              <Select value={subject} onValueChange={setSubject}>
+                <SelectTrigger>
+                  <SelectValue placeholder="선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subjectOptions.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -518,11 +519,12 @@ const SuperAdminSeminarPage = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>포스터 이미지 (선택)</Label>
-              <ImageUpload
-                value={imageUrl}
-                onChange={setImageUrl}
+              <Label>포스터 이미지 (선택, 최대 5장)</Label>
+              <MultiImageUpload
+                values={imageUrls}
+                onChange={setImageUrls}
                 folder="seminars"
+                maxImages={5}
               />
             </div>
 

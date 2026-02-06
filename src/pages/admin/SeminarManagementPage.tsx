@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
-import ImageUpload from "@/components/ImageUpload";
+import MultiImageUpload from "@/components/MultiImageUpload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -101,11 +101,10 @@ const SeminarManagementPage = () => {
   const [hour, setHour] = useState("10");
   const [minute, setMinute] = useState("00");
   const [location, setLocation] = useState("");
-  const [locationDetail, setLocationDetail] = useState("");
   const [capacity, setCapacity] = useState(30);
   const [subject, setSubject] = useState("");
   const [targetGrade, setTargetGrade] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [customQuestions, setCustomQuestions] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -224,11 +223,10 @@ const SeminarManagementPage = () => {
     setHour("10");
     setMinute("00");
     setLocation("");
-    setLocationDetail("");
     setCapacity(30);
     setSubject("");
     setTargetGrade("");
-    setImageUrl("");
+    setImageUrls([]);
     setCustomQuestions([]);
     setEditingSeminar(null);
   };
@@ -246,14 +244,17 @@ const SeminarManagementPage = () => {
       Math.abs(parseInt(curr) - mins) < Math.abs(parseInt(prev) - mins) ? curr : prev
     );
     setMinute(roundedMins);
-    // Parse location for detail (format: "main address | detail address")
-    const locationParts = (seminar.location || "").split(" | ");
-    setLocation(locationParts[0] || "");
-    setLocationDetail(locationParts[1] || "");
+    setLocation(seminar.location || "");
     setCapacity(seminar.capacity || 30);
     setSubject(seminar.subject || "");
     setTargetGrade(seminar.target_grade || "");
-    setImageUrl(seminar.image_url || "");
+    // Parse image_url - could be JSON array or single URL
+    try {
+      const parsed = seminar.image_url ? JSON.parse(seminar.image_url) : [];
+      setImageUrls(Array.isArray(parsed) ? parsed : seminar.image_url ? [seminar.image_url] : []);
+    } catch {
+      setImageUrls(seminar.image_url ? [seminar.image_url] : []);
+    }
     setCustomQuestions(seminar.custom_questions || []);
     setIsDialogOpen(true);
   };
@@ -295,10 +296,6 @@ const SeminarManagementPage = () => {
     setSubmitting(true);
     try {
       const dateTime = new Date(`${date}T${hour}:${minute}`).toISOString();
-      // Combine main location and detail address
-      const fullLocation = locationDetail.trim() 
-        ? `${location.trim()} | ${locationDetail.trim()}` 
-        : location.trim() || null;
 
       // Filter out empty questions
       const validQuestions = customQuestions.filter(q => q.trim());
@@ -307,11 +304,11 @@ const SeminarManagementPage = () => {
         title,
         description: description || null,
         date: dateTime,
-        location: fullLocation,
+        location: location.trim() || null,
         capacity,
         subject: subject || null,
         target_grade: targetGrade || null,
-        image_url: imageUrl || null,
+        image_url: imageUrls.length > 0 ? JSON.stringify(imageUrls) : null,
         custom_questions: validQuestions.length > 0 ? validQuestions : null,
       };
 
@@ -586,19 +583,11 @@ const SeminarManagementPage = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>장소 (기본 주소)</Label>
+              <Label>장소</Label>
               <AddressSearch
                 value={location}
                 onChange={setLocation}
-                placeholder="주소를 검색하세요"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>상세 주소</Label>
-              <Input
-                placeholder="상세 주소 (예: 4층 회의실)"
-                value={locationDetail}
-                onChange={(e) => setLocationDetail(e.target.value)}
+                placeholder="주소를 입력하세요"
               />
             </div>
             <div className="space-y-2">
@@ -623,6 +612,7 @@ const SeminarManagementPage = () => {
                     <SelectItem value="국어">국어</SelectItem>
                     <SelectItem value="과학">과학</SelectItem>
                     <SelectItem value="코딩">코딩</SelectItem>
+                    <SelectItem value="기타">기타</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -636,16 +626,18 @@ const SeminarManagementPage = () => {
                     <SelectItem value="초등학생">초등학생</SelectItem>
                     <SelectItem value="중학생">중학생</SelectItem>
                     <SelectItem value="고등학생">고등학생</SelectItem>
+                    <SelectItem value="기타">기타</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-2">
               <Label>포스터 이미지</Label>
-              <ImageUpload
-                value={imageUrl}
-                onChange={setImageUrl}
+              <MultiImageUpload
+                values={imageUrls}
+                onChange={setImageUrls}
                 folder="seminars"
+                maxImages={5}
               />
             </div>
             <div className="space-y-2">
