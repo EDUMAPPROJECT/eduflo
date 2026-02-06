@@ -91,6 +91,14 @@ const RoleSelection = () => {
           시작하면 서비스 이용약관과 개인정보처리방침에 동의하게 됩니다
         </p>
       </div>
+
+      {/* Temporary Email/Password Login Button */}
+      <button
+        onClick={() => navigate("/auth?mode=email")}
+        className="fixed bottom-4 right-4 text-xs text-muted-foreground/50 hover:text-muted-foreground underline"
+      >
+        이메일 로그인
+      </button>
     </div>
   );
 };

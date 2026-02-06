@@ -82,6 +82,17 @@ const queryClient = new QueryClient();
 const App = () => {
   const [showSplash, setShowSplash] = useState(true);
 
+  // Global unhandled rejection handler to prevent white screen crashes
+  useEffect(() => {
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      console.error("Unhandled rejection:", event.reason);
+      event.preventDefault();
+    };
+
+    window.addEventListener("unhandledrejection", handleRejection);
+    return () => window.removeEventListener("unhandledrejection", handleRejection);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
