@@ -273,8 +273,8 @@ const SuperAdminSeminarPage = () => {
   };
 
   const handleAddQuestion = () => {
-    if (customQuestions.length >= 3) {
-      toast.error('질문은 최대 3개까지 추가할 수 있습니다');
+    if (customQuestions.length >= 20) {
+      toast.error('질문은 최대 20개까지 추가할 수 있습니다');
       return;
     }
     setCustomQuestions([...customQuestions, '']);
@@ -646,12 +646,15 @@ const SuperAdminSeminarPage = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>상세 내용</Label>
+              <Label>설명회 안내</Label>
+              <p className="text-xs text-muted-foreground">
+                **텍스트**로 볼드체를 적용할 수 있습니다.
+              </p>
               <Textarea
-                placeholder="설명회 상세 내용"
+                placeholder="설명회 상세 내용을 입력하세요. **볼드체** 사용 가능"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                rows={4}
+                rows={6}
                 maxLength={2000}
               />
             </div>
@@ -671,36 +674,37 @@ const SuperAdminSeminarPage = () => {
               <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-2">
                   <HelpCircle className="w-4 h-4" />
-                  신청자 질문 (최대 3개)
+                  추가 질문 (최대 20개)
                 </Label>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={handleAddQuestion}
-                  disabled={customQuestions.length >= 3}
+                  disabled={customQuestions.length >= 20}
                 >
                   <Plus className="w-3 h-3 mr-1" />
                   추가
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                학부모가 신청 시 답변해야 할 질문을 추가할 수 있습니다.
+                학부모가 신청 시 답변해야 할 질문을 추가할 수 있습니다. **텍스트**로 볼드체를 적용할 수 있습니다.
               </p>
               {customQuestions.map((question, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Input
+                <div key={index} className="flex items-start gap-2">
+                  <Textarea
                     placeholder={`질문 ${index + 1}`}
                     value={question}
                     onChange={(e) => handleQuestionChange(index, e.target.value)}
-                    maxLength={100}
+                    maxLength={200}
+                    rows={2}
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     onClick={() => handleRemoveQuestion(index)}
-                    className="shrink-0 text-destructive hover:text-destructive"
+                    className="shrink-0 text-destructive hover:text-destructive mt-1"
                   >
                     <X className="w-4 h-4" />
                   </Button>

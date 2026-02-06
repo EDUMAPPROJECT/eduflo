@@ -643,7 +643,7 @@ const SeminarManagementPage = () => {
             <div className="space-y-2">
               <Label>설명회 안내</Label>
               <p className="text-xs text-muted-foreground">
-                **텍스트**로 볼드체를 적용할 수 있습니다. Shift+Enter로 줄바꿈이 가능합니다.
+                **텍스트**로 볼드체를 적용할 수 있습니다.
               </p>
               <Textarea
                 placeholder="설명회 상세 내용을 입력하세요. **볼드체** 사용 가능"
@@ -672,22 +672,23 @@ const SeminarManagementPage = () => {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                학부모가 신청 시 답변해야 할 질문을 추가할 수 있습니다.
+                학부모가 신청 시 답변해야 할 질문을 추가할 수 있습니다. **텍스트**로 볼드체를 적용할 수 있습니다.
               </p>
               {customQuestions.map((question, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Input
+                <div key={index} className="flex items-start gap-2">
+                  <Textarea
                     placeholder={`질문 ${index + 1}`}
                     value={question}
                     onChange={(e) => handleQuestionChange(index, e.target.value)}
-                    maxLength={100}
+                    maxLength={200}
+                    rows={2}
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     onClick={() => handleRemoveQuestion(index)}
-                    className="shrink-0 text-destructive hover:text-destructive"
+                    className="shrink-0 text-destructive hover:text-destructive mt-1"
                   >
                     <X className="w-4 h-4" />
                   </Button>

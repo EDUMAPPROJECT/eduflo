@@ -638,7 +638,13 @@ const SeminarDetailPage = () => {
                 <p className="text-sm font-medium text-foreground">추가 질문</p>
                 {seminar.custom_questions.map((question, index) => (
                   <div key={index} className="space-y-1">
-                    <Label className="text-sm text-muted-foreground">{question}</Label>
+                    <Label className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {question.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+                        part.startsWith('**') && part.endsWith('**')
+                          ? <strong key={i}>{part.slice(2, -2)}</strong>
+                          : part
+                      )}
+                    </Label>
                     <Input
                       placeholder="답변을 입력하세요"
                       value={customAnswers[question] || ""}
