@@ -85,6 +85,8 @@ const SeminarDetailPage = () => {
   // Form state
   const [parentName, setParentName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
+  const [parentCount, setParentCount] = useState("1");
+  const [studentCount, setStudentCount] = useState("1");
   const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({});
   const surveyFormRef = useRef<{ triggerSubmit: () => void; isValid: () => boolean; getAnswers: () => Record<string, SurveyAnswer> } | null>(null);
 
@@ -200,6 +202,13 @@ const SeminarDetailPage = () => {
       return;
     }
 
+    const pCount = parseInt(parentCount) || 0;
+    const sCount = parseInt(studentCount) || 0;
+    if (pCount + sCount <= 0) {
+      toast.error('참석 인원을 입력해주세요');
+      return;
+    }
+
     setSubmitting(true);
     try {
       // All seminar applications start as pending (requires admin approval)
@@ -209,8 +218,11 @@ const SeminarDetailPage = () => {
         seminar_id: id,
         user_id: user.id,
         student_name: parentName.trim(),
+        attendee_count: pCount + sCount,
         status: applicationStatus,
-        custom_answers: (Object.keys(surveyAnswers).length > 0 ? { ...surveyAnswers, _parentPhone: parentPhone.trim() } : { _parentPhone: parentPhone.trim() }) as any,
+        custom_answers: (Object.keys(surveyAnswers).length > 0 
+          ? { ...surveyAnswers, _parentPhone: parentPhone.trim(), _parentCount: pCount, _studentCount: sCount } 
+          : { _parentPhone: parentPhone.trim(), _parentCount: pCount, _studentCount: sCount }) as any,
       } as any);
 
       if (error) throw error;
@@ -234,6 +246,8 @@ const SeminarDetailPage = () => {
   const resetForm = () => {
     setParentName("");
     setParentPhone("");
+    setParentCount("1");
+    setStudentCount("1");
     setCustomAnswers({});
   };
 
@@ -609,7 +623,7 @@ const SeminarDetailPage = () => {
             <DialogTitle className="text-lg">설명회 참가 신청</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0 pr-1">
-            {/* Default fields: parent name & phone */}
+            {/* Default fields: parent name, phone, attendee counts */}
             <div className="space-y-3">
               <div className="space-y-1">
                 <Label className="text-sm font-medium">학부모 이름 <span className="text-destructive">*</span></Label>
@@ -629,6 +643,30 @@ const SeminarDetailPage = () => {
                   maxLength={20}
                   type="tel"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium">학부모 인원 <span className="text-destructive">*</span></Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={10}
+                    placeholder="0"
+                    value={parentCount}
+                    onChange={(e) => setParentCount(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium">학생 인원 <span className="text-destructive">*</span></Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={10}
+                    placeholder="0"
+                    value={studentCount}
+                    onChange={(e) => setStudentCount(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 

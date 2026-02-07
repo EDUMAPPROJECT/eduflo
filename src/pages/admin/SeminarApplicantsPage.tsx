@@ -10,8 +10,18 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { ArrowLeft, GraduationCap, Phone, Calendar, User, Eye, CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeft, GraduationCap, Phone, Calendar, User, Eye, CheckCircle, XCircle, ArrowUpDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { SurveyField, SurveyAnswer } from "@/types/surveyField";
 
 interface Application {
@@ -44,6 +54,8 @@ const SeminarApplicantsPage = () => {
   const [seminar, setSeminar] = useState<SeminarInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [deleteTarget, setDeleteTarget] = useState<Application | null>(null);
 
   useEffect(() => {
     if (seminarId) fetchData();
@@ -140,7 +152,30 @@ const SeminarApplicantsPage = () => {
     }
   };
 
-  // All seminars now use approval mode (no more auto-confirm)
+  const sortedApplications = [...applications].sort((a, b) => {
+    const dateA = new Date(a.created_at).getTime();
+    const dateB = new Date(b.created_at).getTime();
+    return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+  });
+
+  const deleteApplication = async (appId: string) => {
+    try {
+      const { error } = await supabase
+        .from("seminar_applications")
+        .delete()
+        .eq("id", appId);
+
+      if (error) throw error;
+
+      setApplications((prev) => prev.filter((a) => a.id !== appId));
+      setDeleteTarget(null);
+      setSelectedApp(null);
+      toast.success("신청이 삭제되었습니다");
+    } catch (error) {
+      console.error("Error deleting application:", error);
+      toast.error("삭제에 실패했습니다");
+    }
+  };
 
   // Render detail sheet ordered by survey_fields
   const renderDetailContent = (app: Application) => {
@@ -270,6 +305,20 @@ const SeminarApplicantsPage = () => {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-4">
+        {/* Sort toggle */}
+        {applications.length > 1 && (
+          <div className="flex justify-end mb-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 text-xs"
+              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+            >
+              <ArrowUpDown className="w-3.5 h-3.5" />
+              {sortOrder === "asc" ? "오래된순" : "최신순"}
+            </Button>
+          </div>
+        )}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -283,7 +332,7 @@ const SeminarApplicantsPage = () => {
           </Card>
         ) : (
           <div className="space-y-3">
-            {applications.map((app, index) => {
+            {sortedApplications.map((app, index) => {
               const phone = getParentPhone(app);
 
               return (
@@ -309,16 +358,28 @@ const SeminarApplicantsPage = () => {
                         )}
                       </div>
 
-                      {/* Detail button */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1 text-xs flex-shrink-0"
-                        onClick={() => setSelectedApp(app)}
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        상세
-                      </Button>
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1 text-xs"
+                          onClick={() => setSelectedApp(app)}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          상세
+                        </Button>
+                        {app.status === "confirmed" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setDeleteTarget(app)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Approve/reject buttons */}
@@ -351,18 +412,53 @@ const SeminarApplicantsPage = () => {
         )}
       </main>
 
-      {/* Detail Sheet */}
-      <Sheet open={!!selectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
-        <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
-          <SheetHeader className="mb-4">
-            <div className="flex items-center justify-between">
-              <SheetTitle className="text-lg">신청 상세</SheetTitle>
-              {selectedApp && getStatusBadge(selectedApp.status)}
-            </div>
-          </SheetHeader>
-          {selectedApp && renderDetailContent(selectedApp)}
-        </SheetContent>
-      </Sheet>
+        {/* Detail Sheet */}
+        <Sheet open={!!selectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
+          <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
+            <SheetHeader className="mb-4">
+              <div className="flex items-center justify-between">
+                <SheetTitle className="text-lg">신청 상세</SheetTitle>
+                {selectedApp && getStatusBadge(selectedApp.status)}
+              </div>
+            </SheetHeader>
+            {selectedApp && renderDetailContent(selectedApp)}
+            {/* Delete button for confirmed */}
+            {selectedApp && selectedApp.status === "confirmed" && (
+              <div className="pt-3 border-t border-border mt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-1 text-destructive hover:text-destructive"
+                  onClick={() => setDeleteTarget(selectedApp)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  신청 삭제
+                </Button>
+              </div>
+            )}
+          </SheetContent>
+        </Sheet>
+
+        {/* Delete confirmation */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>신청 삭제</AlertDialogTitle>
+              <AlertDialogDescription>
+                {deleteTarget?.student_name}님의 신청을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>취소</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => deleteTarget && deleteApplication(deleteTarget.id)}
+              >
+                삭제
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 };
