@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
+import SurveyFormBuilder from "@/components/SurveyFormBuilder";
 import MultiImageUpload from "@/components/MultiImageUpload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,8 +44,8 @@ import {
   Pencil,
   Trash2,
   X,
-  HelpCircle,
 } from "lucide-react";
+import type { SurveyField } from "@/types/surveyField";
 import AddressSearch from "@/components/AddressSearch";
 import { toast } from "sonner";
 
@@ -63,20 +64,8 @@ interface Seminar {
   application_count?: number;
 }
 
-interface Application {
-  id: string;
-  student_name: string;
-  student_grade: string | null;
-  attendee_count: number | null;
-  message: string | null;
-  custom_answers: Record<string, string> | null;
-  created_at: string;
-  user_id: string;
-  profile?: {
-    phone: string;
-    user_name: string | null;
-  };
-}
+
+
 
 const hourOptions = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
 const minuteOptions = ['00', '15', '30', '45'];
@@ -89,9 +78,6 @@ const SeminarManagementPage = () => {
   const [academyId, setAcademyId] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSeminar, setEditingSeminar] = useState<Seminar | null>(null);
-  const [selectedSeminar, setSelectedSeminar] = useState<Seminar | null>(null);
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loadingApps, setLoadingApps] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Form state
@@ -100,12 +86,16 @@ const SeminarManagementPage = () => {
   const [date, setDate] = useState("");
   const [hour, setHour] = useState("10");
   const [minute, setMinute] = useState("00");
-  const [location, setLocation] = useState("");
+  const [locationName, setLocationName] = useState("");
+  const [locationDetail, setLocationDetail] = useState("");
+  const [locationAddress, setLocationAddress] = useState("");
   const [capacity, setCapacity] = useState(30);
   const [subject, setSubject] = useState("");
   const [targetGrade, setTargetGrade] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [customQuestions, setCustomQuestions] = useState<string[]>([]);
+  const [surveyFields, setSurveyFields] = useState<SurveyField[]>([]);
+  const [confirmationMode, setConfirmationMode] = useState("auto");
+  const [completionMessage, setCompletionMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -181,40 +171,7 @@ const SeminarManagementPage = () => {
     }
   };
 
-  const fetchApplications = async (seminarId: string) => {
-    setLoadingApps(true);
-    try {
-      const { data, error } = await supabase
-        .from("seminar_applications")
-        .select("*")
-        .eq("seminar_id", seminarId)
-        .order("created_at", { ascending: false });
 
-      if (error) throw error;
-
-      // Get user profiles
-      if (data && data.length > 0) {
-        const userIds = data.map((app) => app.user_id);
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, phone, user_name")
-          .in("id", userIds);
-
-        const appsWithProfiles = data.map((app) => ({
-          ...app,
-          profile: profiles?.find((p) => p.id === app.user_id),
-        }));
-
-        setApplications(appsWithProfiles as Application[]);
-      } else {
-        setApplications([]);
-      }
-    } catch (error) {
-      console.error("Error fetching applications:", error);
-    } finally {
-      setLoadingApps(false);
-    }
-  };
 
   const resetForm = () => {
     setTitle("");
@@ -222,12 +179,16 @@ const SeminarManagementPage = () => {
     setDate("");
     setHour("10");
     setMinute("00");
-    setLocation("");
+    setLocationName("");
+    setLocationDetail("");
+    setLocationAddress("");
     setCapacity(30);
     setSubject("");
     setTargetGrade("");
     setImageUrls([]);
-    setCustomQuestions([]);
+    setSurveyFields([]);
+    setConfirmationMode("auto");
+    setCompletionMessage("");
     setEditingSeminar(null);
   };
 
@@ -244,7 +205,23 @@ const SeminarManagementPage = () => {
       Math.abs(parseInt(curr) - mins) < Math.abs(parseInt(prev) - mins) ? curr : prev
     );
     setMinute(roundedMins);
-    setLocation(seminar.location || "");
+    // Parse location JSON
+    if (seminar.location) {
+      try {
+        const parsed = JSON.parse(seminar.location);
+        setLocationName(parsed.name || "");
+        setLocationDetail(parsed.detail || "");
+        setLocationAddress(parsed.address || "");
+      } catch {
+        setLocationName(seminar.location);
+        setLocationDetail("");
+        setLocationAddress("");
+      }
+    } else {
+      setLocationName("");
+      setLocationDetail("");
+      setLocationAddress("");
+    }
     setCapacity(seminar.capacity || 30);
     setSubject(seminar.subject || "");
     setTargetGrade(seminar.target_grade || "");
@@ -255,31 +232,17 @@ const SeminarManagementPage = () => {
     } catch {
       setImageUrls(seminar.image_url ? [seminar.image_url] : []);
     }
-    setCustomQuestions(seminar.custom_questions || []);
+    // Load survey_fields from seminar (cast from Json)
+    const rawFields = (seminar as any).survey_fields;
+    setSurveyFields(Array.isArray(rawFields) ? rawFields : []);
+    setConfirmationMode((seminar as any).confirmation_mode || "auto");
+    setCompletionMessage((seminar as any).completion_message || "");
     setIsDialogOpen(true);
   };
 
   const openCreateDialog = () => {
     resetForm();
     setIsDialogOpen(true);
-  };
-
-  const handleAddQuestion = () => {
-    if (customQuestions.length >= 20) {
-      toast.error('질문은 최대 20개까지 추가할 수 있습니다');
-      return;
-    }
-    setCustomQuestions([...customQuestions, '']);
-  };
-
-  const handleQuestionChange = (index: number, value: string) => {
-    const updated = [...customQuestions];
-    updated[index] = value;
-    setCustomQuestions(updated);
-  };
-
-  const handleRemoveQuestion = (index: number) => {
-    setCustomQuestions(customQuestions.filter((_, i) => i !== index));
   };
 
   const handleSaveSeminar = async () => {
@@ -297,19 +260,23 @@ const SeminarManagementPage = () => {
     try {
       const dateTime = new Date(`${date}T${hour}:${minute}`).toISOString();
 
-      // Filter out empty questions
-      const validQuestions = customQuestions.filter(q => q.trim());
+      // Filter survey fields with labels
+      const validFields = surveyFields.filter(f => f.label?.trim() || f.consentText?.trim());
 
       const seminarData = {
         title,
         description: description || null,
         date: dateTime,
-        location: location.trim() || null,
+        location: (locationName.trim() || locationDetail.trim() || locationAddress.trim())
+          ? JSON.stringify({ name: locationName.trim(), detail: locationDetail.trim(), address: locationAddress.trim() })
+          : null,
         capacity,
         subject: subject || null,
         target_grade: targetGrade || null,
         image_url: imageUrls.length > 0 ? JSON.stringify(imageUrls) : null,
-        custom_questions: validQuestions.length > 0 ? validQuestions : null,
+        survey_fields: (validFields.length > 0 ? validFields : null) as any,
+        confirmation_mode: "manual",
+        completion_message: completionMessage.trim() || null,
       };
 
       if (editingSeminar) {
@@ -507,20 +474,15 @@ const SeminarManagementPage = () => {
                       >
                         {expired ? "기간 종료" : (effectiveStatus === "recruiting" ? "마감하기" : "모집 재개")}
                       </Button>
-                      <Dialog>
-                        <Button
+                      <Button
                           variant="outline"
                           size="sm"
                           className="flex-1"
-                          onClick={() => {
-                            setSelectedSeminar(seminar);
-                            fetchApplications(seminar.id);
-                          }}
+                          onClick={() => navigate(`/admin/seminars/${seminar.id}/applicants`)}
                         >
                           신청자 명단
                           <ChevronRight className="w-4 h-4 ml-1" />
                         </Button>
-                      </Dialog>
                     </div>
                   </CardContent>
                 </Card>
@@ -583,10 +545,18 @@ const SeminarManagementPage = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>장소</Label>
+              <Label>위치</Label>
+              <Input
+                placeholder="예) 서울역 컨벤션홀"
+                value={locationName}
+                onChange={(e) => setLocationName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>도로명주소</Label>
               <AddressSearch
-                value={location}
-                onChange={setLocation}
+                value={locationAddress}
+                onChange={setLocationAddress}
                 placeholder="주소를 입력하세요"
               />
             </div>
@@ -640,6 +610,8 @@ const SeminarManagementPage = () => {
                 maxImages={5}
               />
             </div>
+
+
             <div className="space-y-2">
               <Label>설명회 안내</Label>
               <p className="text-xs text-muted-foreground">
@@ -653,47 +625,31 @@ const SeminarManagementPage = () => {
               />
             </div>
 
-            {/* Custom Questions Section */}
-            <div className="space-y-3 pt-2 border-t border-border">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-2">
-                  <HelpCircle className="w-4 h-4" />
-                  추가 질문 (최대 20개)
-                </Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddQuestion}
-                  disabled={customQuestions.length >= 20}
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  추가
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                학부모가 신청 시 답변해야 할 질문을 추가할 수 있습니다. **텍스트**로 볼드체를 적용할 수 있습니다.
+            {/* Survey Fields Section */}
+            <div className="pt-2 border-t border-border">
+              <p className="text-xs text-muted-foreground mb-2">
+                설문 질문에도 **텍스트**로 볼드체를 적용할 수 있습니다.
               </p>
-              {customQuestions.map((question, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <Textarea
-                    placeholder={`질문 ${index + 1}`}
-                    value={question}
-                    onChange={(e) => handleQuestionChange(index, e.target.value)}
-                    maxLength={200}
-                    rows={2}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveQuestion(index)}
-                    className="shrink-0 text-destructive hover:text-destructive mt-1"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
+              <SurveyFormBuilder
+                fields={surveyFields}
+                onChange={setSurveyFields}
+                maxFields={20}
+              />
+            </div>
+
+            {/* Completion Message */}
+            <div className="space-y-2">
+              <Label>신청 완료 안내 메시지</Label>
+              <Textarea
+                placeholder="예: 신청이 완료되었습니다. 당일 10분 전까지 입장해주세요."
+                value={completionMessage}
+                onChange={(e) => setCompletionMessage(e.target.value)}
+                rows={3}
+                maxLength={500}
+              />
+              <p className="text-xs text-muted-foreground">
+                신청 완료 후 학부모에게 표시됩니다.
+              </p>
             </div>
 
             <Button
@@ -707,69 +663,6 @@ const SeminarManagementPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Applications Dialog */}
-      <Dialog open={!!selectedSeminar} onOpenChange={(open) => !open && setSelectedSeminar(null)}>
-        <DialogContent className="max-w-sm mx-auto max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>신청자 명단</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            {loadingApps ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
-              </div>
-            ) : applications.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                신청자가 없습니다
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {applications.map((app) => (
-                  <div
-                    key={app.id}
-                    className="bg-muted/50 rounded-lg p-3"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <GraduationCap className="w-4 h-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">
-                          {app.student_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {app.student_grade || "학년 미정"} ·{" "}
-                          {app.attendee_count || 1}명
-                        </p>
-                      </div>
-                    </div>
-                    {app.profile?.phone && (
-                      <p className="text-xs text-muted-foreground mb-1">
-                        📞 {app.profile.phone}
-                      </p>
-                    )}
-                    {app.message && (
-                      <p className="text-xs text-muted-foreground bg-background rounded p-2 mb-1">
-                        💬 {app.message}
-                      </p>
-                    )}
-                    {app.custom_answers && Object.keys(app.custom_answers).length > 0 && (
-                      <div className="mt-2 space-y-1">
-                        {Object.entries(app.custom_answers).map(([q, a], idx) => (
-                          <div key={idx} className="text-xs bg-background rounded p-2">
-                            <p className="text-muted-foreground font-medium">❓ {q}</p>
-                            <p className="text-foreground mt-0.5">{a}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>

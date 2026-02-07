@@ -61,8 +61,6 @@ const ReservationDetailSheet = ({
         return <Badge variant="destructive">취소됨</Badge>;
       case "recruiting":
         return <Badge variant="default">모집중</Badge>;
-      case "applied":
-        return <Badge variant="secondary" className="bg-green-100 text-green-700">신청 완료</Badge>;
       case "closed":
         return <Badge variant="secondary">마감</Badge>;
       default:
@@ -93,14 +91,17 @@ const ReservationDetailSheet = ({
     }
   };
 
-  // Parse location to separate main and detail address
+  // Parse location JSON (same format as detail page)
   const parseLocation = (location: string | null | undefined) => {
-    if (!location) return { main: null, detail: null };
-    const parts = location.split(" | ");
-    return {
-      main: parts[0] || null,
-      detail: parts[1] || null
-    };
+    if (!location) return { name: null, address: null };
+    try {
+      const parsed = JSON.parse(location);
+      return { name: parsed.name || null, address: parsed.address || null };
+    } catch {
+      // Legacy format: "name | address"
+      const parts = location.split(" | ");
+      return { name: parts[0] || null, address: parts[1] || null };
+    }
   };
 
   const locationParts = parseLocation(data.seminarLocation);
@@ -215,7 +216,7 @@ const ReservationDetailSheet = ({
               </>
             )}
 
-            {type === "seminar" && locationParts.main && (
+            {type === "seminar" && (locationParts.name || locationParts.address) && (
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
@@ -223,9 +224,9 @@ const ReservationDetailSheet = ({
                   </div>
                   <div className="flex-1">
                     <p className="text-xs text-muted-foreground">장소</p>
-                    <p className="font-medium">{locationParts.main}</p>
-                    {locationParts.detail && (
-                      <p className="text-sm text-muted-foreground">{locationParts.detail}</p>
+                    {locationParts.name && <p className="font-medium">{locationParts.name}</p>}
+                    {locationParts.address && (
+                      <p className="text-sm text-muted-foreground">{locationParts.address}</p>
                     )}
                   </div>
                 </div>
@@ -234,7 +235,7 @@ const ReservationDetailSheet = ({
                     variant="outline"
                     size="sm"
                     className="flex-1 gap-1.5"
-                    onClick={() => copyToClipboard(data.seminarLocation || "")}
+                    onClick={() => copyToClipboard(locationParts.address || locationParts.name || "")}
                   >
                     <Copy className="w-3.5 h-3.5" />
                     주소 복사
@@ -244,7 +245,7 @@ const ReservationDetailSheet = ({
                     size="sm"
                     className="flex-1 gap-1.5"
                     onClick={() => {
-                      const encodedLocation = encodeURIComponent(locationParts.main || "");
+                      const encodedLocation = encodeURIComponent(locationParts.address || locationParts.name || "");
                       window.open(`https://map.naver.com/v5/search/${encodedLocation}`, "_blank");
                     }}
                   >

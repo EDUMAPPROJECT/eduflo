@@ -35,6 +35,7 @@ import ReservationManagementPage from "./pages/admin/ReservationManagementPage";
 import ProfileManagementPage from "./pages/admin/ProfileManagementPage";
 import ProfileReadOnlyPage from "./pages/admin/ProfileReadOnlyPage";
 import SeminarManagementPage from "./pages/admin/SeminarManagementPage";
+import SeminarApplicantsPage from "./pages/admin/SeminarApplicantsPage";
 import PostManagementPage from "./pages/admin/PostManagementPage";
 import FeedPostManagementPage from "./pages/admin/FeedPostManagementPage";
 import AdminChatListPage from "./pages/admin/AdminChatListPage";
@@ -166,6 +167,7 @@ const App = () => {
               <Route path="/admin/profile" element={<ProtectedAdminRoute><ProfileManagementPage /></ProtectedAdminRoute>} />
               <Route path="/admin/profileread" element={<ProtectedAdminRoute><ProfileReadOnlyPage /></ProtectedAdminRoute>} />
               <Route path="/admin/seminars" element={<ProtectedAdminRoute><SeminarManagementPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/seminars/:seminarId/applicants" element={<ProtectedAdminRoute><SeminarApplicantsPage /></ProtectedAdminRoute>} />
               <Route path="/admin/posts" element={<ProtectedAdminRoute><PostManagementPage /></ProtectedAdminRoute>} />
               <Route path="/admin/feed-posts" element={<ProtectedAdminRoute><FeedPostManagementPage /></ProtectedAdminRoute>} />
               <Route path="/admin/chats" element={<ProtectedAdminRoute><AdminChatListPage /></ProtectedAdminRoute>} />
@@ -182,6 +184,7 @@ const App = () => {
               <Route path="/admin/super/academies/:id/edit" element={<ProtectedAdminRoute><SuperAdminAcademyEditPage /></ProtectedAdminRoute>} />
               <Route path="/admin/super/community" element={<ProtectedAdminRoute><SuperAdminCommunityPage /></ProtectedAdminRoute>} />
               <Route path="/admin/super/seminars" element={<ProtectedAdminRoute><SuperAdminSeminarPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/super/seminars/:seminarId/applicants" element={<ProtectedAdminRoute><SeminarApplicantsPage /></ProtectedAdminRoute>} />
               <Route path="/admin/my" element={<ProtectedAdminRoute><AdminMyPage /></ProtectedAdminRoute>} />
               <Route path="/admin/my/profile" element={<ProtectedAdminRoute><MyProfilePage /></ProtectedAdminRoute>} />
               <Route path="/admin/settings" element={<ProtectedAdminRoute><SettingsPage /></ProtectedAdminRoute>} />
@@ -204,6 +207,7 @@ const App = () => {
               <Route path="/super/users" element={<ProtectedSuperAdminRoute><SuperAdminUsersPage /></ProtectedSuperAdminRoute>} />
               <Route path="/super/posts/create" element={<ProtectedSuperAdminRoute><SuperAdminCommunityPage /></ProtectedSuperAdminRoute>} />
               <Route path="/super/seminars/manage" element={<ProtectedSuperAdminRoute><SuperAdminSeminarPage /></ProtectedSuperAdminRoute>} />
+              <Route path="/super/seminars/:seminarId/applicants" element={<ProtectedSuperAdminRoute><SeminarApplicantsPage /></ProtectedSuperAdminRoute>} />
               <Route path="/super/academies" element={<ProtectedSuperAdminRoute><SuperAdminAcademiesPage /></ProtectedSuperAdminRoute>} />
               <Route path="/super/academies/create" element={<ProtectedSuperAdminRoute><SuperAdminAcademyCreatePage /></ProtectedSuperAdminRoute>} />
               <Route path="/super/academies/:id/edit" element={<ProtectedSuperAdminRoute><SuperAdminAcademyEditPage /></ProtectedSuperAdminRoute>} />

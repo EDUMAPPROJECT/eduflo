@@ -935,6 +935,7 @@ export type Database = {
           id: string
           message: string | null
           seminar_id: string
+          status: string
           student_grade: string | null
           student_name: string
           user_id: string
@@ -946,6 +947,7 @@ export type Database = {
           id?: string
           message?: string | null
           seminar_id: string
+          status?: string
           student_grade?: string | null
           student_name: string
           user_id: string
@@ -957,6 +959,7 @@ export type Database = {
           id?: string
           message?: string | null
           seminar_id?: string
+          status?: string
           student_grade?: string | null
           student_name?: string
           user_id?: string
@@ -976,6 +979,8 @@ export type Database = {
           academy_id: string | null
           author_id: string | null
           capacity: number | null
+          completion_message: string | null
+          confirmation_mode: string
           created_at: string
           custom_questions: string[] | null
           date: string
@@ -985,6 +990,7 @@ export type Database = {
           location: string | null
           status: Database["public"]["Enums"]["seminar_status"]
           subject: string | null
+          survey_fields: Json | null
           target_grade: string | null
           title: string
           updated_at: string
@@ -993,6 +999,8 @@ export type Database = {
           academy_id?: string | null
           author_id?: string | null
           capacity?: number | null
+          completion_message?: string | null
+          confirmation_mode?: string
           created_at?: string
           custom_questions?: string[] | null
           date: string
@@ -1002,6 +1010,7 @@ export type Database = {
           location?: string | null
           status?: Database["public"]["Enums"]["seminar_status"]
           subject?: string | null
+          survey_fields?: Json | null
           target_grade?: string | null
           title: string
           updated_at?: string
@@ -1010,6 +1019,8 @@ export type Database = {
           academy_id?: string | null
           author_id?: string | null
           capacity?: number | null
+          completion_message?: string | null
+          confirmation_mode?: string
           created_at?: string
           custom_questions?: string[] | null
           date?: string
@@ -1019,6 +1030,7 @@ export type Database = {
           location?: string | null
           status?: Database["public"]["Enums"]["seminar_status"]
           subject?: string | null
+          survey_fields?: Json | null
           target_grade?: string | null
           title?: string
           updated_at?: string

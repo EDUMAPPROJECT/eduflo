@@ -41,6 +41,7 @@ interface SeminarApplication {
   attendee_count: number | null;
   message: string | null;
   created_at: string;
+  status?: string;
   seminar?: {
     id: string;
     title: string;
@@ -48,6 +49,7 @@ interface SeminarApplication {
     time?: string | null;
     location: string | null;
     status: "recruiting" | "closed";
+    confirmation_mode?: string;
     academy?: {
       name: string;
     };
@@ -152,6 +154,7 @@ const MyReservationsPage = () => {
             date,
             location,
             status,
+            confirmation_mode,
             academy:academies (
               name
             )
@@ -237,6 +240,15 @@ const MyReservationsPage = () => {
   };
 
   const openSeminarDetail = (app: SeminarApplication) => {
+    // Determine display status based on confirmation_mode and application status
+    const appStatus = (app as any).status || 'confirmed';
+    let seminarDisplayStatus = "confirmed";
+    if (appStatus === 'pending') {
+      seminarDisplayStatus = "pending";
+    } else if (appStatus === 'confirmed') {
+      seminarDisplayStatus = "confirmed";
+    }
+
     setDetailSheet({
       open: true,
       type: "seminar",
@@ -251,7 +263,7 @@ const MyReservationsPage = () => {
         seminarLocation: app.seminar?.location,
         seminarAcademyName: app.seminar?.academy?.name,
         attendeeCount: app.attendee_count,
-        seminarStatus: "applied", // Always show as "신청 완료" for applied seminars
+        seminarStatus: seminarDisplayStatus,
       }
     });
   };
@@ -450,33 +462,16 @@ const MyReservationsPage = () => {
                           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                             <Calendar className="w-4 h-4 text-primary" />
                           </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">방문</Badge>
-                              <h4 className="font-medium text-foreground text-sm line-clamp-1">
-                                {reservation.academy?.name || "학원"}
-                              </h4>
-                            </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-foreground text-sm line-clamp-1">
+                              {reservation.academy?.name || "학원"}
+                            </h4>
                             <p className="text-xs text-muted-foreground">
                               {reservation.student_name} · {reservation.student_grade || "학년 미정"}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {getStatusBadge(reservation.status)}
-                          {reservation.status === "pending" && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openCancelDialog("reservation", reservation.id, reservation.academy?.name || "방문 상담");
-                              }}
-                              className="p-1.5 hover:bg-destructive/10 rounded-full transition-colors"
-                              title="예약 취소"
-                            >
-                              <X className="w-4 h-4 text-destructive" />
-                            </button>
-                          )}
-                        </div>
+                        {getStatusBadge(reservation.status)}
                       </div>
                       <div className="flex items-center gap-2 text-sm text-primary font-medium">
                         <Clock className="w-4 h-4" />
@@ -499,49 +494,42 @@ const MyReservationsPage = () => {
                           <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
                             <GraduationCap className="w-4 h-4 text-accent" />
                           </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">설명회</Badge>
-                              <h4 className="font-medium text-foreground text-sm line-clamp-1">
-                                {app.seminar?.title || "설명회"}
-                              </h4>
-                            </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-foreground text-sm line-clamp-1">
+                              {app.seminar?.title || "설명회"}
+                            </h4>
                             <p className="text-xs text-muted-foreground">
                               {app.seminar?.academy?.name} · {app.student_name}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            variant="secondary"
-                            className="text-xs bg-green-100 text-green-700"
-                          >
-                            신청 완료
-                          </Badge>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openCancelDialog("seminar", app.id, app.seminar?.title || "설명회");
-                            }}
-                            className="p-1.5 hover:bg-destructive/10 rounded-full transition-colors"
-                            title="신청 취소"
-                          >
-                            <X className="w-4 h-4 text-destructive" />
-                          </button>
-                        </div>
+                        {(app as any).status === 'pending' ? (
+                          <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700 shrink-0">대기중</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 shrink-0">확정</Badge>
+                        )}
                       </div>
-                      {app.seminar?.date && (
-                        <div className="flex items-center gap-2 text-sm text-accent font-medium">
-                          <Clock className="w-4 h-4" />
-                          <span>{formatSeminarDateTime(app.seminar.date)}</span>
-                        </div>
-                      )}
-                      {app.seminar?.location && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                          <MapPin className="w-3 h-3" />
-                          <span className="line-clamp-1">{app.seminar.location.split(" | ")[0]}</span>
-                        </div>
-                      )}
+                      <div>
+                        {app.seminar?.date && (
+                          <div className="flex items-center gap-2 text-sm text-accent font-medium">
+                            <Clock className="w-4 h-4" />
+                            <span>{formatSeminarDateTime(app.seminar.date)}</span>
+                          </div>
+                        )}
+                        {app.seminar?.location && (() => {
+                          let locDisplay = app.seminar.location;
+                          try {
+                            const parsed = JSON.parse(app.seminar.location);
+                            locDisplay = parsed.name || parsed.address || app.seminar.location;
+                          } catch {}
+                          return (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                              <MapPin className="w-3 h-3" />
+                              <span className="line-clamp-1">{locDisplay}</span>
+                            </div>
+                          );
+                        })()}
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -585,12 +573,9 @@ const MyReservationsPage = () => {
                                 <Calendar className="w-4 h-4 text-muted-foreground" />
                               </div>
                               <div>
-                                <div className="flex items-center gap-1.5">
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">방문</Badge>
-                                  <h4 className="font-medium text-foreground text-sm line-clamp-1">
-                                    {reservation.academy?.name || "학원"}
-                                  </h4>
-                                </div>
+                                <h4 className="font-medium text-foreground text-sm line-clamp-1">
+                                  {reservation.academy?.name || "학원"}
+                                </h4>
                                 <p className="text-xs text-muted-foreground">
                                   {reservation.student_name} · {reservation.student_grade || "학년 미정"}
                                 </p>
@@ -620,12 +605,9 @@ const MyReservationsPage = () => {
                                 <GraduationCap className="w-4 h-4 text-muted-foreground" />
                               </div>
                               <div>
-                                <div className="flex items-center gap-1.5">
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">설명회</Badge>
-                                  <h4 className="font-medium text-foreground text-sm line-clamp-1">
-                                    {app.seminar?.title || "설명회"}
-                                  </h4>
-                                </div>
+                                <h4 className="font-medium text-foreground text-sm line-clamp-1">
+                                  {app.seminar?.title || "설명회"}
+                                </h4>
                                 <p className="text-xs text-muted-foreground">
                                   {app.seminar?.academy?.name} · {app.student_name}
                                 </p>
@@ -681,7 +663,7 @@ const MyReservationsPage = () => {
                           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                             <Calendar className="w-4 h-4 text-primary" />
                           </div>
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <h4 className="font-medium text-foreground text-sm line-clamp-1">
                               {reservation.academy?.name || "학원"}
                             </h4>
@@ -690,21 +672,7 @@ const MyReservationsPage = () => {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {getStatusBadge(reservation.status)}
-                          {reservation.status === "pending" && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openCancelDialog("reservation", reservation.id, reservation.academy?.name || "방문 상담");
-                              }}
-                              className="p-1.5 hover:bg-destructive/10 rounded-full transition-colors"
-                              title="예약 취소"
-                            >
-                              <X className="w-4 h-4 text-destructive" />
-                            </button>
-                          )}
-                        </div>
+                        {getStatusBadge(reservation.status)}
                       </div>
                       <div className="flex items-center gap-2 text-sm text-primary font-medium mb-2">
                         <Clock className="w-4 h-4" />
@@ -756,7 +724,7 @@ const MyReservationsPage = () => {
                           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                             <GraduationCap className="w-4 h-4 text-primary" />
                           </div>
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <h4 className="font-medium text-foreground text-sm line-clamp-1">
                               {app.seminar?.title || "설명회"}
                             </h4>
@@ -765,24 +733,11 @@ const MyReservationsPage = () => {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            variant="secondary"
-                            className="text-xs bg-green-100 text-green-700"
-                          >
-                            신청 완료
-                          </Badge>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openCancelDialog("seminar", app.id, app.seminar?.title || "설명회");
-                            }}
-                            className="p-1.5 hover:bg-destructive/10 rounded-full transition-colors"
-                            title="신청 취소"
-                          >
-                            <X className="w-4 h-4 text-destructive" />
-                          </button>
-                        </div>
+                        {(app as any).status === 'pending' ? (
+                          <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700 shrink-0">대기중</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 shrink-0">확정</Badge>
+                        )}
                       </div>
                       {app.seminar?.academy && (
                         <p className="text-xs text-muted-foreground mb-1">
@@ -796,12 +751,19 @@ const MyReservationsPage = () => {
                             <span>{formatDate(app.seminar.date)}</span>
                           </div>
                         )}
-                        {app.seminar?.location && (
-                          <div className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            <span className="line-clamp-1">{app.seminar.location}</span>
-                          </div>
-                        )}
+                        {app.seminar?.location && (() => {
+                          let locDisplay = app.seminar.location;
+                          try {
+                            const parsed = JSON.parse(app.seminar.location);
+                            locDisplay = parsed.name || parsed.address || app.seminar.location;
+                          } catch {}
+                          return (
+                            <div className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              <span className="line-clamp-1">{locDisplay}</span>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </CardContent>
                   </Card>

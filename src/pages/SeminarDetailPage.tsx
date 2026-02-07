@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import type { SurveyField, SurveyAnswer } from "@/types/surveyField";
 import { supabase } from "@/integrations/supabase/client";
 import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import { toast } from "sonner";
 import { logError } from "@/lib/errorLogger";
 import { seminarApplicationSchema, validateInput } from "@/lib/validation";
 import LoginRequiredDialog from "@/components/LoginRequiredDialog";
+import SurveyFormRenderer from "@/components/SurveyFormRenderer";
 
 interface Seminar {
   id: string;
@@ -77,13 +79,16 @@ const SeminarDetailPage = () => {
   const [myApplication, setMyApplication] = useState<any>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
+  const [completionMessage, setCompletionMessage] = useState("");
 
   // Form state
-  const [studentName, setStudentName] = useState("");
-  const [studentGrade, setStudentGrade] = useState("");
-  const [attendeeCount, setAttendeeCount] = useState(1);
-  const [message, setMessage] = useState("");
+  const [parentName, setParentName] = useState("");
+  const [parentPhone, setParentPhone] = useState("");
+  const [parentCount, setParentCount] = useState("1");
+  const [studentCount, setStudentCount] = useState("1");
   const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({});
+  const surveyFormRef = useRef<{ triggerSubmit: () => void; isValid: () => boolean; getAnswers: () => Record<string, SurveyAnswer> } | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -176,45 +181,60 @@ const SeminarDetailPage = () => {
       return;
     }
 
-    // Validate input
-    const validation = validateInput(seminarApplicationSchema, {
-      student_name: studentName,
-      student_grade: studentGrade || null,
-      message: message || null,
-      attendee_count: attendeeCount,
-    });
+    // Collect survey answers
+    const surveyFieldsList: SurveyField[] = (seminar as any).survey_fields || [];
+    let surveyAnswers: Record<string, SurveyAnswer> = {};
+    if (surveyFieldsList.length > 0 && surveyFormRef.current) {
+      const isValid = surveyFormRef.current.isValid();
+      if (!isValid) {
+        toast.error('설문 항목을 모두 확인해주세요');
+        return;
+      }
+      surveyAnswers = surveyFormRef.current.getAnswers();
+    }
 
-    if (!validation.success) {
-      toast.error((validation as { success: false; error: string }).error);
+    if (!parentName.trim()) {
+      toast.error('학부모 이름을 입력해주세요');
+      return;
+    }
+    if (!parentPhone.trim()) {
+      toast.error('전화번호를 입력해주세요');
       return;
     }
 
-    const validatedData = (validation as { success: true; data: { student_name: string; student_grade?: string | null; message?: string | null; attendee_count: number } }).data;
+    const pCount = parseInt(parentCount) || 0;
+    const sCount = parseInt(studentCount) || 0;
+    if (pCount + sCount <= 0) {
+      toast.error('참석 인원을 입력해주세요');
+      return;
+    }
 
     setSubmitting(true);
     try {
+      // All seminar applications start as pending (requires admin approval)
+      const applicationStatus = 'pending';
+
       const { error } = await supabase.from("seminar_applications").insert({
         seminar_id: id,
         user_id: user.id,
-        student_name: validatedData.student_name,
-        student_grade: validatedData.student_grade,
-        attendee_count: validatedData.attendee_count,
-        message: validatedData.message,
-        custom_answers: Object.keys(customAnswers).length > 0 ? customAnswers : null,
-      });
+        student_name: parentName.trim(),
+        attendee_count: pCount + sCount,
+        status: applicationStatus,
+        custom_answers: (Object.keys(surveyAnswers).length > 0 
+          ? { ...surveyAnswers, _parentPhone: parentPhone.trim(), _parentCount: pCount, _studentCount: sCount } 
+          : { _parentPhone: parentPhone.trim(), _parentCount: pCount, _studentCount: sCount }) as any,
+      } as any);
 
       if (error) throw error;
 
-      toast.success("설명회 신청이 완료되었습니다");
       setIsDialogOpen(false);
       setHasApplied(true);
-      setMyApplication({
-        student_name: studentName,
-        student_grade: studentGrade,
-        attendee_count: attendeeCount,
-      });
-      resetForm();
+      setMyApplication({ student_name: parentName.trim() });
       fetchApplicationCount();
+
+      // Show completion dialog
+      setCompletionMessage((seminar as any).completion_message || "설명회 신청이 완료되었습니다");
+      setShowCompletionDialog(true);
     } catch (error) {
       logError("apply-seminar", error);
       toast.error("신청에 실패했습니다");
@@ -224,10 +244,10 @@ const SeminarDetailPage = () => {
   };
 
   const resetForm = () => {
-    setStudentName("");
-    setStudentGrade("");
-    setAttendeeCount(1);
-    setMessage("");
+    setParentName("");
+    setParentPhone("");
+    setParentCount("1");
+    setStudentCount("1");
     setCustomAnswers({});
   };
 
@@ -474,15 +494,37 @@ const SeminarDetailPage = () => {
               {formatTime(seminar.date)}
             </p>
           </div>
-          <div className="bg-card border border-border rounded-xl p-4 col-span-2 shadow-card">
-            <div className="flex items-center gap-2 text-primary mb-2">
-              <MapPin className="w-5 h-5" />
-              <span className="text-xs font-semibold">장소</span>
-            </div>
-            <p className="text-sm font-medium text-foreground">
-              {seminar.location || "장소 미정"}
-            </p>
-          </div>
+          {(() => {
+            let locName = "";
+            let locDetail = "";
+            let locAddress = "";
+            if (seminar.location) {
+              try {
+                const parsed = JSON.parse(seminar.location);
+                locName = parsed.name || "";
+                locDetail = parsed.detail || "";
+                locAddress = parsed.address || "";
+              } catch {
+                locName = seminar.location;
+              }
+            }
+            return (
+              <div className="bg-card border border-border rounded-xl p-4 col-span-2 shadow-card">
+                <div className="flex items-center gap-2 text-primary mb-2">
+                  <MapPin className="w-5 h-5" />
+                  <span className="text-xs font-semibold">장소</span>
+                </div>
+                {locName || locAddress ? (
+                  <div className="space-y-1">
+                    {locName && <p className="text-sm font-bold text-foreground">{locName}</p>}
+                    {locAddress && <p className="text-xs text-muted-foreground">{locAddress}</p>}
+                  </div>
+                ) : (
+                  <p className="text-sm font-medium text-foreground">장소 미정</p>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Capacity with Progress */}
@@ -529,11 +571,13 @@ const SeminarDetailPage = () => {
                 <span className="font-bold text-lg">신청 완료</span>
               </div>
               <p className="text-sm text-foreground">
-                <span className="font-semibold">{myApplication.student_name}</span> ({myApplication.student_grade})
+                <span className="font-semibold">{myApplication.student_name}</span>
               </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {myApplication.attendee_count}명 참석 예정
-              </p>
+              {(seminar as any).completion_message && (
+                <p className="text-sm text-foreground mt-2 whitespace-pre-wrap">
+                  {(seminar as any).completion_message}
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -574,76 +618,82 @@ const SeminarDetailPage = () => {
 
       {/* Application Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-sm mx-auto">
+        <DialogContent className="max-w-sm mx-auto max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="text-lg">설명회 참가 신청</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="studentName">학생 이름 *</Label>
-              <Input
-                id="studentName"
-                placeholder="학생 이름을 입력하세요"
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="studentGrade">학년 *</Label>
-              <Select value={studentGrade} onValueChange={setStudentGrade}>
-                <SelectTrigger>
-                  <SelectValue placeholder="학년을 선택하세요" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="초등 1학년">초등 1학년</SelectItem>
-                  <SelectItem value="초등 2학년">초등 2학년</SelectItem>
-                  <SelectItem value="초등 3학년">초등 3학년</SelectItem>
-                  <SelectItem value="초등 4학년">초등 4학년</SelectItem>
-                  <SelectItem value="초등 5학년">초등 5학년</SelectItem>
-                  <SelectItem value="초등 6학년">초등 6학년</SelectItem>
-                  <SelectItem value="중학교 1학년">중학교 1학년</SelectItem>
-                  <SelectItem value="중학교 2학년">중학교 2학년</SelectItem>
-                  <SelectItem value="중학교 3학년">중학교 3학년</SelectItem>
-                  <SelectItem value="고등학교 1학년">고등학교 1학년</SelectItem>
-                  <SelectItem value="고등학교 2학년">고등학교 2학년</SelectItem>
-                  <SelectItem value="고등학교 3학년">고등학교 3학년</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="attendeeCount">참석 인원</Label>
-              <Input
-                id="attendeeCount"
-                type="number"
-                min={1}
-                max={5}
-                value={attendeeCount}
-                onChange={(e) => setAttendeeCount(Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="message">질문 사항 (선택)</Label>
-              <Textarea
-                id="message"
-                placeholder="설명회에서 듣고 싶은 내용이 있으시면 적어주세요"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={3}
-              />
+          <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0 pr-1">
+            {/* Default fields: parent name, phone, attendee counts */}
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-sm font-medium">학부모 이름 <span className="text-destructive">*</span></Label>
+                <Input
+                  placeholder="이름을 입력하세요"
+                  value={parentName}
+                  onChange={(e) => setParentName(e.target.value)}
+                  maxLength={50}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-sm font-medium">전화번호 <span className="text-destructive">*</span></Label>
+                <Input
+                  placeholder="전화번호를 입력하세요"
+                  value={parentPhone}
+                  onChange={(e) => setParentPhone(e.target.value)}
+                  maxLength={20}
+                  type="tel"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium">학부모 인원 <span className="text-destructive">*</span></Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={10}
+                    placeholder="0"
+                    value={parentCount}
+                    onChange={(e) => setParentCount(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium">학생 인원 <span className="text-destructive">*</span></Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={10}
+                    placeholder="0"
+                    value={studentCount}
+                    onChange={(e) => setStudentCount(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Custom Questions from Seminar */}
-            {seminar.custom_questions && seminar.custom_questions.length > 0 && (
-              <div className="space-y-3 pt-3 border-t border-border">
+            {/* Survey Fields from Seminar */}
+            {(() => {
+              const surveyFields: SurveyField[] = (seminar as any).survey_fields || [];
+              if (surveyFields.length === 0) return null;
+              return (
+                <div className="space-y-2">
+                  <SurveyFormRenderer
+                    fields={surveyFields}
+                    onSubmit={() => {}}
+                    renderOnly
+                    formRef={surveyFormRef}
+                  />
+                </div>
+              );
+            })()}
+
+            {/* Legacy custom questions fallback */}
+            {seminar.custom_questions && seminar.custom_questions.length > 0 && !((seminar as any).survey_fields?.length > 0) && (
+              <div className="space-y-3">
                 <p className="text-sm font-medium text-foreground">추가 질문</p>
                 {seminar.custom_questions.map((question, index) => (
                   <div key={index} className="space-y-1">
                     <Label className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {question.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
-                        part.startsWith('**') && part.endsWith('**')
-                          ? <strong key={i}>{part.slice(2, -2)}</strong>
-                          : part
-                      )}
+                      {question}
                     </Label>
                     <Input
                       placeholder="답변을 입력하세요"
@@ -669,6 +719,30 @@ const SeminarDetailPage = () => {
         </DialogContent>
       </Dialog>
       <LoginRequiredDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
+
+      {/* Completion Message Dialog */}
+      <Dialog open={showCompletionDialog} onOpenChange={setShowCompletionDialog}>
+        <DialogContent className="max-w-sm mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-primary" />
+              신청 완료
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-foreground whitespace-pre-wrap">
+              {completionMessage.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+                part.startsWith('**') && part.endsWith('**')
+                  ? <strong key={i}>{part.slice(2, -2)}</strong>
+                  : part
+              )}
+            </p>
+          </div>
+          <Button className="w-full" onClick={() => setShowCompletionDialog(false)}>
+            확인
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
