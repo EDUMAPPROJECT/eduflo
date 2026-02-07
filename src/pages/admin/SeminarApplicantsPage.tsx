@@ -99,7 +99,7 @@ const SeminarApplicantsPage = () => {
     try {
       const { error } = await supabase
         .from("seminar_applications")
-        .update({ status } as any)
+        .update({ status })
         .eq("id", appId);
 
       if (error) throw error;
