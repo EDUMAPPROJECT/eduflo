@@ -183,10 +183,12 @@ const AuthPage = () => {
     pendingPhoneRef.current = null;
     const digits = getDigitsOnly(phone);
     const phoneNum = digits.startsWith("82") ? `+${digits}` : `+82${digits.replace(/^0/, "")}`;
+    // invisible reCAPTCHA는 Firebase 권장대로 '인증번호 받기' 버튼에 바인딩 (도메인 검증 시 필요)
+    const buttonEl = document.getElementById("firebase-phone-auth-button") ?? container;
     let cancelled = false;
     (async () => {
       try {
-        const verifier = new RecaptchaVerifier(firebaseAuth, container, {
+        const verifier = new RecaptchaVerifier(firebaseAuth, buttonEl, {
           size: "invisible",
         });
         if (cancelled) return;
@@ -199,8 +201,13 @@ const AuthPage = () => {
       } catch (error: unknown) {
         if (cancelled) return;
         logError("firebase-phone-request", error);
+        const code = error && typeof error === "object" && "code" in error ? String((error as { code: string }).code) : "";
         const msg = error && typeof error === "object" && "message" in error ? String((error as { message: string }).message) : "인증번호 발송에 실패했습니다";
-        toast.error(msg);
+        if (code === "auth/invalid-app-credential") {
+          toast.error("앱 인증에 실패했습니다. 배포된 주소에서 시도하거나, Firebase 콘솔에서 허용 도메인을 확인해주세요.");
+        } else {
+          toast.error(msg);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -505,6 +512,7 @@ const AuthPage = () => {
 
               {!loginShowVerification ? (
                 <Button
+                  id="firebase-phone-auth-button"
                   onClick={handleLoginRequestCode}
                   disabled={loading}
                   className="w-full h-14 text-base"
