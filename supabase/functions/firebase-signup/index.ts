@@ -26,9 +26,10 @@ serve(async (req: Request) => {
   }
 
   try {
-    const body = (await req.json()) as { idToken?: string; role?: string };
+    const body = (await req.json()) as { idToken?: string; role?: string; user_name?: string };
     const idToken = body?.idToken;
     const role = body?.role as AuthRole | undefined;
+    const user_name = typeof body?.user_name === "string" ? body.user_name.trim() : "";
 
     if (!idToken || typeof idToken !== "string") {
       return new Response(
@@ -39,6 +40,12 @@ serve(async (req: Request) => {
     if (!role || !["parent", "student", "admin"].includes(role)) {
       return new Response(
         JSON.stringify({ error: "유효한 role이 필요합니다 (parent, student, admin)" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    if (!user_name) {
+      return new Response(
+        JSON.stringify({ error: "실명(이름)이 필요합니다" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -86,6 +93,7 @@ serve(async (req: Request) => {
         phone,
         firebase_uid: payload.localId,
         role,
+        user_name,
       },
     });
 
@@ -113,12 +121,12 @@ serve(async (req: Request) => {
     }
 
     // 클라이언트에서 Supabase 세션을 만들 수 있도록 매직 링크 토큰 생성
-    const email = newUser.user.email ?? "";
     let token_hash: string | undefined;
-    if (email) {
+    const userEmail = newUser.user.email ?? "";
+    if (userEmail) {
       const { data: linkData } = await supabase.auth.admin.generateLink({
         type: "magiclink",
-        email,
+        email: userEmail,
       });
       const actionLink = linkData?.properties?.action_link;
       if (actionLink) {

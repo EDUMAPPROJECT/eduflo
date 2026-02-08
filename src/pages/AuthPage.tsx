@@ -5,7 +5,7 @@ import { signInWithPhoneNumber, RecaptchaVerifier, type ConfirmationResult } fro
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Logo from "@/components/Logo";
-import { Lock, ArrowRight, Phone, Mail, ArrowLeft } from "lucide-react";
+import { Lock, ArrowRight, Phone, Mail, ArrowLeft, User } from "lucide-react";
 import { toast } from "sonner";
 import { logError } from "@/lib/errorLogger";
 import { sendIdTokenToBackend, type AuthRole } from "@/lib/sendIdTokenToBackend";
@@ -34,6 +34,7 @@ const AuthPage = () => {
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
   const [recaptchaKey, setRecaptchaKey] = useState(0);
   const pendingPhoneRef = useRef<string | null>(null);
+  const [signupName, setSignupName] = useState(""); // 회원가입 실명
 
   // Email auth states
   const [email, setEmail] = useState("");
@@ -285,12 +286,17 @@ const AuthPage = () => {
       toast.error("인증번호를 입력해주세요");
       return;
     }
+    const trimmedName = signupName.trim();
+    if (!trimmedName) {
+      toast.error("실명(이름)을 입력해주세요");
+      return;
+    }
     setLoading(true);
     try {
       const userCredential = await confirmation.confirm(loginVerificationCode.trim());
       const user = userCredential.user;
       const idToken = await user.getIdToken();
-      const { ok, error: backendError, token_hash } = await sendIdTokenToBackend(idToken, selectedRole, true);
+      const { ok, error: backendError, token_hash } = await sendIdTokenToBackend(idToken, selectedRole, true, trimmedName);
       if (!ok) {
         toast.error(backendError ?? "회원가입 처리에 실패했습니다");
         return;
@@ -356,12 +362,12 @@ const AuthPage = () => {
                 : "이메일로 회원가입하세요"
               : step === "login"
                 ? "휴대폰 번호로 로그인하세요"
-                : "가입 유형을 선택한 뒤 휴대폰 인증을 진행해주세요"}
+                : "가입 유형을 선택하고 휴대폰 번호로 회원가입하세요"}
           </p>
 
           {/* Role selection (for signup) */}
           {step === "signup" && (
-            <div className="grid grid-cols-3 gap-2 mb-6">
+            <div className="grid grid-cols-3 gap-2 mb-4">
               <Button
                 variant={selectedRole === "parent" ? "default" : "outline"}
                 className="h-12 text-sm px-2"
@@ -383,6 +389,21 @@ const AuthPage = () => {
               >
                 학원
               </Button>
+            </div>
+          )}
+
+          {/* 실명 (휴대폰 회원가입 시, 가입 유형 선택 밑) */}
+          {step === "signup" && authMode === "phone" && (
+            <div className="relative mb-4">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="이름"
+                value={signupName}
+                onChange={(e) => setSignupName(e.target.value)}
+                className="pl-12 h-14 text-lg"
+                disabled={loginShowVerification}
+              />
             </div>
           )}
 

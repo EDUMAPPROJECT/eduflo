@@ -3,13 +3,14 @@ export type AuthRole = "parent" | "student" | "admin";
 /**
  * Firebase ID Token을 백엔드로 전송합니다.
  * - 로그인: POST /auth/firebase-login { idToken, role }
- * - 회원가입: POST /auth/firebase-signup { idToken, role }
+ * - 회원가입: POST /auth/firebase-signup { idToken, role, user_name }
  * 성공 시 백엔드가 token_hash를 반환하면 클라이언트에서 Supabase 세션 생성에 사용합니다.
  */
 export async function sendIdTokenToBackend(
   idToken: string,
   role: AuthRole,
-  isSignup: boolean
+  isSignup: boolean,
+  userName?: string
 ): Promise<{ ok: boolean; error?: string; token_hash?: string }> {
   // Lovable 등에서 Supabase만 관리할 때는 VITE_SUPABASE_URL로 Edge Function 호출
   const backendUrl =
@@ -20,7 +21,7 @@ export async function sendIdTokenToBackend(
   const path = isSignup ? "firebase-signup" : "firebase-login";
   const base = backendUrl.replace(/\/$/, "");
   const url = base.includes("/functions/v1") ? `${base}/${path}` : `${base}/functions/v1/${path}`;
-  const body = { idToken, role };
+  const body = isSignup && userName ? { idToken, role, user_name: userName } : { idToken, role };
   try {
     const res = await fetch(url, {
       method: "POST",
