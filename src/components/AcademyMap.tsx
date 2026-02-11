@@ -28,8 +28,10 @@ interface AcademyMapProps {
   onAcademyInfoClick?: (academyId: string) => void;
 }
 
-const DEFAULT_MARKER_SIZE = 36;
-const FOCUSED_MARKER_SIZE = 72;
+const DEFAULT_MARKER_WIDTH = 24;
+const DEFAULT_MARKER_HEIGHT = 28;
+const FOCUSED_MARKER_WIDTH = 36;
+const FOCUSED_MARKER_HEIGHT = 42;
 
 const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null, onAcademyInfoClick }: AcademyMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -103,25 +105,44 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null, onAca
                 title: academy.name,
                 icon: {
                   url: markerIcon,
-                  scaledSize: new naver.Size(DEFAULT_MARKER_SIZE, DEFAULT_MARKER_SIZE),
-                  anchor: new naver.Point(DEFAULT_MARKER_SIZE / 2, DEFAULT_MARKER_SIZE),
+                  scaledSize: new naver.Size(DEFAULT_MARKER_WIDTH, DEFAULT_MARKER_HEIGHT),
+                  anchor: new naver.Point(DEFAULT_MARKER_WIDTH / 2, DEFAULT_MARKER_HEIGHT),
                 },
               });
 
               // 마커 클릭 시 정보창 표시 (클릭하면 상세 페이지로 이동)
               const contentEl = document.createElement("div");
               contentEl.className = "academy-info-window-content";
-              contentEl.style.cssText = "padding: 12px; min-width: 200px; cursor: pointer;";
-              contentEl.innerHTML = `
+              contentEl.style.cssText =
+                "position: relative; padding-bottom: 12px; min-width: 200px; cursor: pointer; background: transparent;";
+
+              const bubbleEl = document.createElement("div");
+              bubbleEl.style.cssText =
+                "position: relative; background: #ffffff; border-radius: 12px; box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12); padding: 12px;";
+              bubbleEl.innerHTML = `
                 <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 6px;">${academy.name}</h3>
                 <p style="font-size: 12px; color: #666; margin: 0;">${academy.address || "주소 정보 없음"}</p>
                 <p style="font-size: 11px; color: #2563eb; margin: 6px 0 0;">학원 프로필 바로가기 →</p>
               `;
+
+              const anchorEl = document.createElement("div");
+              anchorEl.style.cssText =
+                "position: absolute; left: 50%; bottom: -8px; width: 16px; height: 16px; background: #ffffff; transform: translateX(-50%) rotate(45deg); box-shadow: none;";
+
+              bubbleEl.appendChild(anchorEl);
+              contentEl.appendChild(bubbleEl);
               contentEl.addEventListener("click", () => {
                 onAcademyInfoClickRef.current?.(academy.id);
               });
 
-              const infoWindow = new naver.InfoWindow({ content: contentEl });
+              const infoWindow = new naver.InfoWindow({
+                content: contentEl,
+                borderWidth: 0,
+                borderColor: "transparent",
+                backgroundColor: "transparent",
+                anchorSize: new naver.Size(0, 0),
+                disableAnchor: true,
+              });
               infoWindowsRef.current.push(infoWindow);
 
               naver.Event.addListener(marker, "click", () => {
@@ -194,11 +215,12 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null, onAca
       map.setZoom(17);
       markersRef.current.forEach(({ marker, academyId }) => {
         const isFocused = academyId === focusedAcademy.id;
-        const size = isFocused ? FOCUSED_MARKER_SIZE : DEFAULT_MARKER_SIZE;
+        const width = isFocused ? FOCUSED_MARKER_WIDTH : DEFAULT_MARKER_WIDTH;
+        const height = isFocused ? FOCUSED_MARKER_HEIGHT : DEFAULT_MARKER_HEIGHT;
         marker.setIcon({
           url: markerIcon,
-          scaledSize: new naver.Size(size, size),
-          anchor: new naver.Point(size / 2, size),
+          scaledSize: new naver.Size(width, height),
+          anchor: new naver.Point(width / 2, height),
         });
       });
     } else {
@@ -206,8 +228,8 @@ const AcademyMap = ({ onMapClick, expanded = false, focusedAcademy = null, onAca
       markersRef.current.forEach(({ marker }) => {
         marker.setIcon({
           url: markerIcon,
-          scaledSize: new naver.Size(DEFAULT_MARKER_SIZE, DEFAULT_MARKER_SIZE),
-          anchor: new naver.Point(DEFAULT_MARKER_SIZE / 2, DEFAULT_MARKER_SIZE),
+          scaledSize: new naver.Size(DEFAULT_MARKER_WIDTH, DEFAULT_MARKER_HEIGHT),
+          anchor: new naver.Point(DEFAULT_MARKER_WIDTH / 2, DEFAULT_MARKER_HEIGHT),
         });
       });
     }
