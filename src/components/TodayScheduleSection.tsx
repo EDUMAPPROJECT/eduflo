@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { Calendar, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { parseScheduleMultiple, CLASS_COLORS } from "@/hooks/useClassEnrollments";
-import { useChildren } from "@/hooks/useChildren";
-import ChildSelector from "@/components/ChildSelector";
 
 interface TodayClass {
   id: string;
@@ -66,7 +64,7 @@ const getDuration = (
 const TodayScheduleSection = () => {
   const [todayClasses, setTodayClasses] = useState<TodayClass[]>([]);
   const [loading, setLoading] = useState(true);
-  const { selectedChildId, hasChildren } = useChildren();
+  
 
   useEffect(() => {
     const fetchTodaySchedule = async () => {
@@ -94,10 +92,6 @@ const TodayScheduleSection = () => {
           .eq("user_id", session.user.id)
           .order("created_at", { ascending: true });
 
-        // Filter by selected child if available
-        if (hasChildren && selectedChildId) {
-          query = query.eq("child_id", selectedChildId);
-        }
 
         const { data, error } = await query;
 
@@ -146,7 +140,7 @@ const TodayScheduleSection = () => {
     };
 
     fetchTodaySchedule();
-  }, [selectedChildId, hasChildren]);
+  }, []);
 
   if (loading) {
     return (
@@ -169,7 +163,7 @@ const TodayScheduleSection = () => {
           <Calendar className="w-5 h-5 text-primary" />
           <h3 className="text-lg font-semibold">오늘의 일정</h3>
         </div>
-        {hasChildren && <ChildSelector showAllOption={false} />}
+        
       </div>
 
       {todayClasses.length === 0 ? (

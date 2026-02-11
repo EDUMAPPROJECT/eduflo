@@ -2,11 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoutePrefix } from "@/hooks/useRoutePrefix";
-import { useChildren } from "@/hooks/useChildren";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import ChildSelector from "@/components/ChildSelector";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { BookOpen, Clock, Trash2, Users, Building2, UserCircle } from "lucide-react";
+import { BookOpen, Clock, Trash2, Users, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface EnrolledClass {
@@ -59,7 +57,6 @@ const CLASS_COLORS = [
 const MyClassList = () => {
   const navigate = useNavigate();
   const prefix = useRoutePrefix();
-  const { selectedChildId, hasChildren } = useChildren();
   const [enrollments, setEnrollments] = useState<EnrolledClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -70,7 +67,7 @@ const MyClassList = () => {
 
   useEffect(() => {
     fetchEnrollments();
-  }, [selectedChildId, hasChildren]);
+  }, []);
 
   const fetchEnrollments = async () => {
     try {
@@ -81,7 +78,7 @@ const MyClassList = () => {
         return;
       }
 
-      let query = supabase
+      const { data, error } = await supabase
         .from("class_enrollments")
         .select(`
           *,
@@ -96,22 +93,10 @@ const MyClassList = () => {
               id,
               name
             )
-          ),
-          child:children (
-            id,
-            name,
-            grade
           )
         `)
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false });
-
-      // Filter by selected child if available
-      if (hasChildren && selectedChildId) {
-        query = query.eq("child_id", selectedChildId);
-      }
-
-      const { data, error } = await query;
 
       if (error) throw error;
       setEnrollments((data as any) || []);
@@ -155,11 +140,6 @@ const MyClassList = () => {
   if (enrollments.length === 0) {
     return (
       <div className="space-y-4">
-        {hasChildren && (
-          <div className="flex justify-end">
-            <ChildSelector showAllOption={false} />
-          </div>
-        )}
         <Card className="shadow-card border-border">
           <CardContent className="p-6 text-center">
             <BookOpen className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
@@ -180,11 +160,6 @@ const MyClassList = () => {
 
   return (
     <>
-      {hasChildren && (
-        <div className="flex justify-end mb-4">
-          <ChildSelector showAllOption={false} />
-        </div>
-      )}
       <div className="space-y-3">
         {enrollments.map((enrollment, index) => (
           <Card
@@ -231,17 +206,7 @@ const MyClassList = () => {
                         )}
                       </div>
 
-                      {/* Child info if available */}
-                      {enrollment.child && (
-                        <div className="flex items-center gap-1 mt-2 text-xs text-primary">
-                          <UserCircle className="w-3 h-3" />
-                          <span>{enrollment.child.name}</span>
-                          {enrollment.child.grade && (
-                            <span className="text-muted-foreground">({enrollment.child.grade})</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                      </div>
 
                     <button
                       onClick={() =>

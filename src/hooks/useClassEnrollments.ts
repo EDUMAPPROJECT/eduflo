@@ -120,13 +120,13 @@ export function parseSchedule(schedule: string | null): ParsedSchedule | null {
   };
 }
 
-export function useClassEnrollments(childId?: string | null) {
+export function useClassEnrollments() {
   const [enrollments, setEnrollments] = useState<EnrolledClassWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
 
   const fetchEnrollments = useCallback(async (uid: string) => {
-    let query = supabase
+    const query = supabase
       .from("class_enrollments")
       .select(`
         *,
@@ -145,20 +145,10 @@ export function useClassEnrollments(childId?: string | null) {
             id,
             name
           )
-        ),
-        child:children (
-          id,
-          name,
-          grade
         )
       `)
       .eq("user_id", uid)
       .order("created_at", { ascending: true });
-
-    // Filter by child if specified
-    if (childId) {
-      query = query.eq("child_id", childId);
-    }
 
     const { data, error } = await query;
 
@@ -168,7 +158,7 @@ export function useClassEnrollments(childId?: string | null) {
       setEnrollments((data as any) || []);
     }
     setLoading(false);
-  }, [childId]);
+  }, []);
 
   useEffect(() => {
     const initFetch = async () => {
@@ -198,7 +188,7 @@ export function useClassEnrollments(childId?: string | null) {
     return !!data;
   };
 
-  const enrollClass = async (classId: string, enrollChildId?: string | null): Promise<boolean> => {
+  const enrollClass = async (classId: string): Promise<boolean> => {
     if (!userId) return false;
 
     const { error } = await supabase
@@ -206,7 +196,6 @@ export function useClassEnrollments(childId?: string | null) {
       .insert({
         user_id: userId,
         class_id: classId,
-        child_id: enrollChildId || null,
       });
 
     if (error) {
@@ -215,7 +204,7 @@ export function useClassEnrollments(childId?: string | null) {
     }
 
     // Refresh enrollments
-    let query = supabase
+    const { data } = await supabase
       .from("class_enrollments")
       .select(`
         *,
@@ -234,21 +223,10 @@ export function useClassEnrollments(childId?: string | null) {
             id,
             name
           )
-        ),
-        child:children (
-          id,
-          name,
-          grade
         )
       `)
       .eq("user_id", userId)
       .order("created_at", { ascending: true });
-
-    if (childId) {
-      query = query.eq("child_id", childId);
-    }
-
-    const { data } = await query;
 
     setEnrollments((data as any) || []);
     return true;

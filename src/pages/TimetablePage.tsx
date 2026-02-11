@@ -2,9 +2,7 @@ import { ArrowLeft, Plus, Clock, School } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import BottomNavigation from "@/components/BottomNavigation";
-import ChildSelector from "@/components/ChildSelector";
 import { useClassEnrollments, parseScheduleMultiple, CLASS_COLORS } from "@/hooks/useClassEnrollments";
-import { useChildren } from "@/hooks/useChildren";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -42,8 +40,7 @@ interface ManualSchedule {
 const TimetablePage = () => {
   const navigate = useNavigate();
   const routePrefix = useRoutePrefix();
-  const { children, selectedChildId, hasChildren } = useChildren();
-  const { enrollments, loading: enrollmentsLoading, userId } = useClassEnrollments(hasChildren ? selectedChildId : undefined);
+  const { enrollments, loading: enrollmentsLoading, userId } = useClassEnrollments();
   const [manualSchedules, setManualSchedules] = useState<ManualSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -78,13 +75,6 @@ const TimetablePage = () => {
         .eq("user_id", userId)
         .order("created_at", { ascending: true });
 
-      // Filter by selected child if available
-      if (hasChildren && selectedChildId) {
-        query = query.eq("child_id", selectedChildId);
-      } else if (hasChildren && !selectedChildId) {
-        // If has children but none selected, show schedules with null child_id (user's own)
-        query = query.is("child_id", null);
-      }
 
       const { data, error } = await query;
 
@@ -99,7 +89,7 @@ const TimetablePage = () => {
     if (!enrollmentsLoading) {
       fetchManualSchedules();
     }
-  }, [userId, enrollmentsLoading, selectedChildId, hasChildren]);
+  }, [userId, enrollmentsLoading]);
 
   // Parse all enrolled class schedules into blocks
   const scheduleBlocks: ScheduleBlock[] = [];
@@ -181,7 +171,7 @@ const TimetablePage = () => {
         start_time: newStartTime,
         end_time: newEndTime,
         color_index: enrollments.length + manualSchedules.length,
-        child_id: hasChildren && selectedChildId ? selectedChildId : null,
+        child_id: null,
       })
       .select()
       .single();
@@ -263,7 +253,7 @@ const TimetablePage = () => {
             </button>
             <h1 className="text-lg font-semibold">시간표</h1>
           </div>
-          {hasChildren && <ChildSelector showAllOption={false} />}
+          
         </div>
       </header>
 
