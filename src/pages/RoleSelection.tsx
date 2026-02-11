@@ -56,7 +56,7 @@ const RoleSelection = () => {
             onClick={() => handleRoleSelect("student")}
           >
             <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-              <User className="w-6 h-6 text-blue-500" />
+              <User className="w-6 h-6 text-primary" />
             </div>
             <div className="text-left flex-1">
               <div className="font-semibold text-base">학생으로 시작하기</div>
@@ -73,10 +73,10 @@ const RoleSelection = () => {
             onClick={() => handleRoleSelect("admin")}
           >
             <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-accent" />
+              <Building2 className="w-6 h-6 text-primary" />
             </div>
             <div className="text-left flex-1">
-              <div className="font-semibold text-base">학원으로 시작하기</div>
+              <div className="font-semibold text-base">학원 관계자로 시작하기</div>
               <div className="text-xs text-muted-foreground font-normal">
                 학원 등록 또는 기존 학원 참여
               </div>
