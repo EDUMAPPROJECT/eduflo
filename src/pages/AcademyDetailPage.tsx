@@ -267,7 +267,6 @@ const AcademyDetailPage = () => {
 
     setEnrollConfirmDialog({ isOpen: false, classInfo: null });
   };
-  };
 
   const handleOpenEnrollDialog = (classInfo: ClassInfo) => {
     setEnrollConfirmDialog({ isOpen: true, classInfo });
@@ -933,3 +932,4 @@ const AcademyDetailPage = () => {
 };
 
 export default AcademyDetailPage;
+
