@@ -1,4 +1,4 @@
-import { ArrowLeft, Plus, Clock, School } from "lucide-react";
+import { ArrowLeft, Plus, Clock, School, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import BottomNavigation from "@/components/BottomNavigation";
@@ -40,7 +40,7 @@ interface ManualSchedule {
 const TimetablePage = () => {
   const navigate = useNavigate();
   const routePrefix = useRoutePrefix();
-  const { enrollments, loading: enrollmentsLoading, userId } = useClassEnrollments();
+  const { enrollments, loading: enrollmentsLoading, userId, unenrollClass } = useClassEnrollments();
   const [manualSchedules, setManualSchedules] = useState<ManualSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -50,6 +50,7 @@ const TimetablePage = () => {
   const [newEndTime, setNewEndTime] = useState("10:00");
   const [selectedBlock, setSelectedBlock] = useState<ScheduleBlock | null>(null);
   const [showClassDetailDialog, setShowClassDetailDialog] = useState(false);
+  const [deleteEnrollment, setDeleteEnrollment] = useState<{ isOpen: boolean; enrollment: any | null }>({ isOpen: false, enrollment: null });
 
   const days = ["월", "화", "수", "목", "금", "토", "일"];
   const hours = Array.from({ length: 14 }, (_, i) => i + 9); // 09:00 ~ 22:00
@@ -334,6 +335,19 @@ const TimetablePage = () => {
                 <div className="border-t border-border" />
               </div>
             </div>
+
+            {/* Add Button right below timetable */}
+            <div className="flex justify-end mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddDialog(true)}
+                className="gap-1"
+              >
+                <Plus className="w-4 h-4" />
+                수동 추가
+              </Button>
+            </div>
           </div>
         )}
 
@@ -368,6 +382,15 @@ const TimetablePage = () => {
                         {scheduleText || '시간 미정'}
                       </p>
                     </div>
+                    <button
+                      className="shrink-0 p-1 rounded-full hover:bg-destructive/10 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteEnrollment({ isOpen: true, enrollment });
+                      }}
+                    >
+                      <X className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                    </button>
                   </div>
                 );
               })}
@@ -407,23 +430,12 @@ const TimetablePage = () => {
           </div>
         )}
 
-        {/* Info Text and Add Button */}
-        <div className="flex items-center justify-between mt-4">
-          <p className="text-xs text-muted-foreground">
-            {scheduleBlocks.length === 0 
-              ? "MY CLASS에 강좌를 등록하거나 일정을 추가해주세요"
-              : "강좌 클릭 시 상세 정보 확인, 수동 일정 클릭 시 삭제 가능"}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAddDialog(true)}
-            className="gap-1 shrink-0 ml-2"
-          >
-            <Plus className="w-4 h-4" />
-            수동 추가
-          </Button>
-        </div>
+        {/* Info Text */}
+        <p className="text-xs text-muted-foreground mt-4">
+          {scheduleBlocks.length === 0 
+            ? "MY CLASS에 강좌를 등록하거나 일정을 추가해주세요"
+            : "강좌 클릭 시 상세 정보 확인, 수동 일정 클릭 시 삭제 가능"}
+        </p>
       </main>
 
       {/* Class Detail Dialog */}
@@ -561,6 +573,40 @@ const TimetablePage = () => {
               취소
             </Button>
             <Button onClick={handleAddSchedule}>추가</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Enrollment Confirmation Dialog */}
+      <Dialog open={deleteEnrollment.isOpen} onOpenChange={(open) => !open && setDeleteEnrollment({ isOpen: false, enrollment: null })}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm">
+          <DialogHeader>
+            <DialogTitle>강좌 삭제</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium text-foreground">{deleteEnrollment.enrollment?.class?.name}</span> 강좌를 삭제하시겠습니까?{"\n"}MY CLASS에서도 함께 삭제됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setDeleteEnrollment({ isOpen: false, enrollment: null })} className="flex-1">
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={async () => {
+                if (deleteEnrollment.enrollment) {
+                  const success = await unenrollClass(deleteEnrollment.enrollment.class_id);
+                  if (success) {
+                    toast.success("강좌가 삭제되었습니다");
+                  } else {
+                    toast.error("삭제에 실패했습니다");
+                  }
+                }
+                setDeleteEnrollment({ isOpen: false, enrollment: null });
+              }}
+            >
+              삭제
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
