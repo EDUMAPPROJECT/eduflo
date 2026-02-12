@@ -1159,6 +1159,10 @@ export type Database = {
       generate_connection_code: { Args: never; Returns: string }
       generate_random_nickname: { Args: never; Returns: string }
       generate_student_connection_code: { Args: never; Returns: string }
+      get_seminar_application_count: {
+        Args: { _seminar_id: string }
+        Returns: number
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

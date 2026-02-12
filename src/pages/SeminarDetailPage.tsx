@@ -147,12 +147,11 @@ const SeminarDetailPage = () => {
 
   const fetchApplicationCount = async () => {
     try {
-      const { count } = await supabase
-        .from("seminar_applications")
-        .select("*", { count: "exact", head: true })
-        .eq("seminar_id", id);
+      const { data, error } = await supabase
+        .rpc("get_seminar_application_count", { _seminar_id: id });
 
-      setApplicationCount(count || 0);
+      if (error) throw error;
+      setApplicationCount(data ?? 0);
     } catch (error) {
       logError("fetch-application-count", error);
     }
