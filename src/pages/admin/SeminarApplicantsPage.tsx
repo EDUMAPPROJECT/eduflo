@@ -10,7 +10,15 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { ArrowLeft, GraduationCap, Phone, Calendar, User, Eye, CheckCircle, XCircle, ArrowUpDown, Trash2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ArrowLeft, GraduationCap, Phone, Calendar, User, Eye, CheckCircle, XCircle, ArrowUpDown, Trash2, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -56,6 +64,9 @@ const SeminarApplicantsPage = () => {
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [deleteTarget, setDeleteTarget] = useState<Application | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [addForm, setAddForm] = useState({ name: "", phone: "", memo: "" });
+  const [addSubmitting, setAddSubmitting] = useState(false);
 
   useEffect(() => {
     if (seminarId) fetchData();
@@ -174,6 +185,45 @@ const SeminarApplicantsPage = () => {
     } catch (error) {
       console.error("Error deleting application:", error);
       toast.error("삭제에 실패했습니다");
+    }
+  };
+
+  const handleManualAdd = async () => {
+    if (!addForm.name.trim()) {
+      toast.error("이름을 입력해주세요");
+      return;
+    }
+    setAddSubmitting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        toast.error("로그인이 필요합니다");
+        return;
+      }
+
+      const { error } = await supabase.from("seminar_applications").insert({
+        seminar_id: seminarId,
+        user_id: session.user.id,
+        student_name: addForm.name.trim(),
+        status: "confirmed",
+        custom_answers: {
+          _parentPhone: addForm.phone.trim() || null,
+          _manualEntry: true,
+          _memo: addForm.memo.trim() || null,
+        } as any,
+      } as any);
+
+      if (error) throw error;
+
+      toast.success("신청이 수동 추가되었습니다");
+      setAddDialogOpen(false);
+      setAddForm({ name: "", phone: "", memo: "" });
+      fetchData();
+    } catch (error) {
+      console.error("Error adding application:", error);
+      toast.error("추가에 실패했습니다");
+    } finally {
+      setAddSubmitting(false);
     }
   };
 
@@ -301,6 +351,10 @@ const SeminarApplicantsPage = () => {
             )}
           </div>
           <Badge variant="secondary">{applications.length}명</Badge>
+          <Button size="sm" variant="outline" className="gap-1" onClick={() => setAddDialogOpen(true)}>
+            <Plus className="w-3.5 h-3.5" />
+            수동 추가
+          </Button>
         </div>
       </header>
 
@@ -459,6 +513,47 @@ const SeminarApplicantsPage = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Manual Add Dialog */}
+        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>수동 신청 추가</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="manual-name">이름 *</Label>
+                <Input
+                  id="manual-name"
+                  value={addForm.name}
+                  onChange={(e) => setAddForm((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="신청자 이름"
+                />
+              </div>
+              <div>
+                <Label htmlFor="manual-phone">전화번호</Label>
+                <Input
+                  id="manual-phone"
+                  value={addForm.phone}
+                  onChange={(e) => setAddForm((p) => ({ ...p, phone: e.target.value }))}
+                  placeholder="010-0000-0000"
+                />
+              </div>
+              <div>
+                <Label htmlFor="manual-memo">메모</Label>
+                <Input
+                  id="manual-memo"
+                  value={addForm.memo}
+                  onChange={(e) => setAddForm((p) => ({ ...p, memo: e.target.value }))}
+                  placeholder="메모 (선택)"
+                />
+              </div>
+              <Button className="w-full" onClick={handleManualAdd} disabled={addSubmitting}>
+                {addSubmitting ? "추가 중..." : "추가하기"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
     </div>
   );
 };
