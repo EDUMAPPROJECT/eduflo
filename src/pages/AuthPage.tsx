@@ -23,7 +23,7 @@ function isPhoneAuthAllowedHost(): boolean {
 }
 
 /** 로그인/회원가입 후 redirect 쿼리가 없을 때 이동할 기본 경로 (세미나 상세) */
-const DEFAULT_POST_AUTH_PATH = "/p/seminar/c5e20751-4ef1-4a24-a254-924bed6412aa";
+const DEFAULT_POST_AUTH_PATH = "/p/home";
 
 /** redirect 쿼리에서 안전한 경로만 반환 (오픈 리다이렉트 방지) */
 function getSafeRedirect(searchParams: URLSearchParams): string | null {
