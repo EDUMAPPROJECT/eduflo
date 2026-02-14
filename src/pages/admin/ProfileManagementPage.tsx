@@ -959,14 +959,14 @@ const ProfileManagementPage = () => {
             </Card>
 
             <Card className="shadow-card">
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-1">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <Tags className="w-4 h-4 text-primary" />
                   특징 태그
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2 mb-3">
+              <CardContent className="pt-0">
+                <div className="flex flex-wrap gap-2 mb-2">
                   {tags.map((tag) => (
                     <Badge key={tag} variant="secondary" className="gap-1 pr-1">
                       {tag}

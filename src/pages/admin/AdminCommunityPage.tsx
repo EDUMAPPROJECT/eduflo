@@ -217,7 +217,7 @@ const AdminCommunityPage = () => {
             <Button
               variant="ghost"
               size="sm"
-              className="absolute top-2 right-2 h-6 w-6 p-0"
+              className="absolute top-2 right-5 h-6 w-6 p-0"
               onClick={dismissMigrationNotice}
             >
               <X className="h-4 w-4" />

@@ -123,6 +123,7 @@ const AuthPage = () => {
         password: password.trim(),
         options: {
           emailRedirectTo: `${window.location.origin}/`,
+          data: { role: selectedRole },
         },
       });
       if (error) {
@@ -130,11 +131,11 @@ const AuthPage = () => {
         return;
       }
       if (data?.user?.id) {
-        // Create user role
-        const { error: roleError } = await supabase.from("user_roles").insert({
-          user_id: data.user.id,
-          role: selectedRole,
-        });
+        // 트리거가 role을 넣지만, 선택한 역할이 확실히 반영되도록 upsert
+        const { error: roleError } = await supabase.from("user_roles").upsert(
+          { user_id: data.user.id, role: selectedRole },
+          { onConflict: "user_id" }
+        );
         if (roleError) {
           logError("email-signup-role", roleError);
         }

@@ -244,7 +244,7 @@ const AcademySetupPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
+              <div className="space-y-1">
                 <Label htmlFor="name">학원명 *</Label>
                 <Input
                   id="name"
@@ -255,7 +255,7 @@ const AcademySetupPage = () => {
                 />
               </div>
 
-              <div>
+              <div className="space-y-1">
                 <Label>학원 로고/대표 이미지</Label>
                 <ImageUpload
                   value={profileImage}
@@ -265,7 +265,7 @@ const AcademySetupPage = () => {
                 />
               </div>
 
-              <div>
+              <div className="space-y-1">
                 <Label htmlFor="description">학원 소개</Label>
                 <Textarea
                   id="description"
@@ -307,8 +307,8 @@ const AcademySetupPage = () => {
                 과목 및 대상
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
+            <CardContent className="space-y-5">
+              <div className="space-y-1">
                 <Label>대표 과목 *</Label>
                 <Select value={subject} onValueChange={setSubject}>
                   <SelectTrigger>
@@ -322,7 +322,7 @@ const AcademySetupPage = () => {
                 </Select>
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <GraduationCap className="w-4 h-4" />
                   대상 학년 *
