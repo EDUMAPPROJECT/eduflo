@@ -84,8 +84,9 @@ const HomePage = () => {
         .lte("date", threeWeeksFromNow.toISOString())
         .is("academy_id", null);
 
-      // Filter academy seminars by region
+      // 지역이 있으면 해당 지역만, 없으면 신청 가능한 설명회 전부 표시
       const filteredAcademy = (academySeminars || []).filter((s: any) => {
+        if (!regionId) return true;
         return s.academy?.target_regions?.includes(regionId);
       });
 

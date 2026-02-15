@@ -57,39 +57,57 @@ const StudentHomePage = () => {
 
       const threeWeeksFromNow = new Date();
       threeWeeksFromNow.setDate(threeWeeksFromNow.getDate() + 21);
+      const now = new Date().toISOString();
+      const end = threeWeeksFromNow.toISOString();
 
-      const { data, error } = await supabase
+      // 학원 소속 설명회 (academy_id 있음)
+      const { data: academySeminars } = await supabase
         .from("seminars")
         .select(`
-          id,
-          title,
-          date,
-          image_url,
-          location,
-          academy:academies!inner (
-            name,
-            target_regions
-          )
+          id, title, date, image_url, location,
+          academy:academies!inner (name, target_regions)
         `)
         .eq("status", "recruiting")
-        .gte("date", new Date().toISOString())
-        .lte("date", threeWeeksFromNow.toISOString())
-        .order("date", { ascending: true });
+        .gte("date", now)
+        .lte("date", end)
+        .not("academy_id", "is", null);
 
-      if (error) throw error;
+      // 슈퍼관리자 설명회 (academy_id 없음) — 학부모 홈과 동일하게 포함
+      const { data: superAdminSeminars } = await supabase
+        .from("seminars")
+        .select("id, title, date, image_url, location")
+        .eq("status", "recruiting")
+        .gte("date", now)
+        .lte("date", end)
+        .is("academy_id", null);
 
-      const filtered = (data || []).filter((seminar: any) => {
-        const regions = seminar.academy?.target_regions || [];
-        return regions.includes(regionId);
+      // 지역이 있으면 해당 지역만, 없으면 학원 설명회 전부 + 슈퍼관리자 설명회 전부
+      const filteredAcademy = (academySeminars || []).filter((s: any) => {
+        if (!regionId) return true;
+        return s.academy?.target_regions?.includes(regionId);
       });
 
-      setSeminars(filtered.map((s: any) => ({
+      const academyList = filteredAcademy.map((s: any) => ({
         id: s.id,
         title: s.title,
         date: s.date,
         image_url: s.image_url,
         academy: s.academy ? { name: s.academy.name } : null,
-      })));
+      }));
+
+      const superAdminList = (superAdminSeminars || []).map((s: any) => ({
+        id: s.id,
+        title: s.title,
+        date: s.date,
+        image_url: s.image_url,
+        academy: null as { name: string } | null,
+      }));
+
+      const allSeminars = [...academyList, ...superAdminList].sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+
+      setSeminars(allSeminars);
     } catch (error) {
       console.error("Error fetching seminars:", error);
     } finally {
