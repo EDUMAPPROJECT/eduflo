@@ -8,7 +8,6 @@ import QuickActionMenu from "@/components/QuickActionMenu";
 
 import GlobalRegionSelector from "@/components/GlobalRegionSelector";
 import SeminarCarousel from "@/components/SeminarCarousel";
-import EmptyRegionState from "@/components/EmptyRegionState";
 import AcademyNewsFeed from "@/components/AcademyNewsFeed";
 import PostDetailDialog from "@/components/PostDetailDialog";
 import AdminHeader from "@/components/AdminHeader";
@@ -210,7 +209,6 @@ const HomePage = () => {
     setPostDialogOpen(true);
   };
 
-  const hasNoData = !loadingSeminars && !loadingPosts && seminars.length === 0 && posts.length === 0;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -246,25 +244,18 @@ const HomePage = () => {
           <TodayScheduleSection />
         </section>
 
-        {/* Empty State for Region */}
-        {hasNoData ? (
-          <EmptyRegionState />
-        ) : (
-          <>
-            {/* Seminar Carousel */}
-            <SeminarCarousel 
-              seminars={seminars} 
-              loading={loadingSeminars} 
-            />
-
-            {/* Academy News Feed */}
-            <AcademyNewsFeed
-              posts={posts}
-              loading={loadingPosts}
-              onPostClick={handlePostClick}
-            />
-          </>
-        )}
+        {/* Empty Region State - EmptyRegionState 임시 미사용, 항상 캐러셀/피드 표시 */}
+        <>
+          <SeminarCarousel 
+            seminars={seminars} 
+            loading={loadingSeminars} 
+          />
+          <AcademyNewsFeed
+            posts={posts}
+            loading={loadingPosts}
+            onPostClick={handlePostClick}
+          />
+        </>
       </main>
 
       {/* Post Detail Dialog */}
