@@ -61,6 +61,7 @@ import AcademyDashboardPage from "./pages/academy/AcademyDashboardPage";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import ProtectedSuperAdminRoute from "./components/ProtectedSuperAdminRoute";
 import NotFound from "./pages/NotFound";
+import ReleaseNoticeGate from "./components/ReleaseNoticeGate";
 
 // Student Pages
 import StudentHomePage from "./pages/student/StudentHomePage";
@@ -102,6 +103,7 @@ const App = () => {
           <Sonner />
           {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
           <BrowserRouter>
+            <ReleaseNoticeGate>
             <Routes>
               <Route path="/" element={<RoleSelection />} />
               <Route path="/auth" element={<AuthPage />} />
@@ -215,6 +217,7 @@ const App = () => {
 
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </ReleaseNoticeGate>
           </BrowserRouter>
         </RegionProvider>
       </TooltipProvider>
