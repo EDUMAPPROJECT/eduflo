@@ -95,7 +95,7 @@ const AuthPage = () => {
         return;
       }
       if (data?.session?.user?.id) {
-        await navigateByDatabaseRole(data.session.user.id, selectedRole);
+        await navigateByDatabaseRole(data.session.user.id);
         toast.success("로그인되었습니다");
       }
     } catch (error) {
@@ -152,22 +152,14 @@ const AuthPage = () => {
   };
 
   // 로그인 후 이동: redirect 쿼리가 있으면 해당 경로, 없으면 역할별 메인. roleOverride(이메일 로그인 시 선택 역할)가 있으면 그 역할 홈으로 이동.
-  const navigateByDatabaseRole = async (userId: string, roleOverride?: AuthRole) => {
+  const navigateByDatabaseRole = async (userId: string) => {
     // 1순위: redirect 쿼리로 돌아가기 (예: 세미나 상세 등)
     if (redirectAfterAuth) {
       navigate(redirectAfterAuth, { replace: true });
       return;
     }
 
-    // 2순위: 이메일 로그인 시 선택한 역할로 이동
-    if (roleOverride) {
-      if (roleOverride === "admin") navigate("/admin/home");
-      else if (roleOverride === "student") navigate("/s/home");
-      else navigate("/p/home");
-      return;
-    }
-
-    // 3순위: DB에 저장된 역할 기반 기본 홈으로 이동
+    // 2순위: DB에 저장된 역할 기반 기본 홈으로 이동
     const fallback = "/p/home";
     try {
       const { data: roleData, error } = await supabase
@@ -320,7 +312,7 @@ const AuthPage = () => {
           return;
         }
         if (data?.session?.user?.id) {
-          await navigateByDatabaseRole(data.session.user.id, selectedRole);
+          await navigateByDatabaseRole(data.session.user.id);
         } else {
           navigate(redirectAfterAuth ?? "/p/home", { replace: Boolean(redirectAfterAuth) });
         }
@@ -421,7 +413,7 @@ const AuthPage = () => {
           </p>
 
           {/* Role selection (휴대폰/이메일 로그인 시 + 휴대폰 회원가입 시) */}
-          {(step === "signup" || step === "login" || authMode === "email") && (
+          {step === "signup" && (
             <div className="grid grid-cols-3 gap-2 mb-4">
               <Button
                 variant={selectedRole === "parent" ? "default" : "outline"}
