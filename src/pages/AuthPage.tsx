@@ -95,7 +95,7 @@ const AuthPage = () => {
         return;
       }
       if (data?.session?.user?.id) {
-        await navigateByDatabaseRole(data.session.user.id);
+        await navigateByDatabaseRole(data.session.user.id, selectedRole);
         toast.success("로그인되었습니다");
       }
     } catch (error) {
@@ -151,15 +151,23 @@ const AuthPage = () => {
     }
   };
 
-  // 로그인 후 이동: redirect 쿼리가 있으면 해당 경로, 없으면 역할별 메인
-  const navigateByDatabaseRole = async (userId: string) => {
+  // 로그인 후 이동: redirect 쿼리가 있으면 해당 경로, 없으면 역할별 메인. roleOverride(이메일 로그인 시 선택 역할)가 있으면 그 역할 홈으로 이동.
+  const navigateByDatabaseRole = async (userId: string, roleOverride?: AuthRole) => {
     // 1순위: redirect 쿼리로 돌아가기 (예: 세미나 상세 등)
     if (redirectAfterAuth) {
       navigate(redirectAfterAuth, { replace: true });
       return;
     }
 
-    // 2순위: DB에 저장된 역할 기반 기본 홈으로 이동
+    // 2순위: 이메일 로그인 시 선택한 역할로 이동
+    if (roleOverride) {
+      if (roleOverride === "admin") navigate("/admin/home");
+      else if (roleOverride === "student") navigate("/s/home");
+      else navigate("/p/home");
+      return;
+    }
+
+    // 3순위: DB에 저장된 역할 기반 기본 홈으로 이동
     const fallback = "/p/home";
     try {
       const { data: roleData, error } = await supabase
@@ -312,7 +320,7 @@ const AuthPage = () => {
           return;
         }
         if (data?.session?.user?.id) {
-          await navigateByDatabaseRole(data.session.user.id);
+          await navigateByDatabaseRole(data.session.user.id, selectedRole);
         } else {
           navigate(redirectAfterAuth ?? "/p/home", { replace: Boolean(redirectAfterAuth) });
         }
@@ -402,20 +410,18 @@ const AuthPage = () => {
 
         <div className="w-full max-w-sm animate-fade-up">
           <h2 className="text-xl font-semibold text-foreground text-center mb-2">
-            {step === "login" ? "로그인" : "회원가입"}
+            {authMode === "email" ? "로그인" : step === "login" ? "로그인" : "회원가입"}
           </h2>
           <p className="text-muted-foreground text-sm text-center mb-6">
             {authMode === "email"
-              ? step === "login"
-                ? "이메일로 로그인하세요"
-                : "이메일로 회원가입하세요"
+              ? "이메일로 로그인하세요"
               : step === "login"
                 ? "휴대폰 번호로 로그인하세요"
                 : "가입 유형을 선택하고 휴대폰 번호로 회원가입하세요"}
           </p>
 
-          {/* Role selection (for signup) */}
-          {step === "signup" && (
+          {/* Role selection (휴대폰/이메일 로그인 시 + 휴대폰 회원가입 시) */}
+          {(step === "signup" || step === "login" || authMode === "email") && (
             <div className="grid grid-cols-3 gap-2 mb-4">
               <Button
                 variant={selectedRole === "parent" ? "default" : "outline"}
@@ -480,27 +486,16 @@ const AuthPage = () => {
                 />
               </div>
 
-              {step === "login" ? (
-                <Button
-                  onClick={handleEmailLogin}
-                  disabled={loading}
-                  className="w-full h-14 text-base"
-                  size="xl"
-                >
-                  {loading ? "로그인 중..." : "로그인"}
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleEmailSignup}
-                  disabled={loading}
-                  className="w-full h-14 text-base"
-                  size="xl"
-                >
-                  {loading ? "처리 중..." : "가입하기"}
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              )}
+              {/* 이메일 화면에서는 로그인만 가능, 회원가입 불가 */}
+              <Button
+                onClick={handleEmailLogin}
+                disabled={loading}
+                className="w-full h-14 text-base"
+                size="xl"
+              >
+                {loading ? "로그인 중..." : "로그인"}
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
             </div>
           )}
 
@@ -588,7 +583,7 @@ const AuthPage = () => {
           )}
 
           <div className="mt-6 text-center">
-            {step === "login" ? (
+            {authMode === "email" ? null : step === "login" ? (
               <p className="text-sm text-muted-foreground">
                 계정이 없으신가요?{" "}
                 <button
