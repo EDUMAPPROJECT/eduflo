@@ -34,11 +34,24 @@ interface ReleaseNoticeGateProps {
 const ReleaseNoticeGate = ({ children }: ReleaseNoticeGateProps) => {
   const { pathname } = useLocation();
   const [hasSession, setHasSession] = useState<boolean | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setHasSession(!!session);
+      const loggedIn = !!session;
+      setHasSession(loggedIn);
+
+      if (loggedIn && session) {
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("is_super_admin")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        setIsSuperAdmin(!!roleData?.is_super_admin);
+      } else {
+        setIsSuperAdmin(false);
+      }
     };
 
     checkSession();
@@ -50,6 +63,7 @@ const ReleaseNoticeGate = ({ children }: ReleaseNoticeGateProps) => {
 
   const showBanner =
     hasSession === true &&
+    !isSuperAdmin &&
     !isPublicPath(pathname) &&
     !isSeminarRelatedPath(pathname) &&
     !isHomePath(pathname);
