@@ -631,12 +631,12 @@ const SuperAdminSeminarPage = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>포스터 이미지 (선택, 최대 5장)</Label>
+              <Label>포스터 이미지 (선택, 최대 10장)</Label>
               <MultiImageUpload
                 values={imageUrls}
                 onChange={setImageUrls}
                 folder="seminars"
-                maxImages={5}
+                maxImages={10}
               />
             </div>
 

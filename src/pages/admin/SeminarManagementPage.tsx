@@ -607,7 +607,7 @@ const SeminarManagementPage = () => {
                 values={imageUrls}
                 onChange={setImageUrls}
                 folder="seminars"
-                maxImages={5}
+                maxImages={10}
               />
             </div>
 
