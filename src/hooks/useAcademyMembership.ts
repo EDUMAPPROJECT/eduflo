@@ -59,39 +59,78 @@ export const useAcademyMembership = () => {
         return;
       }
 
-      if (!memberData || memberData.length === 0) {
-        setMemberships([]);
-        setLoading(false);
-        return;
+      const fullPermissions: AcademyMember['permissions'] = {
+        manage_classes: true,
+        manage_teachers: true,
+        manage_posts: true,
+        manage_seminars: true,
+        manage_consultations: true,
+        view_analytics: true,
+        manage_settings: true,
+        manage_members: true,
+        edit_profile: true,
+      };
+
+      let combined: AcademyWithMembership[] = [];
+
+      if (memberData && memberData.length > 0) {
+        const academyIds = memberData.map(m => m.academy_id);
+        const { data: academyData, error: academyError } = await supabase
+          .from('academies')
+          .select('id, name, subject, profile_image, join_code')
+          .in('id', academyIds);
+
+        if (academyError) {
+          logError('Academy Fetch', academyError);
+          setLoading(false);
+          return;
+        }
+
+        combined = memberData.map(member => {
+          const academy = academyData?.find(a => a.id === member.academy_id);
+          return {
+            id: academy?.id || '',
+            name: academy?.name || '',
+            subject: academy?.subject || '',
+            profile_image: academy?.profile_image || null,
+            join_code: academy?.join_code || null,
+            membership: {
+              ...member,
+              permissions: (member.permissions as AcademyMember['permissions']) ?? fullPermissions,
+            } as AcademyMember,
+          };
+        }).filter(m => m.id);
       }
 
-      // Fetch academy details for each membership
-      const academyIds = memberData.map(m => m.academy_id);
-      const { data: academyData, error: academyError } = await supabase
+      // Fallback: academies where user is owner_id (academy_members에 없어도 소유 학원으로 표시)
+      const { data: ownedAcademies } = await supabase
         .from('academies')
         .select('id, name, subject, profile_image, join_code')
-        .in('id', academyIds);
+        .eq('owner_id', session.user.id);
 
-      if (academyError) {
-        logError('Academy Fetch', academyError);
-        setLoading(false);
-        return;
+      if (ownedAcademies?.length) {
+        const existingIds = new Set(combined.map(m => m.id));
+        for (const academy of ownedAcademies) {
+          if (existingIds.has(academy.id)) continue;
+          combined.push({
+            id: academy.id,
+            name: academy.name ?? '',
+            subject: academy.subject ?? '',
+            profile_image: academy.profile_image ?? null,
+            join_code: academy.join_code ?? null,
+            membership: {
+              id: academy.id,
+              academy_id: academy.id,
+              user_id: session.user.id,
+              role: 'owner',
+              status: 'approved',
+              permissions: fullPermissions,
+              created_at: '',
+              updated_at: '',
+            } as AcademyMember,
+          });
+        }
       }
-
-      const combined = memberData.map(member => {
-        const academy = academyData?.find(a => a.id === member.academy_id);
-        return {
-          id: academy?.id || '',
-          name: academy?.name || '',
-          subject: academy?.subject || '',
-          profile_image: academy?.profile_image || null,
-          join_code: academy?.join_code || null,
-          membership: {
-            ...member,
-            permissions: member.permissions as AcademyMember['permissions'],
-          } as AcademyMember,
-        };
-      }).filter(m => m.id);
 
       setMemberships(combined);
     } catch (error) {

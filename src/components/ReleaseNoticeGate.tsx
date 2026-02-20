@@ -35,6 +35,7 @@ const ReleaseNoticeGate = ({ children }: ReleaseNoticeGateProps) => {
   const { pathname } = useLocation();
   const [hasSession, setHasSession] = useState<boolean | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -45,12 +46,14 @@ const ReleaseNoticeGate = ({ children }: ReleaseNoticeGateProps) => {
       if (loggedIn && session) {
         const { data: roleData } = await supabase
           .from("user_roles")
-          .select("is_super_admin")
+          .select("is_super_admin, role")
           .eq("user_id", session.user.id)
           .maybeSingle();
         setIsSuperAdmin(!!roleData?.is_super_admin);
+        setIsAdmin(roleData?.role === "admin");
       } else {
         setIsSuperAdmin(false);
+        setIsAdmin(false);
       }
     };
 
@@ -64,6 +67,7 @@ const ReleaseNoticeGate = ({ children }: ReleaseNoticeGateProps) => {
   const showBanner =
     hasSession === true &&
     !isSuperAdmin &&
+    !isAdmin &&
     !isPublicPath(pathname) &&
     !isSeminarRelatedPath(pathname) &&
     !isHomePath(pathname);

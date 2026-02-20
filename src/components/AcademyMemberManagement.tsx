@@ -43,6 +43,14 @@ const GRADE_OPTIONS = [
   { value: 'admin', label: '관리자', icon: UserCog },
 ];
 
+function getMemberDisplayName(profile: MemberWithProfile["profile"]): string {
+  if (!profile) return "이름 없음";
+  const name = (profile.user_name || "").trim();
+  if (name) return name;
+  if (profile.email) return profile.email;
+  return "이름 없음";
+}
+
 const AcademyMemberManagement = ({ academyId }: AcademyMemberManagementProps) => {
   const { isOwner, generateJoinCode, primaryAcademy, refetch, memberships } = useAcademyMembership();
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
@@ -341,11 +349,13 @@ const AcademyMemberManagement = ({ academyId }: AcademyMemberManagementProps) =>
                     </div>
                     <div>
                       <p className="text-sm font-medium">
-                        {member.profile?.user_name || '이름 없음'}
+                        {getMemberDisplayName(member.profile)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {member.profile?.email}
-                      </p>
+                      {member.profile?.email && (
+                        <p className="text-xs text-muted-foreground">
+                          {member.profile.email}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -402,11 +412,13 @@ const AcademyMemberManagement = ({ academyId }: AcademyMemberManagementProps) =>
                       </div>
                       <div>
                         <p className="text-sm font-medium">
-                          {member.profile?.user_name || '이름 없음'}
+                          {getMemberDisplayName(member.profile)}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {member.profile?.email}
-                        </p>
+                        {member.profile?.email && (
+                          <p className="text-xs text-muted-foreground">
+                            {member.profile.email}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -469,7 +481,7 @@ const AcademyMemberManagement = ({ academyId }: AcademyMemberManagementProps) =>
           <DialogHeader>
             <DialogTitle>권한 설정</DialogTitle>
             <DialogDescription>
-              {editingMember?.profile?.user_name || '관리자'}의 권한을 설정합니다
+              {editingMember ? (getMemberDisplayName(editingMember.profile) === "이름 없음" ? "관리자" : getMemberDisplayName(editingMember.profile)) : "관리자"}의 권한을 설정합니다
             </DialogDescription>
           </DialogHeader>
           

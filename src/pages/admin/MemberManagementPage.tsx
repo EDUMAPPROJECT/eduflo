@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -11,16 +10,11 @@ import { Card, CardContent } from "@/components/ui/card";
 
 const MemberManagementPage = () => {
   const navigate = useNavigate();
-  const { memberships, loading: membershipLoading, primaryAcademy, isOwner, hasPermission } = useAcademyMembership();
-  const [academyId, setAcademyId] = useState<string | null>(null);
-  const [canManageMembers, setCanManageMembers] = useState(false);
+  const { loading: membershipLoading, primaryAcademy, isOwner, hasPermission } = useAcademyMembership();
 
-  useEffect(() => {
-    if (primaryAcademy) {
-      setAcademyId(primaryAcademy.id);
-      const canManage = isOwner(primaryAcademy.id) || hasPermission(primaryAcademy.id, 'manage_members');
-      setCanManageMembers(canManage);
-    }
+  const canManageMembers = useMemo(() => {
+    if (!primaryAcademy) return false;
+    return isOwner(primaryAcademy.id) || hasPermission(primaryAcademy.id, "manage_members");
   }, [primaryAcademy, isOwner, hasPermission]);
 
   if (membershipLoading) {
@@ -46,7 +40,7 @@ const MemberManagementPage = () => {
 
       {/* Main Content */}
       <main className="max-w-lg mx-auto px-4 py-6">
-        {!academyId ? (
+        {!primaryAcademy ? (
           <Card className="shadow-card border-border">
             <CardContent className="p-8 text-center">
               <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
@@ -71,7 +65,7 @@ const MemberManagementPage = () => {
             </CardContent>
           </Card>
         ) : (
-          <AcademyMemberManagement academyId={academyId} />
+          <AcademyMemberManagement academyId={primaryAcademy.id} />
         )}
       </main>
 
