@@ -489,7 +489,7 @@ const ProfileManagementPage = () => {
 
     try {
       if (editingTeacher) {
-        await supabase
+        const { error } = await supabase
           .from("teachers")
           .update({
             name: validatedData.name,
@@ -499,8 +499,9 @@ const ProfileManagementPage = () => {
             member_id: teacherMemberId || null,
           })
           .eq("id", editingTeacher.id);
+        if (error) throw error;
       } else {
-        await supabase.from("teachers").insert({
+        const { error } = await supabase.from("teachers").insert({
           academy_id: academy.id,
           name: validatedData.name,
           subject: validatedData.subject,
@@ -508,15 +509,21 @@ const ProfileManagementPage = () => {
           image_url: validatedData.image_url,
           member_id: teacherMemberId || null,
         });
+        if (error) throw error;
       }
 
       toast({ title: "저장 완료" });
       setIsTeacherDialogOpen(false);
       resetTeacherForm();
       fetchTeachers(academy.id);
-    } catch (error) {
+    } catch (error: unknown) {
       logError("save-teacher", error);
-      toast({ title: "오류", variant: "destructive" });
+      const message = error instanceof Error ? error.message : undefined;
+      toast({
+        title: "강사 저장 실패",
+        description: message || "권한이 없거나 입력을 확인해주세요.",
+        variant: "destructive",
+      });
     }
   };
 
