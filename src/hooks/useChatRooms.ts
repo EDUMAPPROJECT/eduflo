@@ -124,7 +124,15 @@ export const useChatRooms = (isAdmin: boolean = false) => {
 export const useOrCreateChatRoom = () => {
   const [loading, setLoading] = useState(false);
 
-  const getOrCreateChatRoom = async (academyId: string): Promise<string | null> => {
+  /**
+   * 채팅방 ID를 반환합니다. 이미 있으면 기존 ID, 없으면 새로 생성합니다.
+   * @param academyId 학원 ID
+   * @param staffUserId 학원 담당자 user_id. 넣으면 해당 담당자와의 1:1 방을 사용합니다. 생략 시 기존처럼 학원 대표 1개 방을 사용합니다.
+   */
+  const getOrCreateChatRoom = async (
+    academyId: string,
+    staffUserId?: string | null
+  ): Promise<string | null> => {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -132,25 +140,39 @@ export const useOrCreateChatRoom = () => {
         return null;
       }
 
-      // Check if chat room already exists
-      const { data: existingRoom } = await supabase
+      const parentId = session.user.id;
+
+      let query = supabase
         .from('chat_rooms')
         .select('id')
         .eq('academy_id', academyId)
-        .eq('parent_id', session.user.id)
-        .maybeSingle();
+        .eq('parent_id', parentId);
+
+      if (staffUserId) {
+        query = query.eq('staff_user_id', staffUserId);
+      } else {
+        query = query.is('staff_user_id', null);
+      }
+
+      const { data: existingRoom } = await query.maybeSingle();
 
       if (existingRoom) {
         return existingRoom.id;
       }
 
-      // Create new chat room
+      const insertPayload: { academy_id: string; parent_id: string; staff_user_id?: string | null } = {
+        academy_id: academyId,
+        parent_id: parentId,
+      };
+      if (staffUserId) {
+        insertPayload.staff_user_id = staffUserId;
+      } else {
+        insertPayload.staff_user_id = null;
+      }
+
       const { data: newRoom, error } = await supabase
         .from('chat_rooms')
-        .insert({
-          academy_id: academyId,
-          parent_id: session.user.id,
-        })
+        .insert(insertPayload)
         .select('id')
         .single();
 

@@ -8,6 +8,7 @@ import Logo from "@/components/Logo";
 import BottomNavigation from "@/components/BottomNavigation";
 import AcademyNewsTab from "@/components/AcademyNewsTab";
 import ConsultationReservationDialog from "@/components/ConsultationReservationDialog";
+import ChatStaffSelectModal from "@/components/ChatStaffSelectModal";
 import LoginRequiredDialog from "@/components/LoginRequiredDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -185,18 +186,21 @@ const AcademyDetailPage = () => {
   }>({ isOpen: false, classInfo: null });
   
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [chatStaffModalOpen, setChatStaffModalOpen] = useState(false);
 
   // Removed old consultation form state - using new ConsultationReservationDialog
 
-  const handleStartChat = async () => {
+  const handleChatConsultationClick = () => {
     if (!user) {
       setShowLoginDialog(true);
       return;
     }
+    setChatStaffModalOpen(true);
+  };
 
+  const handleChatStaffSelect = async (staffUserId: string) => {
     if (!id) return;
-
-    const roomId = await getOrCreateChatRoom(id);
+    const roomId = await getOrCreateChatRoom(id, staffUserId);
     if (roomId) {
       navigate(`${prefix}/chats/${roomId}`);
     } else {
@@ -896,7 +900,7 @@ const AcademyDetailPage = () => {
           <Button
             variant="outline"
             className="flex-1 h-11 text-sm gap-1.5"
-            onClick={handleStartChat}
+            onClick={handleChatConsultationClick}
             disabled={chatLoading}
           >
             <MessageCircle className="w-4 h-4" />
@@ -926,6 +930,15 @@ const AcademyDetailPage = () => {
           academyName={academy.name}
         />
       )}
+
+      {/* 채팅 상담: 담당자 선택 모달 */}
+      <ChatStaffSelectModal
+        open={chatStaffModalOpen}
+        onOpenChange={setChatStaffModalOpen}
+        academyId={id ?? undefined}
+        onSelect={handleChatStaffSelect}
+        selecting={chatLoading}
+      />
 
       <LoginRequiredDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
       <BottomNavigation />

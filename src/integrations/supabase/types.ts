@@ -282,6 +282,7 @@ export type Database = {
           created_at: string
           id: string
           parent_id: string
+          staff_user_id: string | null
           updated_at: string
         }
         Insert: {
@@ -289,6 +290,7 @@ export type Database = {
           created_at?: string
           id?: string
           parent_id: string
+          staff_user_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -296,6 +298,7 @@ export type Database = {
           created_at?: string
           id?: string
           parent_id?: string
+          staff_user_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1159,6 +1162,10 @@ export type Database = {
       generate_connection_code: { Args: never; Returns: string }
       generate_random_nickname: { Args: never; Returns: string }
       generate_student_connection_code: { Args: never; Returns: string }
+      get_academy_staff_for_chat: {
+        Args: { _academy_id: string }
+        Returns: { user_id: string; name: string; role_label: string; description: string }[]
+      }
       get_seminar_application_count: {
         Args: { _seminar_id: string }
         Returns: number

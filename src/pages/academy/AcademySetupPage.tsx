@@ -123,13 +123,14 @@ const AcademySetupPage = () => {
 
       if (academyError) throw academyError;
 
-      // Add user as owner in academy_members
+      // Add user as owner in academy_members (is_academy_owner now includes academies.owner_id so this succeeds)
       const { error: memberError } = await supabase
         .from("academy_members")
         .insert({
           academy_id: academyData.id,
           user_id: user.id,
           role: 'owner',
+          status: 'approved',
           permissions: {
             manage_classes: true,
             manage_teachers: true,
@@ -139,12 +140,13 @@ const AcademySetupPage = () => {
             view_analytics: true,
             manage_settings: true,
             manage_members: true,
+            edit_profile: true,
           },
         });
 
       if (memberError) {
         console.error("Error adding owner to academy_members:", memberError);
-        // Continue anyway as academy is created
+        toast({ title: "학원은 등록되었으나 멤버 등록에 실패했습니다. 관리자에게 문의하세요.", variant: "destructive" });
       }
 
       toast({ title: "학원이 성공적으로 등록되었습니다!" });
