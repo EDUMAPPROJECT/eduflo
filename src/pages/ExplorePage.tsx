@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useRegion } from "@/contexts/RegionContext";
+import { useRegion, REGION_ALL } from "@/contexts/RegionContext";
 import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 import BottomNavigation from "@/components/BottomNavigation";
 import Logo from "@/components/Logo";
@@ -101,13 +101,21 @@ const ExplorePage = () => {
   const fetchAcademies = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from("academies")
         .select("*")
-        .contains("target_regions", [selectedRegion])
         .order("is_mou", { ascending: false })
         .order("created_at", { ascending: false });
 
+      // "전체"가 아니면 해당 지역 학원만 표시. target_regions가 비어 있거나 null인 학원(신규 등록)도 포함해 목록에 노출
+      if (selectedRegion !== REGION_ALL) {
+        query = query.or(
+          `target_regions.cs.{"${selectedRegion}"},target_regions.is.null`
+        );
+      }
+
+      const { data, error } = await query;
+      
       if (error) throw error;
       setAcademies((data as Academy[]) || []);
     } catch (error) {
