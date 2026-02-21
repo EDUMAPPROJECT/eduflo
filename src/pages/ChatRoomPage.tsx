@@ -5,7 +5,6 @@ import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Send, GraduationCap } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const formatTime = (dateStr: string) => {
@@ -110,26 +109,40 @@ const ChatRoomPage = () => {
           ) : (
             messages.map((message) => {
               const isMe = message.sender_id === userId;
+              if (isMe) {
+                return (
+                  <div key={message.id} className="flex justify-end w-full">
+                    <div className="max-w-[75%] rounded-2xl px-4 py-2.5 bg-primary text-primary-foreground rounded-tr-sm">
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      <p className="text-xs mt-1 text-primary-foreground/70">
+                        {formatTime(message.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
               return (
-                <div
-                  key={message.id}
-                  className={cn("flex", isMe ? "justify-end" : "justify-start")}
-                >
-                  <div
-                    className={cn(
-                      "max-w-[75%] rounded-2xl px-4 py-2.5",
-                      isMe
-                        ? "bg-primary text-primary-foreground rounded-tr-sm"
-                        : "bg-secondary text-foreground rounded-tl-sm"
-                    )}
-                  >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    <p
-                      className={cn(
-                        "text-xs mt-1",
-                        isMe ? "text-primary-foreground/70" : "text-muted-foreground"
+                <div key={message.id} className="flex flex-col items-start w-full">
+                  {/* 프로필 사진과 닉네임 같은 가로선상 */}
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0">
+                      {roomInfo.academy.profile_image ? (
+                        <img
+                          src={roomInfo.academy.profile_image}
+                          alt={roomInfo.academy.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <GraduationCap className="w-5 h-5 text-primary" />
                       )}
-                    >
+                    </div>
+                    <span className="text-xs font-semibold text-foreground">
+                      {roomInfo.academy.name}
+                    </span>
+                  </div>
+                  <div className="max-w-[75%] rounded-2xl px-4 py-2.5 bg-card border border-border text-foreground rounded-tl-sm">
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    <p className="text-xs mt-1 text-muted-foreground">
                       {formatTime(message.created_at)}
                     </p>
                   </div>

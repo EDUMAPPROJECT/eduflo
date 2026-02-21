@@ -9,74 +9,6 @@
 - `VITE_SUPABASE_URL`: Supabase 프로젝트 URL
 - `VITE_SUPABASE_PUBLISHABLE_KEY`: Supabase 공개 키 (anon/public key)
 
-## 배포 플랫폼 선택
-
-### 1. Vercel (권장)
-
-Vercel은 Vite 프로젝트와 매우 잘 통합되며, 커스텀 도메인 연결이 간단합니다.
-
-#### 배포 단계:
-
-1. **GitHub/GitLab/Bitbucket에 코드 푸시**
-   ```bash
-   git add .
-   git commit -m "Deploy to Vercel"
-   git push
-   ```
-
-2. **Vercel에 프로젝트 연결**
-   - [Vercel](https://vercel.com)에 로그인
-   - "Add New Project" 클릭
-   - GitHub 저장소 선택
-   - 프로젝트 설정:
-     - Framework Preset: Vite
-     - Root Directory: `./`
-     - Build Command: `npm run build`
-     - Output Directory: `dist`
-     - Install Command: `npm install`
-
-3. **환경 변수 설정**
-   - Vercel 대시보드에서 프로젝트 선택
-   - Settings > Environment Variables로 이동
-   - 다음 변수 추가:
-     - `VITE_SUPABASE_URL`: Supabase 프로젝트 URL
-     - `VITE_SUPABASE_PUBLISHABLE_KEY`: Supabase 공개 키
-
-4. **커스텀 도메인 연결**
-   - Settings > Domains로 이동
-   - 도메인 추가
-   - DNS 설정 안내에 따라 도메인 제공업체에서 DNS 레코드 추가
-   - SSL 인증서는 자동으로 발급됩니다
-
-5. **재배포**
-   - 환경 변수 추가 후 자동으로 재배포되거나
-   - Deployments 탭에서 "Redeploy" 클릭
-
-### 2. Netlify
-
-Netlify도 좋은 대안입니다.
-
-#### 배포 단계:
-
-1. **netlify.toml 파일 생성** (선택사항, 자동 감지 가능)
-2. **Netlify에 프로젝트 연결**
-   - [Netlify](https://www.netlify.com)에 로그인
-   - "Add new site" > "Import an existing project"
-   - Git 저장소 연결
-3. **빌드 설정**
-   - Build command: `npm run build`
-   - Publish directory: `dist`
-4. **환경 변수 설정**
-   - Site settings > Environment variables
-   - 필요한 변수 추가
-5. **커스텀 도메인 연결**
-   - Domain settings > Custom domains
-   - 도메인 추가 및 DNS 설정
-
-### 3. Cloudflare Pages
-
-무료로 제공되며 글로벌 CDN이 포함됩니다.
-
 ## Supabase Edge Functions 배포 (Lovable 사용 시)
 
 Lovable에서 백엔드를 쓰는 방식은 두 가지입니다.
@@ -183,9 +115,6 @@ npm run preview
 ```
 
 ## 문제 해결
-
-### CORS 오류
-- Supabase에서 새 도메인을 허용된 오리진에 추가했는지 확인
 
 ### 환경 변수 오류
 - 환경 변수 이름이 `VITE_`로 시작하는지 확인

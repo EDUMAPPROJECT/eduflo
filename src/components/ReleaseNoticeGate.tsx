@@ -36,7 +36,7 @@ const ReleaseNoticeGate = ({ children }: ReleaseNoticeGateProps) => {
   const [hasSession, setHasSession] = useState<boolean | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  // const [isParent, setIsParent] = useState(false); // 임시: 학부모도 배너 미표시
+  const [isParent, setIsParent] = useState(false); // 임시: 학부모도 배너 미표시
 
   useEffect(() => {
     const checkSession = async () => {
@@ -52,11 +52,11 @@ const ReleaseNoticeGate = ({ children }: ReleaseNoticeGateProps) => {
           .maybeSingle();
         setIsSuperAdmin(!!roleData?.is_super_admin);
         setIsAdmin(roleData?.role === "admin");
-        // setIsParent(roleData?.role === "parent");
+        setIsParent(roleData?.role === "parent");
       } else {
         setIsSuperAdmin(false);
         setIsAdmin(false);
-        // setIsParent(false);
+        setIsParent(false);
       }
     };
 
@@ -71,7 +71,7 @@ const ReleaseNoticeGate = ({ children }: ReleaseNoticeGateProps) => {
     hasSession === true &&
     !isSuperAdmin &&
     !isAdmin &&
-    // !isParent &&
+    !isParent &&
     !isPublicPath(pathname) &&
     !isSeminarRelatedPath(pathname) &&
     !isHomePath(pathname);
