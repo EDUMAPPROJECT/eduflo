@@ -15,30 +15,17 @@ export const useUnreadMessages = (isAdmin: boolean = false) => {
       const userId = session.user.id;
 
       if (isAdmin) {
-        // Admin: Check unread messages in chat rooms for academies they own
-        const { data: academies } = await supabase
-          .from('academies')
-          .select('id')
-          .eq('owner_id', userId);
-
-        if (!academies || academies.length === 0) {
-          setHasUnread(false);
-          return;
-        }
-
-        const academyIds = academies.map(a => a.id);
-
+        // Admin: RLS가 적용된 채팅방만 조회 (원장=학원 전체, 멤버=본인 담당만)
         const { data: chatRooms } = await supabase
           .from('chat_rooms')
-          .select('id')
-          .in('academy_id', academyIds);
+          .select('id');
 
         if (!chatRooms || chatRooms.length === 0) {
           setHasUnread(false);
           return;
         }
 
-        const chatRoomIds = chatRooms.map(r => r.id);
+        const chatRoomIds = chatRooms.map((r: { id: string }) => r.id);
 
         const { count } = await supabase
           .from('messages')
