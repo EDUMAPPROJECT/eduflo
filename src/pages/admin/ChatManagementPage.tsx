@@ -132,7 +132,7 @@ const ChatManagementPage = () => {
               <Card
                 key={room.id}
                 className="shadow-card cursor-pointer hover:shadow-lg transition-shadow border-border"
-                onClick={() => navigate(`/admin/chats/${room.id}`)}
+                onClick={() => navigate(`/admin/chats/${room.id}`, { state: { from: 'chat-management' } })}
               >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">

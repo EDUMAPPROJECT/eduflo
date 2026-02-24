@@ -19,6 +19,7 @@ const ChatRoomPage = () => {
   const navigate = useNavigate();
   const prefix = useRoutePrefix();
   const { messages, roomInfo, loading, userId, isAdmin, sendMessage } = useChatMessages(id);
+  const isPending = roomInfo?.status === 'pending';
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -102,13 +103,29 @@ const ChatRoomPage = () => {
       {/* Messages Area */}
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-lg mx-auto px-4 py-4 space-y-3">
-          {messages.length === 0 ? (
+          {isPending && (
+            <div className="text-center py-4 px-4 rounded-xl bg-amber-50 border border-amber-200">
+              <p className="text-sm text-amber-800">강사가 수락할 때까지 기다려주세요.</p>
+              <p className="text-xs text-amber-700 mt-1">수락 후 메시지를 보낼 수 있습니다.</p>
+            </div>
+          )}
+          {messages.length === 0 && !isPending ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">메시지를 보내 상담을 시작하세요</p>
             </div>
           ) : (
             messages.map((message) => {
               const isMe = message.sender_id === userId;
+              const isChatRequest = message.message_type === 'chat_request';
+              if (isChatRequest) {
+                return (
+                  <div key={message.id} className="flex justify-center w-full">
+                    <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-muted border border-border text-center">
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{message.content}</p>
+                    </div>
+                  </div>
+                );
+              }
               if (isMe) {
                 return (
                   <div key={message.id} className="flex justify-end w-full">
@@ -123,7 +140,6 @@ const ChatRoomPage = () => {
               }
               return (
                 <div key={message.id} className="flex flex-col items-start w-full">
-                  {/* 프로필 사진과 닉네임 같은 가로선상 */}
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0">
                       {roomInfo.academy.profile_image ? (
@@ -154,21 +170,21 @@ const ChatRoomPage = () => {
         </div>
       </main>
 
-      {/* Message Input */}
+      {/* Message Input - 강사 수락 대기 중에는 비활성화 */}
       <div className="sticky bottom-0 bg-card border-t border-border p-4">
         <div className="max-w-lg mx-auto flex gap-2">
           <Input
-            placeholder="메시지를 입력하세요..."
+            placeholder={isPending ? "강사가 수락할 때까지 대기 중..." : "메시지를 입력하세요..."}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             className="flex-1 rounded-full"
-            disabled={sending}
+            disabled={sending || isPending}
           />
           <Button
             size="icon"
             onClick={handleSendMessage}
-            disabled={!newMessage.trim() || sending}
+            disabled={!newMessage.trim() || sending || isPending}
             className="rounded-full shrink-0"
           >
             <Send className="w-4 h-4" />

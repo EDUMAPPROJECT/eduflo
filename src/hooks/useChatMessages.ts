@@ -17,10 +17,13 @@ interface Message {
   sender_id: string;
   is_read: boolean;
   created_at: string;
+  message_type?: string;
 }
 
 interface ChatRoomInfo {
   id: string;
+  status: string;
+  staff_user_id: string | null;
   academy: {
     id: string;
     name: string;
@@ -73,6 +76,8 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
           .select(`
             id,
             parent_id,
+            status,
+            staff_user_id,
             academies (
               id,
               name,
@@ -105,6 +110,8 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
         setRoomInfo({
           id: roomData.id,
           parent_id: roomData.parent_id,
+          status: (roomData as { status?: string }).status ?? 'active',
+          staff_user_id: (roomData as { staff_user_id?: string | null }).staff_user_id ?? null,
           academy: {
             id: academy.id,
             name: academy.name,
@@ -184,9 +191,38 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
     };
   }, [chatRoomId, userId]);
 
+  // 채팅방 status 변경(강사 수락) 반영
+  useEffect(() => {
+    if (!chatRoomId) return;
+    const channel = supabase
+      .channel(`chat_room:${chatRoomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_rooms',
+          filter: `id=eq.${chatRoomId}`,
+        },
+        (payload) => {
+          const row = payload.new as { status?: string };
+          if (row?.status === 'active') {
+            setRoomInfo((prev) => (prev ? { ...prev, status: 'active' } : null));
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [chatRoomId]);
+
   const sendMessage = useCallback(async (content: string): Promise<{ success: boolean; error?: string }> => {
-    if (!chatRoomId || !userId) {
+    if (!chatRoomId || !userId || !roomInfo) {
       return { success: false, error: "채팅방 정보가 없습니다" };
+    }
+    if (roomInfo.status === 'pending' && roomInfo.parent_id === userId) {
+      return { success: false, error: "강사가 수락할 때까지 메시지를 보낼 수 없습니다" };
     }
 
     // Validate message content
@@ -224,7 +260,41 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
       logError('ChatMessages Send', error);
       return { success: false, error: "오류가 발생했습니다" };
     }
-  }, [chatRoomId, userId]);
+  }, [chatRoomId, userId, roomInfo]);
 
-  return { messages, roomInfo, loading, userId, isAdmin, sendMessage };
+  const acceptChatRequest = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    if (!chatRoomId || !roomInfo || roomInfo.status !== 'pending') {
+      return { success: false, error: "수락할 수 없는 상태입니다" };
+    }
+    if (userId !== roomInfo.staff_user_id) {
+      return { success: false, error: "담당 강사만 수락할 수 있습니다" };
+    }
+    try {
+      const { error } = await supabase
+        .from('chat_rooms')
+        .update({ status: 'active', updated_at: new Date().toISOString() })
+        .eq('id', chatRoomId);
+
+      if (error) {
+        logError('ChatMessages Accept', error);
+        return { success: false, error: "수락 처리에 실패했습니다" };
+      }
+      setRoomInfo((prev) => (prev ? { ...prev, status: 'active' } : null));
+      return { success: true };
+    } catch (error) {
+      logError('ChatMessages Accept', error);
+      return { success: false, error: "오류가 발생했습니다" };
+    }
+  }, [chatRoomId, userId, roomInfo]);
+
+  return {
+    messages,
+    roomInfo,
+    loading,
+    userId,
+    isAdmin,
+    sendMessage,
+    acceptChatRequest,
+    isStaffForThisRoom: !!roomInfo?.staff_user_id && roomInfo.staff_user_id === userId,
+  };
 };

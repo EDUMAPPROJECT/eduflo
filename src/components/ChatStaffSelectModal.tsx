@@ -14,7 +14,8 @@ interface ChatStaffSelectModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   academyId: string | undefined;
-  onSelect: (staffUserId: string) => void;
+  /** staffUserId, roleLabel(원장/부원장/강사 등). 강사면 수락 후 채팅 가능 */
+  onSelect: (staffUserId: string, roleLabel: string) => void;
   selecting?: boolean;
 }
 
@@ -68,7 +69,8 @@ const ChatStaffSelectModal = ({
 
   const handleConfirm = () => {
     if (selectedUserId) {
-      onSelect(selectedUserId);
+      const staffItem = staff.find((s) => s.user_id === selectedUserId);
+      onSelect(selectedUserId, staffItem?.roleLabel ?? "관리자");
       setSelectedUserId(null);
       onOpenChange(false);
     }

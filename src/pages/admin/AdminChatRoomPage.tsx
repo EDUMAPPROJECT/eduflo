@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,10 +17,16 @@ const formatTime = (dateStr: string) => {
 const AdminChatRoomPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { messages, roomInfo, loading, userId, sendMessage } = useChatMessages(id);
+  const location = useLocation();
+  const fromChatManagement = (location.state as { from?: string } | null)?.from === 'chat-management';
+  const { messages, roomInfo, loading, userId, sendMessage, acceptChatRequest, isStaffForThisRoom } = useChatMessages(id);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [accepting, setAccepting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const isPending = roomInfo?.status === 'pending';
+  const showAcceptButton = isPending && isStaffForThisRoom;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,6 +50,18 @@ const AdminChatRoomPage = () => {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleAccept = async () => {
+    if (accepting) return;
+    setAccepting(true);
+    const result = await acceptChatRequest();
+    if (result.success) {
+      toast.success("채팅 상담을 수락했습니다. 이제 메시지를 주고받을 수 있습니다.");
+    } else if (result.error) {
+      toast.error(result.error);
+    }
+    setAccepting(false);
   };
 
   if (loading) {
@@ -70,7 +88,7 @@ const AdminChatRoomPage = () => {
       {/* Header */}
       <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/chats")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(fromChatManagement ? "/admin/chat-management" : "/admin/chats")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
@@ -95,6 +113,25 @@ const AdminChatRoomPage = () => {
             </div>
           ) : (
             messages.map((message) => {
+              const isChatRequest = message.message_type === 'chat_request';
+              if (isChatRequest) {
+                return (
+                  <div key={message.id} className="flex flex-col items-center w-full space-y-3">
+                    <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-muted border border-border text-center">
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{message.content}</p>
+                    </div>
+                    {showAcceptButton && (
+                      <Button
+                        onClick={handleAccept}
+                        disabled={accepting}
+                        className="rounded-full"
+                      >
+                        {accepting ? "처리 중..." : "수락"}
+                      </Button>
+                    )}
+                  </div>
+                );
+              }
               const isMe = message.sender_id === userId;
               if (isMe) {
                 return (
@@ -110,7 +147,6 @@ const AdminChatRoomPage = () => {
               }
               return (
                 <div key={message.id} className="flex flex-col items-start w-full">
-                  {/* 프로필 아이콘과 닉네임 같은 가로선상 */}
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center shrink-0">
                       <User className="w-5 h-5 text-primary" />
@@ -133,21 +169,21 @@ const AdminChatRoomPage = () => {
         </div>
       </main>
 
-      {/* Message Input */}
+      {/* Message Input - 수락 대기 중(강사)일 때는 수락 후 입력 가능 */}
       <div className="sticky bottom-0 bg-card border-t border-border p-4">
         <div className="max-w-lg mx-auto flex gap-2">
           <Input
-            placeholder="메시지를 입력하세요..."
+            placeholder={showAcceptButton ? "위에서 수락한 후 메시지를 보낼 수 있습니다" : "메시지를 입력하세요..."}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             className="flex-1 rounded-full"
-            disabled={sending}
+            disabled={sending || showAcceptButton}
           />
           <Button
             size="icon"
             onClick={handleSendMessage}
-            disabled={!newMessage.trim() || sending}
+            disabled={!newMessage.trim() || sending || showAcceptButton}
             className="rounded-full shrink-0"
           >
             <Send className="w-4 h-4" />

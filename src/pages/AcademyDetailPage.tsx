@@ -198,9 +198,10 @@ const AcademyDetailPage = () => {
     setChatStaffModalOpen(true);
   };
 
-  const handleChatStaffSelect = async (staffUserId: string) => {
+  const handleChatStaffSelect = async (staffUserId: string, roleLabel: string) => {
     if (!id) return;
-    const roomId = await getOrCreateChatRoom(id, staffUserId);
+    const requireAccept = roleLabel === '강사';
+    const roomId = await getOrCreateChatRoom(id, staffUserId, requireAccept);
     if (roomId) {
       navigate(`${prefix}/chats/${roomId}`);
     } else {

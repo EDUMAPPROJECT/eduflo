@@ -153,10 +153,12 @@ export const useOrCreateChatRoom = () => {
    * 채팅방 ID를 반환합니다. 이미 있으면 기존 ID, 없으면 새로 생성합니다.
    * @param academyId 학원 ID
    * @param staffUserId 학원 담당자 user_id. 넣으면 해당 담당자와의 1:1 방을 사용합니다. 생략 시 기존처럼 학원 대표 1개 방을 사용합니다.
+   * @param requireAccept true면 강사 수락 전까지 대기(pending). 강사에게 요청 메시지가 발송됨.
    */
   const getOrCreateChatRoom = async (
     academyId: string,
-    staffUserId?: string | null
+    staffUserId?: string | null,
+    requireAccept?: boolean
   ): Promise<string | null> => {
     setLoading(true);
     try {
@@ -185,9 +187,11 @@ export const useOrCreateChatRoom = () => {
         return existingRoom.id;
       }
 
-      const insertPayload: { academy_id: string; parent_id: string; staff_user_id?: string | null } = {
+      const status = requireAccept ? 'pending' : 'active';
+      const insertPayload: { academy_id: string; parent_id: string; staff_user_id?: string | null; status?: string } = {
         academy_id: academyId,
         parent_id: parentId,
+        status,
       };
       if (staffUserId) {
         insertPayload.staff_user_id = staffUserId;
@@ -204,6 +208,26 @@ export const useOrCreateChatRoom = () => {
       if (error) {
         console.error('Error creating chat room:', error);
         return null;
+      }
+
+      if (requireAccept && newRoom?.id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('user_name')
+          .eq('id', parentId)
+          .maybeSingle();
+        const parentName =
+          (profile?.user_name && profile.user_name.trim()) ||
+          (session.user.user_metadata?.user_name as string)?.trim() ||
+          session.user.email ||
+          '학부모';
+        const content = `${parentName}님이 선생님에게 채팅 상담 요청을 보냈습니다. 수락을 통해 채팅 진행 여부를 결정해주세요.`;
+        await supabase.from('messages').insert({
+          chat_room_id: newRoom.id,
+          sender_id: parentId,
+          content,
+          message_type: 'chat_request',
+        });
       }
 
       return newRoom.id;
