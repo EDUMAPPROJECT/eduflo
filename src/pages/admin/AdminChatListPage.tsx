@@ -22,7 +22,7 @@ const formatTime = (date: Date | null) => {
 
 const AdminChatListPage = () => {
   const navigate = useNavigate();
-  const { chatRooms, loading } = useChatRooms(true);
+  const { chatRooms, loading } = useChatRooms(true, true);
 
   if (loading) {
     return (

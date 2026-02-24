@@ -205,8 +205,7 @@ const AdminHomePage = () => {
     {
       icon: MessageSquare,
       label: "학원 채팅 관리",
-      path: "/admin/chat-management",
-      disabled: true
+      path: "/admin/chat-management"
     }
   ];
 
@@ -313,22 +312,22 @@ const AdminHomePage = () => {
                 <Card
                   key={action.path}
                   className={`shadow-card border-border transition-all ${
-                    action.disabled 
-                      ? 'opacity-50 cursor-not-allowed' 
+                    'disabled' in action && action.disabled
+                      ? 'opacity-50 cursor-not-allowed'
                       : 'cursor-pointer hover:shadow-soft'
                   }`}
-                  onClick={() => !action.disabled && handleQuickActionClick(action.path, action.requiresEditPermission)}
+                  onClick={() => !('disabled' in action && action.disabled) && handleQuickActionClick(action.path, action.requiresEditPermission)}
                 >
                   <CardContent className="p-6 flex flex-col items-center justify-center text-center">
                     <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-3 ${
-                      action.disabled ? 'bg-muted' : 'bg-secondary'
+                      'disabled' in action && action.disabled ? 'bg-muted' : 'bg-secondary'
                     }`}>
-                      <action.icon className={`w-7 h-7 ${action.disabled ? 'text-muted-foreground' : 'text-primary'}`} />
+                      <action.icon className={`w-7 h-7 ${'disabled' in action && action.disabled ? 'text-muted-foreground' : 'text-primary'}`} />
                     </div>
-                    <span className={`font-medium text-sm ${action.disabled ? 'text-muted-foreground' : 'text-foreground'}`}>
+                    <span className={`font-medium text-sm ${'disabled' in action && action.disabled ? 'text-muted-foreground' : 'text-foreground'}`}>
                       {action.label}
                     </span>
-                    {action.disabled && (
+                    {'disabled' in action && action.disabled && (
                       <span className="text-xs text-muted-foreground mt-1">준비 중</span>
                     )}
                   </CardContent>

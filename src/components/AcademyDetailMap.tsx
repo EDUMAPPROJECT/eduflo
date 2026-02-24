@@ -55,6 +55,7 @@ const AcademyDetailMap = ({
           zoom: 16,
           logoControl: false,
           mapTypeControl: false,
+          draggable: false,
         });
 
         const marker = new window.naver.maps.Marker({

@@ -5,6 +5,7 @@ interface ChatRoom {
   id: string;
   academy_id: string;
   parent_id: string;
+  staff_user_id: string | null;
   academy: {
     id: string;
     name: string;
@@ -14,12 +15,15 @@ interface ChatRoom {
     user_name: string | null;
     phone: string | null;
   } | null;
+  staff_profile?: {
+    user_name: string | null;
+  } | null;
   lastMessage: string | null;
   lastMessageAt: Date | null;
   unreadCount: number;
 }
 
-export const useChatRooms = (isAdmin: boolean = false) => {
+export const useChatRooms = (isAdmin: boolean = false, ownOnly: boolean = false) => {
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -35,13 +39,14 @@ export const useChatRooms = (isAdmin: boolean = false) => {
 
         setUserId(session.user.id);
 
-        // Get chat rooms with academy info
+        // Get chat rooms with academy info (RLS: 원장=전체, 멤버=본인 담당만)
         const { data: rooms, error } = await supabase
           .from('chat_rooms')
           .select(`
             id,
             academy_id,
             parent_id,
+            staff_user_id,
             updated_at,
             academies (
               id,
@@ -57,9 +62,17 @@ export const useChatRooms = (isAdmin: boolean = false) => {
           return;
         }
 
+        // 채팅 탭: 본인 담당만 표시 (원장 포함)
+        let roomsToProcess = rooms ?? [];
+        if (isAdmin && ownOnly) {
+          roomsToProcess = roomsToProcess.filter(
+            (r: { staff_user_id?: string | null }) => r.staff_user_id === session.user.id
+          );
+        }
+
         // Get last message and unread count for each room
         const roomsWithMessages = await Promise.all(
-          (rooms || []).map(async (room) => {
+          roomsToProcess.map(async (room: { id: string; academy_id: string; parent_id: string; staff_user_id?: string | null; updated_at?: string; academies?: unknown }) => {
             // Get last message
             const { data: lastMessageData } = await supabase
               .from('messages')
@@ -78,9 +91,11 @@ export const useChatRooms = (isAdmin: boolean = false) => {
               .neq('sender_id', session.user.id);
 
             const academy = room.academies as unknown as { id: string; name: string; profile_image: string | null };
+            const staffUserId = room.staff_user_id ?? null;
 
             // Fetch parent profile if admin
             let parentProfile = null;
+            let staffProfile = null;
             if (isAdmin) {
               const { data: profileData } = await supabase
                 .from('profiles')
@@ -88,18 +103,28 @@ export const useChatRooms = (isAdmin: boolean = false) => {
                 .eq('id', room.parent_id)
                 .maybeSingle();
               parentProfile = profileData;
+              if (staffUserId) {
+                const { data: staffData } = await supabase
+                  .from('profiles')
+                  .select('user_name')
+                  .eq('id', staffUserId)
+                  .maybeSingle();
+                staffProfile = staffData;
+              }
             }
 
             return {
               id: room.id,
               academy_id: room.academy_id,
               parent_id: room.parent_id,
+              staff_user_id: staffUserId,
               academy: {
                 id: academy.id,
                 name: academy.name,
                 profile_image: academy.profile_image,
               },
               parent_profile: parentProfile,
+              staff_profile: staffProfile,
               lastMessage: lastMessageData?.content || null,
               lastMessageAt: lastMessageData?.created_at ? new Date(lastMessageData.created_at) : null,
               unreadCount: unreadCount || 0,
@@ -116,7 +141,7 @@ export const useChatRooms = (isAdmin: boolean = false) => {
     };
 
     fetchChatRooms();
-  }, [isAdmin]);
+  }, [isAdmin, ownOnly]);
 
   return { chatRooms, loading, userId };
 };

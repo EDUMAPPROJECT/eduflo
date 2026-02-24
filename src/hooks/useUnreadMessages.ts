@@ -15,22 +15,29 @@ export const useUnreadMessages = (isAdmin: boolean = false) => {
       const userId = session.user.id;
 
       if (isAdmin) {
-        // Admin: RLS가 적용된 채팅방만 조회 (원장=학원 전체, 멤버=본인 담당만)
+        // Admin: 채팅 탭과 동일하게 본인 담당 채팅만 (staff_user_id = 본인)
         const { data: chatRooms } = await supabase
           .from('chat_rooms')
-          .select('id');
+          .select('id, staff_user_id');
 
         if (!chatRooms || chatRooms.length === 0) {
           setHasUnread(false);
           return;
         }
 
-        const chatRoomIds = chatRooms.map((r: { id: string }) => r.id);
+        const ownRoomIds = chatRooms
+          .filter((r: { id: string; staff_user_id?: string | null }) => r.staff_user_id === userId)
+          .map((r: { id: string }) => r.id);
+
+        if (ownRoomIds.length === 0) {
+          setHasUnread(false);
+          return;
+        }
 
         const { count } = await supabase
           .from('messages')
           .select('id', { count: 'exact', head: true })
-          .in('chat_room_id', chatRoomIds)
+          .in('chat_room_id', ownRoomIds)
           .neq('sender_id', userId)
           .eq('is_read', false);
 
