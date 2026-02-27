@@ -23,10 +23,10 @@ const RoleSelection = () => {
         {/* Tagline */}
         <div className="text-center mb-12 animate-fade-up" style={{ animationDelay: "0.2s" }}>
           <h1 className="text-xl font-semibold text-foreground mb-2">
-            우리 동네 학원 찾기
+            우리 동네 학원의 모든 것
           </h1>
           <p className="text-muted-foreground text-sm">
-            내 아이에게 딱 맞는 학원을 찾아보세요
+            우리 아이에게 딱 맞는 학원 탐색부터 관리까지
           </p>
         </div>
 

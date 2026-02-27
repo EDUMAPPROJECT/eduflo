@@ -3,25 +3,9 @@ import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import FormalReleaseBanner from "./FormalReleaseBanner";
 
-/** 설명회 관련 경로: 배너를 띄우지 않음 */
-function isSeminarRelatedPath(pathname: string): boolean {
-  return pathname.includes("/seminar");
-}
-
-/** 설명회 목록이 있는 홈 경로: 배너 띄우지 않음 (설명회 보러 가기로 이동한 뒤 배너가 사라지도록) */
-function isHomePath(pathname: string): boolean {
-  return (
-    pathname === "/p/home" ||
-    pathname === "/s/home" ||
-    pathname === "/admin/home" ||
-    pathname === "/super/home" ||
-    pathname === "/home"
-  );
-}
-
-/** 로그인/회원가입 전 경로: 배너 띄우지 않음 */
-function isPublicPath(pathname: string): boolean {
-  return pathname === "/" || pathname === "/auth" || pathname.startsWith("/auth");
+/** 커뮤니티 관련 경로에서만 배너 표시 */
+function isCommunityPath(pathname: string): boolean {
+  return pathname.includes("/community");
 }
 
 interface ReleaseNoticeGateProps {
@@ -35,8 +19,6 @@ const ReleaseNoticeGate = ({ children }: ReleaseNoticeGateProps) => {
   const { pathname } = useLocation();
   const [hasSession, setHasSession] = useState<boolean | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  // const [isParent, setIsParent] = useState(false); // 임시: 학부모도 배너 미표시
 
   useEffect(() => {
     const checkSession = async () => {
@@ -47,16 +29,12 @@ const ReleaseNoticeGate = ({ children }: ReleaseNoticeGateProps) => {
       if (loggedIn && session) {
         const { data: roleData } = await supabase
           .from("user_roles")
-          .select("is_super_admin, role")
+          .select("is_super_admin")
           .eq("user_id", session.user.id)
           .maybeSingle();
         setIsSuperAdmin(!!roleData?.is_super_admin);
-        setIsAdmin(roleData?.role === "admin");
-        // setIsParent(roleData?.role === "parent");
       } else {
         setIsSuperAdmin(false);
-        setIsAdmin(false);
-        // setIsParent(false);
       }
     };
 
@@ -70,11 +48,7 @@ const ReleaseNoticeGate = ({ children }: ReleaseNoticeGateProps) => {
   const showBanner =
     hasSession === true &&
     !isSuperAdmin &&
-    !isAdmin &&
-    // !isParent &&
-    !isPublicPath(pathname) &&
-    !isSeminarRelatedPath(pathname) &&
-    !isHomePath(pathname);
+    isCommunityPath(pathname);
 
   return (
     <>
