@@ -33,15 +33,15 @@ const FormalReleaseBanner = () => {
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">정식 출시 준비 중입니다</h2>
           <p className="text-sm text-muted-foreground">
-            현재 <strong>설명회 신청</strong> 기능만 이용 가능합니다.
+            현재 <strong>커뮤니티를 제외한 기능들만</strong> 이용 가능합니다.
             <br />
-            다른 기능은 정식 출시 후 이용해 주세요.
+            커뮤니티 기능은 정식 출시 후 이용해 주세요.
           </p>
         </div>
         <Button asChild className="w-full gap-2">
           <Link to={getHomePath()}>
             <CalendarCheck className="h-4 w-4" />
-            설명회 보러 가기
+            홈으로 돌아가기
           </Link>
         </Button>
       </div>

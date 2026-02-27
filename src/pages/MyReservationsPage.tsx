@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 import BottomNavigation from "@/components/BottomNavigation";
 import ReservationDetailSheet from "@/components/ReservationDetailSheet";
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,7 @@ interface ReservationWithAcademy extends ConsultationReservation {
 
 const MyReservationsPage = () => {
   const navigate = useNavigate();
+  const prefix = useRoutePrefix();
   const [user, setUser] = useState<any>(null);
   const [reservations, setReservations] = useState<ReservationWithAcademy[]>([]);
   const [seminarApplications, setSeminarApplications] = useState<SeminarApplication[]>([]);
@@ -448,7 +450,7 @@ const MyReservationsPage = () => {
                     variant="outline" 
                     size="sm" 
                     className="mt-3"
-                    onClick={() => navigate("/explore")}
+                    onClick={() => navigate(`${prefix}/explore?tab=academies`)}
                   >
                     학원 둘러보기
                   </Button>
@@ -650,7 +652,7 @@ const MyReservationsPage = () => {
                     variant="outline" 
                     size="sm" 
                     className="mt-3"
-                    onClick={() => navigate("/explore")}
+                    onClick={() => navigate(`${prefix}/explore?tab=academies`)}
                   >
                     학원 둘러보기
                   </Button>
@@ -711,7 +713,7 @@ const MyReservationsPage = () => {
                     variant="outline" 
                     size="sm" 
                     className="mt-3"
-                    onClick={() => navigate("/explore?tab=seminars")}
+                    onClick={() => navigate(`${prefix}/explore?tab=seminars`)}
                   >
                     설명회 찾아보기
                   </Button>

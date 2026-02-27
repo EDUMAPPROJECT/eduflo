@@ -91,14 +91,6 @@ const LocationMap = ({ address, name }: LocationMapProps) => {
           <Navigation className="w-4 h-4" />
           네이버 지도
         </Button>
-        <Button
-          variant="outline"
-          className="flex-1 gap-2"
-          onClick={openKakaoMap}
-        >
-          <Navigation className="w-4 h-4" />
-          카카오맵
-        </Button>
       </div>
     </div>
   );

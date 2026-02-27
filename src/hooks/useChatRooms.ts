@@ -18,6 +18,7 @@ interface ChatRoom {
   staff_profile?: {
     user_name: string | null;
   } | null;
+  staff_role_label?: string | null;
   lastMessage: string | null;
   lastMessageAt: Date | null;
   unreadCount: number;
@@ -70,6 +71,40 @@ export const useChatRooms = (isAdmin: boolean = false, ownOnly: boolean = false)
           );
         }
 
+        // 학부모/학생용: 각 학원별 담당자 역할 라벨을 미리 조회
+        let staffRoleMap: Record<string, Record<string, { name: string; roleLabel: string }>> = {};
+
+        if (!isAdmin) {
+          const academyIds = Array.from(
+            new Set(
+              roomsToProcess
+                .filter((r: { staff_user_id?: string | null }) => r.staff_user_id)
+                .map((r: { academy_id: string }) => r.academy_id)
+            )
+          );
+
+          await Promise.all(
+            academyIds.map(async (academyId) => {
+              const { data } = await supabase.rpc('get_academy_staff_for_chat', {
+                _academy_id: academyId,
+              });
+
+              const inner: Record<string, { name: string; roleLabel: string }> = {};
+
+              (data ?? []).forEach(
+                (row: { user_id: string; name: string | null; role_label: string | null }) => {
+                  inner[row.user_id] = {
+                    name: row.name ?? '이름 없음',
+                    roleLabel: row.role_label ?? '담당자',
+                  };
+                }
+              );
+
+              staffRoleMap[academyId] = inner;
+            })
+          );
+        }
+
         // Get last message and unread count for each room
         const roomsWithMessages = await Promise.all(
           roomsToProcess.map(async (room: { id: string; academy_id: string; parent_id: string; staff_user_id?: string | null; updated_at?: string; academies?: unknown }) => {
@@ -96,6 +131,8 @@ export const useChatRooms = (isAdmin: boolean = false, ownOnly: boolean = false)
             // Fetch parent profile if admin
             let parentProfile = null;
             let staffProfile = null;
+            let staffRoleLabel: string | null = null;
+
             if (isAdmin) {
               const { data: profileData } = await supabase
                 .from('profiles')
@@ -111,6 +148,13 @@ export const useChatRooms = (isAdmin: boolean = false, ownOnly: boolean = false)
                   .maybeSingle();
                 staffProfile = staffData;
               }
+            } else if (staffUserId) {
+              const byAcademy = staffRoleMap[room.academy_id];
+              const staffInfo = byAcademy?.[staffUserId];
+              if (staffInfo) {
+                staffProfile = { user_name: staffInfo.name };
+                staffRoleLabel = staffInfo.roleLabel;
+              }
             }
 
             return {
@@ -125,6 +169,7 @@ export const useChatRooms = (isAdmin: boolean = false, ownOnly: boolean = false)
               },
               parent_profile: parentProfile,
               staff_profile: staffProfile,
+              staff_role_label: staffRoleLabel,
               lastMessage: lastMessageData?.content || null,
               lastMessageAt: lastMessageData?.created_at ? new Date(lastMessageData.created_at) : null,
               unreadCount: unreadCount || 0,
