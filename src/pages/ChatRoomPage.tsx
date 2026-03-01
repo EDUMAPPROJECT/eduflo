@@ -117,11 +117,21 @@ const ChatRoomPage = () => {
             messages.map((message) => {
               const isMe = message.sender_id === userId;
               const isChatRequest = message.message_type === 'chat_request';
+              const isChatAccepted = message.message_type === 'chat_accepted';
               if (isChatRequest) {
                 return (
                   <div key={message.id} className="flex justify-center w-full">
                     <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-muted border border-border text-center">
                       <p className="text-sm text-muted-foreground whitespace-pre-wrap">{message.content}</p>
+                    </div>
+                  </div>
+                );
+              }
+              if (isChatAccepted) {
+                return (
+                  <div key={message.id} className="flex justify-center w-full">
+                    <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-primary/10 border border-primary/20 text-center">
+                      <p className="text-sm text-primary whitespace-pre-wrap">{message.content}</p>
                     </div>
                   </div>
                 );
@@ -149,14 +159,14 @@ const ChatRoomPage = () => {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <GraduationCap className="w-5 h-5 text-primary" />
+                        <GraduationCap className="w-6 h-6 text-primary" />
                       )}
                     </div>
                     <span className="text-xs font-semibold text-foreground">
                       {roomInfo.academy.name}
                     </span>
                   </div>
-                  <div className="max-w-[75%] rounded-2xl px-4 py-2.5 bg-card border border-border text-foreground rounded-tl-sm">
+                  <div className="ml-11 max-w-[75%] rounded-2xl px-4 py-2.5 bg-card border border-border text-foreground rounded-tl-sm">
                     <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                     <p className="text-xs mt-1 text-muted-foreground">
                       {formatTime(message.created_at)}

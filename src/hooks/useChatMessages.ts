@@ -270,15 +270,34 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
       return { success: false, error: "담당 강사만 수락할 수 있습니다" };
     }
     try {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from('chat_rooms')
         .update({ status: 'active', updated_at: new Date().toISOString() })
-        .eq('id', chatRoomId);
+        .eq('id', chatRoomId)
+        .select('id, status')
+        .single();
 
       if (error) {
         logError('ChatMessages Accept', error);
         return { success: false, error: "수락 처리에 실패했습니다" };
       }
+      if (!updated || updated.status !== 'active') {
+        logError('ChatMessages Accept', new Error('Update did not persist'));
+        return { success: false, error: "수락 처리에 실패했습니다" };
+      }
+
+      // 학부모에게 수락 안내 메시지 전송
+      const { error: msgError } = await supabase.from('messages').insert({
+        chat_room_id: chatRoomId,
+        sender_id: userId,
+        content: '상담을 수락했습니다. 이제 메시지를 주고받을 수 있습니다.',
+        message_type: 'chat_accepted',
+      });
+      if (msgError) {
+        logError('ChatMessages Accept Message', msgError);
+        // 수락 자체는 완료됐으므로 roomInfo는 갱신하고, 메시지 실패만 로그
+      }
+
       setRoomInfo((prev) => (prev ? { ...prev, status: 'active' } : null));
       return { success: true };
     } catch (error) {

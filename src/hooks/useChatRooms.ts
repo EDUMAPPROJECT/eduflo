@@ -191,6 +191,115 @@ export const useChatRooms = (isAdmin: boolean = false, ownOnly: boolean = false)
   return { chatRooms, loading, userId };
 };
 
+/** 채팅방 선택 화면용 경량 훅 - lastMessage/unreadCount 조회 생략으로 빠른 로딩 */
+export const useChatRoomsForSelect = () => {
+  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchChatRooms = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          setLoading(false);
+          return;
+        }
+        setUserId(session.user.id);
+
+        const { data: rooms, error } = await supabase
+          .from('chat_rooms')
+          .select(`
+            id,
+            academy_id,
+            parent_id,
+            staff_user_id,
+            updated_at,
+            academies (
+              id,
+              name,
+              profile_image
+            )
+          `)
+          .order('updated_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching chat rooms:', error);
+          setLoading(false);
+          return;
+        }
+
+        const roomsToProcess = rooms ?? [];
+        let staffRoleMap: Record<string, Record<string, { name: string; roleLabel: string }>> = {};
+
+        const academyIds = Array.from(
+          new Set(
+            roomsToProcess
+              .filter((r: { staff_user_id?: string | null }) => r.staff_user_id)
+              .map((r: { academy_id: string }) => r.academy_id)
+          )
+        );
+
+        await Promise.all(
+          academyIds.map(async (academyId) => {
+            const { data } = await supabase.rpc('get_academy_staff_for_chat', {
+              _academy_id: academyId,
+            });
+            const inner: Record<string, { name: string; roleLabel: string }> = {};
+            (data ?? []).forEach(
+              (row: { user_id: string; name: string | null; role_label: string | null }) => {
+                inner[row.user_id] = {
+                  name: row.name ?? '이름 없음',
+                  roleLabel: row.role_label ?? '담당자',
+                };
+              }
+            );
+            staffRoleMap[academyId] = inner;
+          })
+        );
+
+        const roomsWithStaff = roomsToProcess.map(
+          (room: { id: string; academy_id: string; parent_id: string; staff_user_id?: string | null; academies?: unknown }) => {
+            const academy = room.academies as unknown as { id: string; name: string; profile_image: string | null };
+            const staffUserId = room.staff_user_id ?? null;
+            let staffProfile = null;
+            let staffRoleLabel: string | null = null;
+            if (staffUserId) {
+              const staffInfo = staffRoleMap[room.academy_id]?.[staffUserId];
+              if (staffInfo) {
+                staffProfile = { user_name: staffInfo.name };
+                staffRoleLabel = staffInfo.roleLabel;
+              }
+            }
+            return {
+              id: room.id,
+              academy_id: room.academy_id,
+              parent_id: room.parent_id,
+              staff_user_id: staffUserId,
+              academy: { id: academy.id, name: academy.name, profile_image: academy.profile_image },
+              parent_profile: null,
+              staff_profile: staffProfile,
+              staff_role_label: staffRoleLabel,
+              lastMessage: null,
+              lastMessageAt: null,
+              unreadCount: 0,
+            };
+          }
+        );
+
+        setChatRooms(roomsWithStaff);
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchChatRooms();
+  }, []);
+
+  return { chatRooms, loading, userId };
+};
+
 export const useOrCreateChatRoom = () => {
   const [loading, setLoading] = useState(false);
 

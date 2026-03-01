@@ -114,6 +114,7 @@ const AdminChatRoomPage = () => {
           ) : (
             messages.map((message) => {
               const isChatRequest = message.message_type === 'chat_request';
+              const isChatAccepted = message.message_type === 'chat_accepted';
               if (isChatRequest) {
                 return (
                   <div key={message.id} className="flex flex-col items-center w-full space-y-3">
@@ -129,6 +130,15 @@ const AdminChatRoomPage = () => {
                         {accepting ? "처리 중..." : "수락"}
                       </Button>
                     )}
+                  </div>
+                );
+              }
+              if (isChatAccepted) {
+                return (
+                  <div key={message.id} className="flex justify-center w-full">
+                    <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-primary/10 border border-primary/20 text-center">
+                      <p className="text-sm text-primary whitespace-pre-wrap">{message.content}</p>
+                    </div>
                   </div>
                 );
               }
@@ -155,7 +165,7 @@ const AdminChatRoomPage = () => {
                       {parentName}
                     </span>
                   </div>
-                  <div className="max-w-[75%] rounded-2xl px-4 py-2.5 bg-card border border-border text-foreground rounded-tl-sm">
+                  <div className="ml-11 max-w-[75%] rounded-2xl px-4 py-2.5 bg-card border border-border text-foreground rounded-tl-sm">
                     <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                     <p className="text-xs mt-1 text-muted-foreground">
                       {formatTime(message.created_at)}

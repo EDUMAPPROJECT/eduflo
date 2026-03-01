@@ -23,6 +23,9 @@ import SeminarDetailPage from "./pages/SeminarDetailPage";
 import AcademyDetailPage from "./pages/AcademyDetailPage";
 import ChatListPage from "./pages/ChatListPage";
 import ChatRoomPage from "./pages/ChatRoomPage";
+import FolderManagementPage from "./pages/FolderManagementPage";
+import CreateFolderPage from "./pages/CreateFolderPage";
+import ChatRoomSelectPage from "./pages/ChatRoomSelectPage";
 import LearningStyleTest from "./pages/LearningStyleTest";
 import LearningStyleResult from "./pages/LearningStyleResult";
 import PreferenceTest from "./pages/PreferenceTest";
@@ -121,6 +124,9 @@ const App = () => {
               <Route path="/p/settings" element={<SettingsPage />} />
               <Route path="/p/customer-service" element={<CustomerServicePage />} />
               <Route path="/p/chats" element={<ChatListPage />} />
+              <Route path="/p/chats/folders" element={<FolderManagementPage />} />
+              <Route path="/p/chats/folders/create" element={<CreateFolderPage />} />
+              <Route path="/p/chats/folders/create/select" element={<ChatRoomSelectPage />} />
               <Route path="/p/chats/:id" element={<ChatRoomPage />} />
               <Route path="/p/seminar/:id" element={<SeminarDetailPage />} />
               <Route path="/p/academy/:id" element={<AcademyDetailPage />} />
@@ -145,6 +151,9 @@ const App = () => {
               <Route path="/s/settings" element={<SettingsPage />} />
               <Route path="/s/customer-service" element={<CustomerServicePage />} />
               <Route path="/s/chats" element={<ChatListPage />} />
+              <Route path="/s/chats/folders" element={<FolderManagementPage />} />
+              <Route path="/s/chats/folders/create" element={<CreateFolderPage />} />
+              <Route path="/s/chats/folders/create/select" element={<ChatRoomSelectPage />} />
               <Route path="/s/chats/:id" element={<ChatRoomPage />} />
               <Route path="/s/seminar/:id" element={<SeminarDetailPage />} />
               <Route path="/s/academy/:id" element={<AcademyDetailPage />} />
