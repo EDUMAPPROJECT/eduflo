@@ -271,7 +271,7 @@ const ConsultationReservationDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="w-auto max-w-[90vw] sm:max-w-md max-h-[90vh] overflow-hidden flex flex-col p-0">
         <DialogHeader className="p-4 border-b border-border">
           <DialogTitle className="flex items-center gap-2">
             <CalendarIcon className="w-5 h-5 text-primary" />
