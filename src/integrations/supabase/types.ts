@@ -1170,7 +1170,12 @@ export type Database = {
       generate_student_connection_code: { Args: never; Returns: string }
       get_academy_staff_for_chat: {
         Args: { _academy_id: string }
-        Returns: { user_id: string; name: string; role_label: string; description: string }[]
+        Returns: {
+          description: string
+          name: string
+          role_label: string
+          user_id: string
+        }[]
       }
       get_seminar_application_count: {
         Args: { _seminar_id: string }
