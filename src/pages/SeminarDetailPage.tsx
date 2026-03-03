@@ -236,6 +236,16 @@ const SeminarDetailPage = () => {
 
       if (error) throw error;
 
+      // 문자콕 알림 발송 (fire-and-forget)
+      supabase.functions.invoke('notify-seminar-event', {
+        body: {
+          eventType: 'seminar_application',
+          seminarId: id,
+          applicantUserId: user.id,
+          applicantName: parentName.trim(),
+        },
+      }).catch(() => {});
+
       setIsDialogOpen(false);
       setHasApplied(true);
       setMyApplication({ student_name: parentName.trim() });
