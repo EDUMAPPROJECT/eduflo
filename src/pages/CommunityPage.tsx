@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useRegion } from "@/contexts/RegionContext";
+import { useRegion, REGION_ALL } from "@/contexts/RegionContext";
 import { useToast } from "@/hooks/use-toast";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useRoutePrefix } from "@/hooks/useRoutePrefix";
@@ -71,13 +71,16 @@ const CommunityPage = () => {
   // Fetch function for infinite scroll
   const fetchPosts = useCallback(async (page: number): Promise<{ data: FeedPost[]; hasMore: boolean }> => {
     try {
-      // First, get academies that target the selected region
-      const { data: academiesInRegion } = await supabase
-        .from("academies")
-        .select("id")
-        .contains("target_regions", [selectedRegion]);
+      let academyIds: string[] | null = null;
 
-      const academyIds = academiesInRegion?.map(a => a.id) || [];
+      // "전체"가 아닐 때만 지역별 학원 필터 적용
+      if (selectedRegion && selectedRegion !== REGION_ALL) {
+        const { data: academiesInRegion } = await supabase
+          .from("academies")
+          .select("id")
+          .contains("target_regions", [selectedRegion]);
+        academyIds = academiesInRegion?.map(a => a.id) || [];
+      }
 
       // Build queries for both academy posts and super admin posts
       let academyQuery = supabase
@@ -88,11 +91,13 @@ const CommunityPage = () => {
         `)
         .not("academy_id", "is", null);
       
-      if (academyIds.length > 0) {
-        academyQuery = academyQuery.in("academy_id", academyIds);
-      } else {
-        // If no academies in region, only get super admin posts
-        academyQuery = academyQuery.eq("academy_id", "00000000-0000-0000-0000-000000000000"); // impossible match
+      if (academyIds !== null) {
+        // 특정 지역: 해당 지역 학원 글만
+        if (academyIds.length > 0) {
+          academyQuery = academyQuery.in("academy_id", academyIds);
+        } else {
+          academyQuery = academyQuery.eq("academy_id", "00000000-0000-0000-0000-000000000000"); // impossible match
+        }
       }
 
       // Super admin posts (no academy_id)

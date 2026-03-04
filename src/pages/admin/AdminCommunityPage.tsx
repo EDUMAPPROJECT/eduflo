@@ -11,17 +11,11 @@ import FeedPostDetailSheet from "@/components/FeedPostDetailSheet";
 import CreatePostDialog from "@/components/CreatePostDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   Newspaper, 
-  Bell, 
+  Plus,
   PartyPopper, 
   Calendar, 
-  Bookmark, 
-  Search,
-  Plus,
-  AlertTriangle,
-  X,
   GraduationCap,
   Megaphone
 } from "lucide-react";
@@ -53,8 +47,6 @@ const filterOptions = [
   { id: 'event', label: '이벤트', icon: PartyPopper },
 ];
 
-const MIGRATION_NOTICE_KEY = 'eduflo_migration_notice_dismissed';
-
 const AdminCommunityPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -66,21 +58,7 @@ const AdminCommunityPage = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [academyId, setAcademyId] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [showMigrationNotice, setShowMigrationNotice] = useState(false);
   const [selectedPost, setSelectedPost] = useState<FeedPost | null>(null);
-
-  useEffect(() => {
-    // Check if migration notice was dismissed
-    const dismissed = localStorage.getItem(MIGRATION_NOTICE_KEY);
-    if (!dismissed) {
-      setShowMigrationNotice(true);
-    }
-  }, []);
-
-  const dismissMigrationNotice = () => {
-    localStorage.setItem(MIGRATION_NOTICE_KEY, 'true');
-    setShowMigrationNotice(false);
-  };
 
   useEffect(() => {
     const init = async () => {
@@ -204,27 +182,6 @@ const AdminCommunityPage = () => {
           </div>
         </div>
       </header>
-
-      {/* Migration Notice */}
-      {showMigrationNotice && (
-        <div className="max-w-lg mx-auto px-4 pt-4">
-          <Alert className="bg-warning/10 border-warning/50">
-            <AlertTriangle className="h-4 w-4 text-warning" />
-            <AlertTitle className="text-warning-foreground">시스템 업데이트 안내</AlertTitle>
-            <AlertDescription className="text-sm text-muted-foreground mt-1">
-              시스템 업데이트로 인해 기존 게시글이 초기화되었습니다. 기존 글을 삭제하고 새로운 양식에 맞춰 소식을 다시 작성해주세요.
-            </AlertDescription>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute top-2 right-5 h-6 w-6 p-0"
-              onClick={dismissMigrationNotice}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </Alert>
-        </div>
-      )}
 
       {/* Filter Chips */}
       <div className="sticky top-14 bg-background/95 backdrop-blur-sm z-30 border-b border-border">

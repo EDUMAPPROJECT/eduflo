@@ -402,11 +402,11 @@ const AuthPage = () => {
 
         <div className="w-full max-w-sm animate-fade-up">
           <h2 className="text-xl font-semibold text-foreground text-center mb-2">
-            {authMode === "email" ? "로그인" : step === "login" ? "로그인" : "회원가입"}
+            {authMode === "email" ? "관리자 로그인" : step === "login" ? "로그인" : "회원가입"}
           </h2>
           <p className="text-muted-foreground text-sm text-center mb-6">
             {authMode === "email"
-              ? "이메일로 로그인하세요"
+              ? "관리자 계정으로 로그인하세요"
               : step === "login"
                 ? "휴대폰 번호로 로그인하세요"
                 : "가입 유형을 선택하고 휴대폰 번호로 회원가입하세요"}

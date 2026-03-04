@@ -1,4 +1,5 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { lazyWithRetry } from "@/utils/lazyWithRetry";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrCreateChatRoom } from "@/hooks/useChatRooms";
@@ -48,9 +49,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { logError } from "@/lib/errorLogger";
+import { MapErrorFallback } from "@/components/MapErrorFallback";
 
-const LocationMap = lazy(() => import("@/components/LocationMap"));
-const AcademyDetailMap = lazy(() => import("@/components/AcademyDetailMap"));
+const LocationMap = lazyWithRetry(() => import("@/components/LocationMap"));
+const AcademyDetailMap = lazyWithRetry(() => import("@/components/AcademyDetailMap"));
 
 interface Academy {
   id: string;
@@ -506,22 +508,24 @@ const AcademyDetailPage = () => {
               <Card className="shadow-card">
                 <CardContent className="p-4">
                   <h3 className="font-semibold text-foreground mb-3">위치</h3>
-                  <Suspense fallback={
-                    <div className="w-full h-48 rounded-lg bg-secondary/50 flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                    </div>
-                  }>
-                    {academy.latitude != null && academy.longitude != null ? (
-                      <AcademyDetailMap
-                        name={academy.name}
-                        address={academy.address}
-                        latitude={academy.latitude}
-                        longitude={academy.longitude}
-                      />
-                    ) : (
-                      <LocationMap address={academy.address} name={academy.name} />
-                    )}
-                  </Suspense>
+                  <MapErrorFallback>
+                    <Suspense fallback={
+                      <div className="w-full h-48 rounded-lg bg-secondary/50 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                      </div>
+                    }>
+                      {academy.latitude != null && academy.longitude != null ? (
+                        <AcademyDetailMap
+                          name={academy.name}
+                          address={academy.address}
+                          latitude={academy.latitude}
+                          longitude={academy.longitude}
+                        />
+                      ) : (
+                        <LocationMap address={academy.address} name={academy.name} />
+                      )}
+                    </Suspense>
+                  </MapErrorFallback>
                 </CardContent>
               </Card>
             )}
