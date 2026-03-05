@@ -6,6 +6,7 @@ import { Mail, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { logError } from "@/lib/errorLogger";
+import type { AuthRole } from "@/lib/sendIdTokenToBackend";
 
 interface EmailSignupDialogProps {
   open: boolean;
