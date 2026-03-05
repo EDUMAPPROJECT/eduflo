@@ -18,6 +18,7 @@ const EmailSignupDialog = ({ open, onOpenChange, onSuccess }: EmailSignupDialogP
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [selectedRole, setSelectedRole] = useState<AuthRole>("parent");
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async () => {
