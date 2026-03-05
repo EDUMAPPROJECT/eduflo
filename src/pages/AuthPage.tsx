@@ -478,7 +478,6 @@ const AuthPage = () => {
                 />
               </div>
 
-              {/* 이메일 화면에서는 로그인만 가능, 회원가입 불가 */}
               <Button
                 onClick={handleEmailLogin}
                 disabled={loading}
@@ -487,6 +486,15 @@ const AuthPage = () => {
               >
                 {loading ? "로그인 중..." : "로그인"}
                 <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+              <Button
+                onClick={handleEmailSignup}
+                disabled={loading}
+                variant="outline"
+                className="w-full h-14 text-base"
+                size="xl"
+              >
+                {loading ? "처리 중..." : "회원가입"}
               </Button>
             </div>
           )}
