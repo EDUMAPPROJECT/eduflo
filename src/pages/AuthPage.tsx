@@ -58,6 +58,7 @@ const AuthPage = () => {
   // Email auth states
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showSignupDialog, setShowSignupDialog] = useState(false);
 
   const resetVerificationState = () => {
     setLoginShowVerification(false);
@@ -489,14 +490,19 @@ const AuthPage = () => {
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
               <Button
-                onClick={handleEmailSignup}
+                onClick={() => setShowSignupDialog(true)}
                 disabled={loading}
                 variant="outline"
                 className="w-full h-14 text-base"
                 size="xl"
               >
-                {loading ? "처리 중..." : "회원가입"}
+                회원가입
               </Button>
+              <EmailSignupDialog
+                open={showSignupDialog}
+                onOpenChange={setShowSignupDialog}
+                onSuccess={() => {}}
+              />
             </div>
           )}
 
