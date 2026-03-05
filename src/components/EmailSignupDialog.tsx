@@ -6,6 +6,7 @@ import { Mail, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { logError } from "@/lib/errorLogger";
+import type { AuthRole } from "@/lib/sendIdTokenToBackend";
 
 interface EmailSignupDialogProps {
   open: boolean;
@@ -17,6 +18,7 @@ const EmailSignupDialog = ({ open, onOpenChange, onSuccess }: EmailSignupDialogP
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [selectedRole, setSelectedRole] = useState<AuthRole>("parent");
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async () => {
@@ -38,7 +40,7 @@ const EmailSignupDialog = ({ open, onOpenChange, onSuccess }: EmailSignupDialogP
         email: email.trim(),
         password: password.trim(),
         options: {
-          data: { role: "admin" },
+          data: { role: selectedRole },
         },
       });
       if (error) {
@@ -68,6 +70,29 @@ const EmailSignupDialog = ({ open, onOpenChange, onSuccess }: EmailSignupDialogP
           <DialogTitle className="text-center">회원가입</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
+          <div className="grid grid-cols-3 gap-2">
+            <Button
+              variant={selectedRole === "parent" ? "default" : "outline"}
+              className="h-12 text-sm px-2"
+              onClick={() => setSelectedRole("parent")}
+            >
+              학부모
+            </Button>
+            <Button
+              variant={selectedRole === "student" ? "default" : "outline"}
+              className="h-12 text-sm px-2"
+              onClick={() => setSelectedRole("student")}
+            >
+              학생
+            </Button>
+            <Button
+              variant={selectedRole === "admin" ? "default" : "outline"}
+              className="h-12 text-sm px-2"
+              onClick={() => setSelectedRole("admin")}
+            >
+              학원 관리자
+            </Button>
+          </div>
           <div className="relative">
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
