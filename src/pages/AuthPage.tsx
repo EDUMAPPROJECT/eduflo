@@ -11,6 +11,7 @@ import { logError } from "@/lib/errorLogger";
 import { sendIdTokenToBackend, type AuthRole } from "@/lib/sendIdTokenToBackend";
 import { formatPhoneWithDash, getDigitsOnly } from "@/lib/formatPhone";
 import { supabase } from "@/integrations/supabase/client";
+import EmailSignupDialog from "@/components/EmailSignupDialog";
 
 type AuthStep = "login" | "signup";
 type AuthMode = "phone" | "email";
