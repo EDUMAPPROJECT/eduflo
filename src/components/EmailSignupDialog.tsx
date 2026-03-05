@@ -39,9 +39,7 @@ const EmailSignupDialog = ({ open, onOpenChange, onSuccess }: EmailSignupDialogP
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password: password.trim(),
-        options: {
-          data: { role: "admin" },
-        },
+        data: { role: selectedRole },
       });
       if (error) {
         toast.error(error.message || "회원가입에 실패했습니다");
