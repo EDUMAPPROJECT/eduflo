@@ -70,6 +70,29 @@ const EmailSignupDialog = ({ open, onOpenChange, onSuccess }: EmailSignupDialogP
           <DialogTitle className="text-center">회원가입</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
+          <div className="grid grid-cols-3 gap-2">
+            <Button
+              variant={selectedRole === "parent" ? "default" : "outline"}
+              className="h-12 text-sm px-2"
+              onClick={() => setSelectedRole("parent")}
+            >
+              학부모
+            </Button>
+            <Button
+              variant={selectedRole === "student" ? "default" : "outline"}
+              className="h-12 text-sm px-2"
+              onClick={() => setSelectedRole("student")}
+            >
+              학생
+            </Button>
+            <Button
+              variant={selectedRole === "admin" ? "default" : "outline"}
+              className="h-12 text-sm px-2"
+              onClick={() => setSelectedRole("admin")}
+            >
+              학원 관리자
+            </Button>
+          </div>
           <div className="relative">
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
