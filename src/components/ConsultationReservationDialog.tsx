@@ -271,7 +271,7 @@ const ConsultationReservationDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-auto max-w-[90vw] sm:max-w-md max-h-[90vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="w-[85vw] max-w-sm max-h-[calc(100dvh-8rem)] sm:max-h-[90vh] overflow-hidden flex flex-col p-0 pb-5">
         <DialogHeader className="p-4 border-b border-border">
           <DialogTitle className="flex items-center gap-2">
             <CalendarIcon className="w-5 h-5 text-primary" />
@@ -289,14 +289,14 @@ const ConsultationReservationDialog = ({
                   <CalendarIcon className="w-4 h-4" />
                   날짜 선택
                 </h3>
-                <div className="border border-border rounded-lg p-2">
+                <div className="border border-border rounded-lg p-2 flex justify-center">
                   <Calendar
                     mode="single"
                     selected={selectedDate}
                     onSelect={handleDateSelect}
                     disabled={isDateDisabled}
                     locale={ko}
-                    className="pointer-events-auto mx-auto"
+                    className="pointer-events-auto w-fit mx-auto"
                   />
                 </div>
               </div>
