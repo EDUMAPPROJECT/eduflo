@@ -47,7 +47,15 @@ const EmailSignupDialog = ({ open, onOpenChange, onSuccess }: EmailSignupDialogP
         toast.error(error.message || "회원가입에 실패했습니다");
         return;
       }
-      if (data?.user) {
+      if (data?.user?.id) {
+        // 트리거가 role을 넣지만, student 등 선택 역할이 확실히 반영되도록 upsert
+        const { error: roleError } = await supabase.from("user_roles").upsert(
+          { user_id: data.user.id, role: selectedRole },
+          { onConflict: "user_id" }
+        );
+        if (roleError) {
+          logError("email-signup-dialog-role", roleError);
+        }
         toast.success("회원가입이 완료되었습니다. 로그인해주세요.");
         setEmail("");
         setPassword("");

@@ -501,7 +501,10 @@ const AuthPage = () => {
               <EmailSignupDialog
                 open={showSignupDialog}
                 onOpenChange={setShowSignupDialog}
-                onSuccess={() => {}}
+                onSuccess={() => {
+                  setStep("login");
+                  resetEmailState();
+                }}
               />
             </div>
           )}
