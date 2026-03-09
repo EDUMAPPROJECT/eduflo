@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,14 +12,19 @@ interface EmailSignupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  defaultRole?: AuthRole;
 }
 
-const EmailSignupDialog = ({ open, onOpenChange, onSuccess }: EmailSignupDialogProps) => {
+const EmailSignupDialog = ({ open, onOpenChange, onSuccess, defaultRole = "parent" }: EmailSignupDialogProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [selectedRole, setSelectedRole] = useState<AuthRole>("parent");
+  const [selectedRole, setSelectedRole] = useState<AuthRole>(defaultRole);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) setSelectedRole(defaultRole);
+  }, [open, defaultRole]);
 
   const handleSignup = async () => {
     if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
