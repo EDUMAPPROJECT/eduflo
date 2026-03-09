@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,7 @@ import { getTagLabel, TAG_CATEGORIES, getTagCategory } from "@/lib/tagDictionary
 const PreferenceResult = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const prefix = useRoutePrefix();
   const profileTags: string[] = location.state?.profileTags || [];
 
   // Group tags by category for display
@@ -66,7 +68,7 @@ const PreferenceResult = () => {
         {/* Action Buttons */}
         <div className="space-y-3">
           <Button 
-            onClick={() => navigate("/explore")} 
+            onClick={() => navigate(`${prefix}/explore`)} 
             className="w-full gap-2"
             size="lg"
           >
@@ -77,7 +79,7 @@ const PreferenceResult = () => {
           <div className="grid grid-cols-2 gap-3">
             <Button 
               variant="outline" 
-              onClick={() => navigate("/home")}
+              onClick={() => navigate(`${prefix}/home`)}
               className="gap-2"
             >
               <Home className="w-4 h-4" />
@@ -85,7 +87,7 @@ const PreferenceResult = () => {
             </Button>
             <Button 
               variant="outline" 
-              onClick={() => navigate("/preference-test")}
+              onClick={() => navigate(`${prefix}/preference-test`)}
               className="gap-2"
             >
               <RefreshCw className="w-4 h-4" />

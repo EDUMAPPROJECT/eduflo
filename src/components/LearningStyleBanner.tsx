@@ -1,14 +1,16 @@
 import { useNavigate } from "react-router-dom";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 import { Button } from "@/components/ui/button";
 import { Sparkles, ArrowRight } from "lucide-react";
 
 const LearningStyleBanner = () => {
   const navigate = useNavigate();
+  const prefix = useRoutePrefix();
 
   return (
     <div 
       className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-5 shadow-lg cursor-pointer group"
-      onClick={() => navigate("/preference-test")}
+      onClick={() => navigate(`${prefix}/learning-style-test`)}
     >
       {/* Background decoration */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />

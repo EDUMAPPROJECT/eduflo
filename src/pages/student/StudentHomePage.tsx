@@ -235,6 +235,13 @@ const StudentHomePage = () => {
           <QuickActionMenu isStudent />
         </section>
 
+        {/* Learning Style Banner - 학습 성향 미설정 시에만 표시 */}
+        {!checkingProfile && learningStyle === null && (
+          <section className="mb-4 px-4">
+            <LearningStyleBanner />
+          </section>
+        )}
+
         {/* Today's Schedule Section */}
         <section className="mb-6 px-4">
           <TodayScheduleSection />

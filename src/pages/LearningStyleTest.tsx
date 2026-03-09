@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -43,6 +44,7 @@ type Answer = "A" | "B";
 
 const LearningStyleTest = () => {
   const navigate = useNavigate();
+  const prefix = useRoutePrefix();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -75,7 +77,7 @@ const LearningStyleTest = () => {
 
       // Navigate to result after animation
       setTimeout(() => {
-        navigate("/learning-style-result", { 
+        navigate(`${prefix}/learning-style-result`, { 
           state: { 
             learningStyle,
             answers: newAnswers 

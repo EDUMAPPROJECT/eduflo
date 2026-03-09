@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,11 +13,12 @@ import { cn } from "@/lib/utils";
 
 const PreferenceTest = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prefix = useRoutePrefix();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const location = useLocation();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -122,7 +124,7 @@ const PreferenceTest = () => {
       if (error) throw error;
 
       toast.success("테스트가 완료되었습니다!");
-      navigate("/preference-result", { state: { profileTags } });
+      navigate(`${prefix}/preference-result`, { state: { profileTags } });
     } catch (error) {
       console.error("Error saving preferences:", error);
       toast.error("저장에 실패했습니다. 다시 시도해주세요.");
