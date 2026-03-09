@@ -10,7 +10,6 @@ import {
   todayKey,
   checkRateLimit,
 } from "../_shared/notification.ts";
-import type { NotificationButton } from "../_shared/notification.ts";
 
 interface RequestBody {
   chatRoomId: string;
@@ -186,7 +185,7 @@ const handler = async (req: Request): Promise<Response> => {
           receivedAt,
         },
         buttons: [
-          { name: "채팅 확인하기", url: chatUrlFor(userRole, chatRoomId) },
+          { name: "답장하러 가기", url: chatUrlFor(userRole, chatRoomId) },
         ],
         chatRoomId,
         academyId: academy.id,

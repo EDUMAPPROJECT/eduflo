@@ -17,7 +17,7 @@ export interface TemplateDefinition {
   buttonNames: string[];
 }
 
-interface MunjaKokResponse {
+interface SsodaaResponse {
   success: boolean;
   resultCode?: string;
   data?: Record<string, unknown>;
@@ -26,165 +26,161 @@ interface MunjaKokResponse {
 
 // ─── Template Registry (10개) ───────────────────────────────────
 // 메시지 본문은 카카오 검수에 등록된 템플릿과 정확히 일치해야 합니다.
-// #{변수N}은 실제 값으로 치환한 후 message 필드에 넣습니다.
+// #{variableName}은 실제 값으로 치환한 후 msg_body 필드에 넣습니다.
+// 학부모/학생 별도 템플릿으로 분리 — 카카오 검수 안정성 확보
+
+// 채팅 알림 공통 메시지 (학원 → 학부모/학생)
+const CHAT_TO_USER_MSG = [
+  "#{academyName}에서 답장이 도착했습니다",
+  "",
+  "지금 확인하고 이어서 상담해 보세요.",
+  "",
+  "- 도착시간: #{receivedAt}",
+  "",
+  "아래 버튼을 누르면 바로 채팅으로 이동합니다.",
+].join("\n");
+
+// 설명회 신청완료 공통 메시지
+const SEMINAR_APPLY_DONE_MSG = [
+  "설명회 신청이 완료되었습니다",
+  "",
+  "- 설명회: #{seminarTitle}",
+  "- 주관: #{academyName}",
+  "- 일시: #{seminarAt}",
+  "- 장소: #{seminarPlace}",
+  "- 신청자: #{applicantName}",
+  "",
+  "변경/취소 및 상세 안내는 아래에서 확인해 주세요.",
+].join("\n");
+
+// 신규 설명회 등록 공통 메시지
+const NEW_SEMINAR_PUBLISHED_MSG = [
+  "새로운 설명회가 등록되었습니다",
+  "",
+  "- 설명회: #{seminarTitle}",
+  "- 주관: #{academyName}",
+  "- 일시: #{seminarAt}",
+  "- 대상: #{targetGrade}",
+  "",
+  "아래에서 상세 확인 후 신청해 주세요.",
+].join("\n");
+
+// 설명회 리마인드 공통 메시지
+const SEMINAR_REMINDER_MSG = [
+  "신청하신 설명회가 내일입니다",
+  "",
+  "- 설명회: #{seminarTitle}",
+  "- 일시: #{seminarAt}",
+  "- 장소: #{seminarPlace}",
+  "",
+  "아래 버튼에서 상세 안내사항을 확인해 주세요.",
+].join("\n");
+
+// ── 템플릿 코드 규칙: 5~30자 (영문, 숫자, 하이픈, 언더바) ──
+// Old → New (30자 초과 축약)
+// TPL_SEMINAR_APPLY_DONE_PARENT_V1 (32자)  → TPL_SEM_DONE_PARENT_V1 (22자)
+// TPL_SEMINAR_APPLY_DONE_STUDENT_V1 (33자) → TPL_SEM_DONE_STUDENT_V1 (23자)
+// TPL_SEMINAR_APPLY_RECEIVED_ACADEMY_V1 (37자) → TPL_SEM_APPLIED_ACADEMY_V1 (26자)
+// TPL_NEW_SEMINAR_PUBLISHED_PARENT_V1 (35자) → TPL_NEW_SEM_PARENT_V1 (21자)
+// TPL_NEW_SEMINAR_PUBLISHED_STUDENT_V1 (36자) → TPL_NEW_SEM_STUDENT_V1 (22자)
+// TPL_SEMINAR_REMINDER_STUDENT_V1 (31자) → TPL_SEM_REMIND_STUDENT_V1 (25자)
 
 const TEMPLATES: Record<string, TemplateDefinition> = {
-  // ── 채팅 (3개) ──
+  // ── 1. 채팅 도착 알림 (학부모/학생 → 학원) ── 22자
   TPL_CHAT_TO_ACADEMY_V1: {
     code: "TPL_CHAT_TO_ACADEMY_V1",
     messageTemplate: [
-      "안녕하세요, #{변수1} 담당자님.",
+      "안녕하세요, #{academyName} 담당자님.",
       "",
-      "EDUFLO에서 #{변수2}님이 새 메시지를 보냈습니다.",
+      "EDUFLO에서 #{senderName}님이 새 메시지를 보냈습니다.",
       "",
-      "- 문의주제: #{변수3}",
-      "- 도착시간: #{변수4}",
+      "- 문의주제: #{inquiryTopic}",
+      "- 도착시간: #{receivedAt}",
       "",
       "아래 버튼을 눌러 바로 확인해 주세요.",
     ].join("\n"),
     variableKeys: ["academyName", "senderName", "inquiryTopic", "receivedAt"],
     buttonNames: ["채팅 확인하기"],
   },
+
+  // ── 2. 채팅 도착 알림 (학원 → 학부모) ── 21자
   TPL_CHAT_TO_PARENT_V1: {
     code: "TPL_CHAT_TO_PARENT_V1",
-    messageTemplate: [
-      "#{변수1}에서 답장이 도착했어요",
-      "",
-      "지금 확인하고 이어서 상담해 보세요.",
-      "",
-      "- 도착시간: #{변수2}",
-      "",
-      "아래 버튼을 누르면 바로 채팅으로 이동합니다.",
-    ].join("\n"),
+    messageTemplate: CHAT_TO_USER_MSG,
     variableKeys: ["academyName", "receivedAt"],
-    buttonNames: ["채팅 확인하기"],
+    buttonNames: ["답장하러 가기"],
   },
+
+  // ── 3. 채팅 도착 알림 (학원 → 학생) ── 22자
   TPL_CHAT_TO_STUDENT_V1: {
     code: "TPL_CHAT_TO_STUDENT_V1",
-    messageTemplate: [
-      "#{변수1}에서 답장이 도착했어요",
-      "",
-      "지금 확인하고 이어서 상담해 보세요.",
-      "",
-      "- 도착시간: #{변수2}",
-      "",
-      "아래 버튼을 누르면 바로 채팅으로 이동합니다.",
-    ].join("\n"),
+    messageTemplate: CHAT_TO_USER_MSG,
     variableKeys: ["academyName", "receivedAt"],
-    buttonNames: ["채팅 확인하기"],
+    buttonNames: ["답장하러 가기"],
   },
 
-  // ── 설명회 신청완료 (2개) ──
-  TPL_SEMINAR_APPLY_DONE_PARENT_V1: {
-    code: "TPL_SEMINAR_APPLY_DONE_PARENT_V1",
-    messageTemplate: [
-      "설명회 신청이 완료되었습니다",
-      "",
-      "- 설명회: #{변수1}",
-      "- 주관: #{변수2}",
-      "- 일시: #{변수3}",
-      "- 장소: #{변수4}",
-      "- 신청자: #{변수5}",
-      "",
-      "변경/취소 및 상세 안내는 아래에서 확인해 주세요.",
-    ].join("\n"),
-    variableKeys: ["seminarTitle", "academyName", "seminarAt", "seminarPlace", "applicantName"],
-    buttonNames: ["신청내역 확인", "길찾기"],
-  },
-  TPL_SEMINAR_APPLY_DONE_STUDENT_V1: {
-    code: "TPL_SEMINAR_APPLY_DONE_STUDENT_V1",
-    messageTemplate: [
-      "설명회 신청이 완료되었습니다",
-      "",
-      "- 설명회: #{변수1}",
-      "- 주관: #{변수2}",
-      "- 일시: #{변수3}",
-      "- 장소: #{변수4}",
-      "- 신청자: #{변수5}",
-      "",
-      "변경/취소 및 상세 안내는 아래에서 확인해 주세요.",
-    ].join("\n"),
+  // ── 4. 설명회 신청 완료 (학부모) ── 22자
+  TPL_SEM_DONE_PARENT_V1: {
+    code: "TPL_SEM_DONE_PARENT_V1",
+    messageTemplate: SEMINAR_APPLY_DONE_MSG,
     variableKeys: ["seminarTitle", "academyName", "seminarAt", "seminarPlace", "applicantName"],
     buttonNames: ["신청내역 확인", "길찾기"],
   },
 
-  // ── 설명회 신청접수 — 학원 (1개) ──
-  TPL_SEMINAR_APPLY_RECEIVED_ACADEMY_V1: {
-    code: "TPL_SEMINAR_APPLY_RECEIVED_ACADEMY_V1",
+  // ── 5. 설명회 신청 완료 (학생) ── 23자
+  TPL_SEM_DONE_STUDENT_V1: {
+    code: "TPL_SEM_DONE_STUDENT_V1",
+    messageTemplate: SEMINAR_APPLY_DONE_MSG,
+    variableKeys: ["seminarTitle", "academyName", "seminarAt", "seminarPlace", "applicantName"],
+    buttonNames: ["신청내역 확인", "길찾기"],
+  },
+
+  // ── 6. 설명회 신청 접수 알림 (학원) ── 26자
+  TPL_SEM_APPLIED_ACADEMY_V1: {
+    code: "TPL_SEM_APPLIED_ACADEMY_V1",
     messageTemplate: [
-      "#{변수1} 담당자님,",
+      "#{academyName} 설명회에 새 신청이 접수되었습니다",
       "",
-      "#{변수2}에 새로운 신청이 접수되었습니다.",
+      "- 설명회: #{seminarTitle}",
+      "- 신청자: #{applicantName}",
+      "- 신청시간: #{appliedAt}",
       "",
-      "- 신청자: #{변수3}",
-      "- 신청일시: #{변수4}",
-      "",
-      "아래 버튼에서 신청자를 확인해 주세요.",
+      "아래 버튼에서 신청자 리스트를 확인해 주세요.",
     ].join("\n"),
     variableKeys: ["academyName", "seminarTitle", "applicantName", "appliedAt"],
-    buttonNames: ["신청자 관리"],
+    buttonNames: ["신청자 확인하기"],
   },
 
-  // ── 신규 설명회 등록 (2개) ──
-  TPL_NEW_SEMINAR_PUBLISHED_PARENT_V1: {
-    code: "TPL_NEW_SEMINAR_PUBLISHED_PARENT_V1",
-    messageTemplate: [
-      "새로운 설명회가 등록되었습니다!",
-      "",
-      "- 설명회: #{변수1}",
-      "- 학원: #{변수2}",
-      "- 일시: #{변수3}",
-      "- 대상: #{변수4}",
-      "",
-      "자세한 내용은 아래에서 확인해 주세요.",
-    ].join("\n"),
+  // ── 7. 신규 설명회 등록 알림 (학부모) ── 21자
+  TPL_NEW_SEM_PARENT_V1: {
+    code: "TPL_NEW_SEM_PARENT_V1",
+    messageTemplate: NEW_SEMINAR_PUBLISHED_MSG,
     variableKeys: ["seminarTitle", "academyName", "seminarAt", "targetGrade"],
-    buttonNames: ["상세보기", "전체 설명회 보기"],
-  },
-  TPL_NEW_SEMINAR_PUBLISHED_STUDENT_V1: {
-    code: "TPL_NEW_SEMINAR_PUBLISHED_STUDENT_V1",
-    messageTemplate: [
-      "새로운 설명회가 등록되었습니다!",
-      "",
-      "- 설명회: #{변수1}",
-      "- 학원: #{변수2}",
-      "- 일시: #{변수3}",
-      "- 대상: #{변수4}",
-      "",
-      "자세한 내용은 아래에서 확인해 주세요.",
-    ].join("\n"),
-    variableKeys: ["seminarTitle", "academyName", "seminarAt", "targetGrade"],
-    buttonNames: ["상세보기", "전체 설명회 보기"],
+    buttonNames: ["설명회 상세보기", "전체 설명회 보기"],
   },
 
-  // ── 전일 리마인드 (2개) ──
-  TPL_SEMINAR_REMINDER_PARENT_V1: {
-    code: "TPL_SEMINAR_REMINDER_PARENT_V1",
-    messageTemplate: [
-      "신청하신 설명회가 내일이에요!",
-      "",
-      "- 설명회: #{변수1}",
-      "- 일시: #{변수2}",
-      "- 장소: #{변수3}",
-      "",
-      "아래 버튼에서 상세/안내사항을 확인해 주세요.",
-    ].join("\n"),
-    variableKeys: ["seminarTitle", "seminarAt", "seminarPlace"],
-    buttonNames: ["상세 확인하기", "길찾기"],
+  // ── 8. 신규 설명회 등록 알림 (학생) ── 22자
+  TPL_NEW_SEM_STUDENT_V1: {
+    code: "TPL_NEW_SEM_STUDENT_V1",
+    messageTemplate: NEW_SEMINAR_PUBLISHED_MSG,
+    variableKeys: ["seminarTitle", "academyName", "seminarAt", "targetGrade"],
+    buttonNames: ["설명회 상세보기", "전체 설명회 보기"],
   },
-  TPL_SEMINAR_REMINDER_STUDENT_V1: {
-    code: "TPL_SEMINAR_REMINDER_STUDENT_V1",
-    messageTemplate: [
-      "신청하신 설명회가 내일이에요!",
-      "",
-      "- 설명회: #{변수1}",
-      "- 일시: #{변수2}",
-      "- 장소: #{변수3}",
-      "",
-      "아래 버튼에서 상세/안내사항을 확인해 주세요.",
-    ].join("\n"),
+
+  // ── 9. 설명회 전일 리마인드 (학부모) ── 25자
+  TPL_SEM_REMIND_PARENT_V1: {
+    code: "TPL_SEM_REMIND_PARENT_V1",
+    messageTemplate: SEMINAR_REMINDER_MSG,
     variableKeys: ["seminarTitle", "seminarAt", "seminarPlace"],
-    buttonNames: ["상세 확인하기", "길찾기"],
+    buttonNames: ["안내사항 확인", "길찾기"],
+  },
+
+  // ── 10. 설명회 전일 리마인드 (학생) ── 25자
+  TPL_SEM_REMIND_STUDENT_V1: {
+    code: "TPL_SEM_REMIND_STUDENT_V1",
+    messageTemplate: SEMINAR_REMINDER_MSG,
+    variableKeys: ["seminarTitle", "seminarAt", "seminarPlace"],
+    buttonNames: ["안내사항 확인", "길찾기"],
   },
 };
 
@@ -199,20 +195,20 @@ export function templateForChatToUser(role: "parent" | "student"): string {
 
 export function templateForSeminarApplyDone(role: "parent" | "student"): string {
   return role === "parent"
-    ? "TPL_SEMINAR_APPLY_DONE_PARENT_V1"
-    : "TPL_SEMINAR_APPLY_DONE_STUDENT_V1";
+    ? "TPL_SEM_DONE_PARENT_V1"
+    : "TPL_SEM_DONE_STUDENT_V1";
 }
 
 export function templateForNewSeminarPublished(role: "parent" | "student"): string {
   return role === "parent"
-    ? "TPL_NEW_SEMINAR_PUBLISHED_PARENT_V1"
-    : "TPL_NEW_SEMINAR_PUBLISHED_STUDENT_V1";
+    ? "TPL_NEW_SEM_PARENT_V1"
+    : "TPL_NEW_SEM_STUDENT_V1";
 }
 
 export function templateForSeminarReminder(role: "parent" | "student"): string {
   return role === "parent"
-    ? "TPL_SEMINAR_REMINDER_PARENT_V1"
-    : "TPL_SEMINAR_REMINDER_STUDENT_V1";
+    ? "TPL_SEM_REMIND_PARENT_V1"
+    : "TPL_SEM_REMIND_STUDENT_V1";
 }
 
 // ─── URL Builder ────────────────────────────────────────────────
@@ -259,15 +255,15 @@ export function mapUrlOrFallback(
 }
 
 // ─── 메시지 빌더 ────────────────────────────────────────────────
-// 템플릿의 #{변수N} 플레이스홀더를 실제 값으로 치환
+// 템플릿의 #{variableName} 플레이스홀더를 실제 값으로 치환
 export function buildMessage(
   template: TemplateDefinition,
   variables: Record<string, string>
 ): string {
   let msg = template.messageTemplate;
-  template.variableKeys.forEach((key, i) => {
-    msg = msg.replaceAll(`#{변수${i + 1}}`, variables[key] || "");
-  });
+  for (const key of template.variableKeys) {
+    msg = msg.replaceAll(`#{${key}}`, variables[key] || "");
+  }
   return msg;
 }
 
@@ -295,17 +291,22 @@ export async function checkRateLimit(
   return (count ?? 0) < maxCount;
 }
 
-// ─── MunjaKok API Adapter ───────────────────────────────────────
-export async function callMunjaKokApi(params: {
+// ─── Ssodaa (쏘다) API Adapter ──────────────────────────────────
+// API Docs: https://apis.ssodaa.com
+// 알림톡 발송: POST /kakao/send/alimtalk
+// 필수 헤더: x-api-key, Content-Type: application/json; charset=utf-8
+const SSODAA_BASE_URL = "https://apis.ssodaa.com";
+
+export async function callSsodaaApi(params: {
   templateCode: string;
   phone: string;
   message: string;
   buttons: NotificationButton[];
-}): Promise<MunjaKokResponse> {
-  const dryRun = Deno.env.get("MUNJAKOK_DRY_RUN") === "true";
+}): Promise<SsodaaResponse> {
+  const dryRun = Deno.env.get("SSODAA_DRY_RUN") === "true";
 
   if (dryRun) {
-    console.log("[DRY_RUN] MunjaKok API call skipped:", {
+    console.log("[DRY_RUN] Ssodaa API call skipped:", {
       templateCode: params.templateCode,
       phone: params.phone,
       messagePreview: params.message.slice(0, 80) + "...",
@@ -314,54 +315,60 @@ export async function callMunjaKokApi(params: {
     return { success: true, resultCode: "DRY_RUN" };
   }
 
-  const apiKey = Deno.env.get("MUNJAKOK_API_KEY");
-  const apiUrl = Deno.env.get("MUNJAKOK_API_URL");
-  const senderKey = Deno.env.get("MUNJAKOK_SENDER_KEY");
-  const senderNo = Deno.env.get("MUNJAKOK_SENDER_NO");
+  const apiKey = Deno.env.get("SSODAA_API_KEY");
+  const tokenKey = Deno.env.get("SSODAA_TOKEN_KEY");
+  const senderKey = Deno.env.get("SSODAA_SENDER_KEY");
 
-  if (!apiKey || !apiUrl || !senderKey || !senderNo) {
-    return { success: false, error: "Missing MunjaKok API configuration (API_KEY, API_URL, SENDER_KEY, SENDER_NO)" };
+  if (!apiKey || !tokenKey || !senderKey) {
+    return { success: false, error: "Missing Ssodaa API configuration (SSODAA_API_KEY, SSODAA_TOKEN_KEY, SSODAA_SENDER_KEY)" };
   }
 
   try {
-    const response = await fetch(apiUrl, {
+    const body: Record<string, unknown> = {
+      token_key: tokenKey,
+      dest_phone: params.phone,
+      sender_key: senderKey,
+      template_code: params.templateCode,
+      msg_body: params.message,
+      failover: {
+        use: "Y",
+        msg_body: params.message,
+      },
+    };
+
+    // 버튼이 있는 경우 button 배열 추가
+    if (params.buttons.length > 0) {
+      body.button = params.buttons.map((b) => ({
+        name: b.name,
+        type: "WL",
+        url_mobile: b.url,
+        url_pc: b.url,
+      }));
+    }
+
+    const response = await fetch(`${SSODAA_BASE_URL}/kakao/send/alimtalk`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json; charset=utf-8",
+        "x-api-key": apiKey,
       },
-      body: JSON.stringify({
-        message_type: "AT",
-        sender_key: senderKey,
-        template_code: params.templateCode,
-        phone_number: params.phone,
-        sender_no: senderNo,
-        message: params.message,
-        fall_back_yn: true,
-        fall_back_message: params.message,
-        buttons: params.buttons.map((b) => ({
-          type: "WL",
-          name: b.name,
-          url_mobile: b.url,
-          url_pc: b.url,
-        })),
-      }),
+      body: JSON.stringify(body),
     });
 
     const data = await response.json();
 
-    if (!response.ok) {
+    if (data.code !== "200") {
       return {
         success: false,
-        resultCode: data.result_code || String(response.status),
+        resultCode: data.code || String(response.status),
         data,
-        error: data.message || "API request failed",
+        error: data.error || "Ssodaa API request failed",
       };
     }
 
     return {
       success: true,
-      resultCode: data.result_code || "OK",
+      resultCode: data.code || "200",
       data,
     };
   } catch (err: unknown) {
@@ -486,11 +493,11 @@ export async function sendNotification(
     }
   }
 
-  // 메시지 본문 빌드 (#{변수N} → 실제 값)
+  // 메시지 본문 빌드 (#{variableName} → 실제 값)
   const message = buildMessage(template, params.variables);
 
   // API 호출
-  const apiResult = await callMunjaKokApi({
+  const apiResult = await callSsodaaApi({
     templateCode: template.code,
     phone,
     message,

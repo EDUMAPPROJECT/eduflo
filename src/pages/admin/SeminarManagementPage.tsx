@@ -296,7 +296,7 @@ const SeminarManagementPage = () => {
 
         if (error) throw error;
 
-        // 문자콕 알림 발송 (fire-and-forget) - 신규 등록 시에만
+        // 쏘다 알림톡 발송 (fire-and-forget) - 신규 등록 시에만
         if (newSeminar?.id) {
           supabase.functions.invoke('notify-seminar-event', {
             body: { eventType: 'seminar_published', seminarId: newSeminar.id },

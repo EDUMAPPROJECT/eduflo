@@ -114,7 +114,6 @@ const handler = async (req: Request): Promise<Response> => {
       if (applicantProfile?.phone) {
         const templateCode = templateForSeminarApplyDone(userRole);
         const detailUrl = seminarDetailUrlFor(userRole, seminarId);
-        // 카카오 템플릿은 버튼 개수 고정 — 길찾기 항상 포함, 장소 없으면 상세페이지로 fallback
         const buttons: NotificationButton[] = [
           { name: "신청내역 확인", url: detailUrl },
           { name: "길찾기", url: mapUrlOrFallback(seminarPlace, detailUrl) },
@@ -150,7 +149,7 @@ const handler = async (req: Request): Promise<Response> => {
 
         if (ownerProfile?.phone) {
           const r2 = await sendNotification(supabase, {
-            templateCode: "TPL_SEMINAR_APPLY_RECEIVED_ACADEMY_V1",
+            templateCode: "TPL_SEM_APPLIED_ACADEMY_V1",
             recipientPhone: ownerProfile.phone,
             recipientUserId: academy.owner_id,
             receiverType: "academy",
@@ -161,14 +160,14 @@ const handler = async (req: Request): Promise<Response> => {
               appliedAt,
             },
             buttons: [
-              { name: "신청자 관리", url: seminarApplicantsUrl(seminarId) },
+              { name: "신청자 확인하기", url: seminarApplicantsUrl(seminarId) },
             ],
             seminarId,
             academyId: academy.id,
             rateLimitKey: `daily:academy:${academy.id}:${dateKey}`,
           });
           results.push({
-            templateCode: "TPL_SEMINAR_APPLY_RECEIVED_ACADEMY_V1",
+            templateCode: "TPL_SEM_APPLIED_ACADEMY_V1",
             success: r2.success,
           });
         }
@@ -217,7 +216,7 @@ const handler = async (req: Request): Promise<Response> => {
             targetGrade: seminar.target_grade || "전체",
           },
           buttons: [
-            { name: "상세보기", url: seminarDetailUrlFor(userRole, seminarId) },
+            { name: "설명회 상세보기", url: seminarDetailUrlFor(userRole, seminarId) },
             { name: "전체 설명회 보기", url: seminarListUrlFor(userRole) },
           ],
           seminarId,

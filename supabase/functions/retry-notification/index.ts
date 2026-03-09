@@ -4,7 +4,7 @@ import {
   corsHeaders,
   getTemplate,
   buildMessage,
-  callMunjaKokApi,
+  callSsodaaApi,
   normalizePhone,
   isRetryable,
 } from "../_shared/notification.ts";
@@ -106,7 +106,7 @@ const handler = async (req: Request): Promise<Response> => {
           })
         : [];
 
-      const apiResult = await callMunjaKokApi({
+      const apiResult = await callSsodaaApi({
         templateCode: template.code,
         phone,
         message,

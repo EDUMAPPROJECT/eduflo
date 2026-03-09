@@ -125,9 +125,8 @@ const handler = async (req: Request): Promise<Response> => {
 
         const templateCode = templateForSeminarReminder(userRole);
         const detailUrl = seminarDetailUrlFor(userRole, seminar.id);
-        // 카카오 템플릿 버튼 개수 고정 — 길찾기 항상 포함
         const buttons: NotificationButton[] = [
-          { name: "상세 확인하기", url: detailUrl },
+          { name: "안내사항 확인", url: detailUrl },
           { name: "길찾기", url: mapUrlOrFallback(seminarPlace, detailUrl) },
         ];
 
