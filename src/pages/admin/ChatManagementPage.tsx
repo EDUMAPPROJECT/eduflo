@@ -153,6 +153,7 @@ const ChatManagementPage = () => {
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs text-muted-foreground">
                           담당: {room.staff_profile?.user_name ?? "담당자"}
+                          {room.staff_role_label && ` (${room.staff_role_label})`}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">

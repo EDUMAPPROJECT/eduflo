@@ -147,6 +147,40 @@ export const useChatRooms = (isAdmin: boolean = false, ownOnly: boolean = false)
                   .eq('id', staffUserId)
                   .maybeSingle();
                 staffProfile = staffData;
+
+                const { data: memberData } = await supabase
+                  .from('academy_members')
+                  .select('role, grade')
+                  .eq('academy_id', room.academy_id)
+                  .eq('user_id', staffUserId)
+                  .maybeSingle();
+
+                if (memberData) {
+                  const role = (memberData as any).role as string | null;
+                  const grade = (memberData as any).grade as string | null;
+
+                  if (role === 'owner') {
+                    staffRoleLabel = '원장';
+                  } else {
+                    switch (grade) {
+                      case 'admin':
+                        staffRoleLabel = '원장';
+                        break;
+                      case 'vice_owner':
+                        staffRoleLabel = '부원장';
+                        break;
+                      case 'staff':
+                        staffRoleLabel = '스탭';
+                        break;
+                      case 'teacher':
+                        staffRoleLabel = '강사';
+                        break;
+                      default:
+                        staffRoleLabel = '스탭';
+                        break;
+                    }
+                  }
+                }
               }
             } else if (staffUserId) {
               const byAcademy = staffRoleMap[room.academy_id];

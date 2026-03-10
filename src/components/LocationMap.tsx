@@ -70,6 +70,7 @@ const LocationMap = ({ address, name }: LocationMapProps) => {
             width="100%"
             height="100%"
             style={{ border: 0 }}
+            className="pointer-events-none"
             allowFullScreen
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"

@@ -152,6 +152,7 @@ const ProfileManagementPage = () => {
   // Class form
   const [className, setClassName] = useState("");
   const [classGrade, setClassGrade] = useState("");
+  const [classYear, setClassYear] = useState("");
   const [classSchedule, setClassSchedule] = useState("");
   const [classFee, setClassFee] = useState("");
   const [classDescription, setClassDescription] = useState("");
@@ -440,10 +441,16 @@ const ProfileManagementPage = () => {
 
   const getGradeLabel = (grade: string | null): string => {
     switch (grade) {
-      case "vice_owner": return "부원장";
-      case "teacher": return "강사";
-      case "admin": return "관리자";
-      default: return "관리자";
+      case "admin":
+        return "원장";
+      case "vice_owner":
+        return "부원장";
+      case "staff":
+        return "스탭";
+      case "teacher":
+        return "강사";
+      default:
+        return "스탭";
     }
   };
 
@@ -535,9 +542,26 @@ const ProfileManagementPage = () => {
   };
 
   // Class CRUD
+  const parseTargetGrade = (target?: string | null) => {
+    let group = "";
+    let year = "";
+    if (!target) return { group, year };
+
+    if (target.includes("초등 저학년")) group = "초등 저학년";
+    else if (target.includes("초등 고학년")) group = "초등 고학년";
+    else if (target.includes("중학생") || target.includes("중학교")) group = "중학생";
+    else if (target.includes("고등학생") || target.includes("고등학교")) group = "고등학생";
+
+    const match = target.match(/[1-6]학년/);
+    if (match) year = match[0];
+
+    return { group, year };
+  };
+
   const resetClassForm = () => {
     setClassName("");
     setClassGrade("");
+    setClassYear("");
     setClassSchedule("");
     setClassFee("");
     setClassDescription("");
@@ -550,7 +574,9 @@ const ProfileManagementPage = () => {
     if (cls) {
       setEditingClass(cls);
       setClassName(cls.name);
-      setClassGrade(cls.target_grade || "");
+      const { group, year } = parseTargetGrade(cls.target_grade || "");
+      setClassGrade(group || "");
+      setClassYear(year || "");
       setClassSchedule(cls.schedule || "");
       setClassFee(cls.fee?.toString() || "");
       setClassDescription(cls.description || "");
@@ -566,9 +592,16 @@ const ProfileManagementPage = () => {
     if (!academy || !className.trim()) return;
 
     try {
+      const composedTargetGrade =
+        classGrade
+          ? (classGrade === "초등 저학년" || classGrade === "초등 고학년")
+            ? `${classGrade} ${classYear || ""}`.trim()
+            : classGrade
+          : null;
+
       const classData = {
         name: className,
-        target_grade: classGrade || null,
+        target_grade: composedTargetGrade,
         schedule: classSchedule || null,
         fee: classFee ? parseInt(classFee) : null,
         description: classDescription || null,
@@ -1208,7 +1241,7 @@ const ProfileManagementPage = () => {
                     <Input value={className} onChange={(e) => setClassName(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label>대상 학년</Label>
+                    <Label>대상 학생</Label>
                     <Select value={classGrade} onValueChange={setClassGrade}>
                       <SelectTrigger>
                         <SelectValue placeholder="선택" />
@@ -1222,7 +1255,21 @@ const ProfileManagementPage = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>수업 일정</Label>
+                    <Label>대상 학년</Label>
+                    <Select value={classYear} onValueChange={setClassYear}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(classGrade === "초등 고학년" ? ["4학년", "5학년", "6학년"] : ["1학년", "2학년", "3학년"]).map((grade) => (
+                          <SelectItem key={grade} value={grade}>
+                            {grade}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <ClassScheduleInput value={classSchedule} onChange={setClassSchedule} />
                   </div>
                   <div className="space-y-2">

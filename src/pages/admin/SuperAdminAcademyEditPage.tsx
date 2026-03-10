@@ -763,7 +763,6 @@ const SuperAdminAcademyEditPage = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>수업 일정</Label>
                     <ClassScheduleInput value={classSchedule} onChange={setClassSchedule} />
                   </div>
                   <div className="space-y-2">

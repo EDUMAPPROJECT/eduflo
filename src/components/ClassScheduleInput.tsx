@@ -133,7 +133,7 @@ export default function ClassScheduleInput({ value, onChange }: ClassScheduleInp
   const selectedDays = entries.map(e => e.day).filter(Boolean);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-1">
       <Label className="text-sm">수업 일정</Label>
       
       <div className="space-y-2">

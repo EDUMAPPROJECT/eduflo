@@ -25,6 +25,7 @@ const AdminHomePage = () => {
   const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userGrade, setUserGrade] = useState<string | null>(null);
   const [academyId, setAcademyId] = useState<string | null>(null);
   const [hasEditProfilePermission, setHasEditProfilePermission] = useState(false);
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
@@ -32,8 +33,8 @@ const AdminHomePage = () => {
   const roleLabels: Record<string, string> = {
     owner: "원장",
     vice_owner: "부원장",
-    teacher: "강사",
-    admin: "관리자"
+    admin: "스탭",
+    teacher: "강사"
   };
 
   useEffect(() => {
@@ -67,7 +68,7 @@ const AdminHomePage = () => {
         // Check if user has approved academy membership
         const { data: memberData } = await supabase
           .from("academy_members")
-          .select("academy_id, role, status, permissions")
+          .select("academy_id, role, grade, status, permissions")
           .eq("user_id", user.id)
           .eq("status", "approved")
           .maybeSingle();
@@ -78,6 +79,7 @@ const AdminHomePage = () => {
         if (memberData) {
           academy = { id: memberData.academy_id };
           setUserRole(memberData.role);
+          setUserGrade((memberData as any).grade ?? null);
           // Check edit permission: owner has all permissions, or check edit_profile permission
           const permissions = memberData.permissions as Record<string, boolean> | null;
           canEditProfile = memberData.role === 'owner' || (permissions?.edit_profile === true);
@@ -91,6 +93,7 @@ const AdminHomePage = () => {
           academy = ownerData;
           if (ownerData) {
             setUserRole('owner');
+            setUserGrade(null);
             canEditProfile = true; // Owner always has edit permission
           }
         }
@@ -212,6 +215,22 @@ const AdminHomePage = () => {
   const hasAcademy = academyId !== null;
   const isLoading = loading || membershipLoading;
 
+  const getUserRoleLabel = (role: string | null, grade: string | null): string => {
+    if (role === "owner") return "원장";
+    switch (grade) {
+      case "admin":
+        return "원장";
+      case "vice_owner":
+        return "부원장";
+      case "staff":
+        return "스탭";
+      case "teacher":
+        return "강사";
+      default:
+        return "스탭";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
@@ -229,7 +248,7 @@ const AdminHomePage = () => {
         {/* Welcome Banner */}
         <div className="gradient-primary rounded-2xl p-5 mb-6 shadow-soft">
           <h2 className="text-primary-foreground font-semibold text-lg mb-1">
-            안녕하세요, {userName || "관리자"} {userRole ? roleLabels[userRole] || "님" : "님"} 👋
+            안녕하세요, {userName || "관리자"} {getUserRoleLabel(userRole, userGrade)} 👋
           </h2>
           <p className="text-primary-foreground/80 text-sm">
             오늘도 에듀플로와 함께 학원을 운영해보세요

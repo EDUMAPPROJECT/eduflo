@@ -38,9 +38,10 @@ interface MemberWithProfile {
 }
 
 const GRADE_OPTIONS = [
+  { value: 'admin', label: '원장', icon: Crown },
   { value: 'vice_owner', label: '부원장', icon: Shield },
+  { value: 'staff', label: '스탭', icon: UserCog },
   { value: 'teacher', label: '강사', icon: GraduationCap },
-  { value: 'admin', label: '관리자', icon: UserCog },
 ];
 
 function getMemberDisplayName(profile: MemberWithProfile["profile"]): string {
@@ -114,7 +115,7 @@ const AcademyMemberManagement = ({ academyId }: AcademyMemberManagementProps) =>
 
         const membersWithProfiles = memberData.map(member => ({
           ...member,
-          grade: (member as any).grade || 'admin',
+          grade: (member as any).grade || 'staff',
           permissions: member.permissions as AcademyMember['permissions'],
           profile: profiles?.find(p => p.id === member.user_id) || null,
         }));
@@ -271,14 +272,34 @@ const AcademyMemberManagement = ({ academyId }: AcademyMemberManagementProps) =>
 
   const getGradeLabel = (role: string, grade?: string) => {
     if (role === 'owner') return '원장';
-    const option = GRADE_OPTIONS.find(r => r.value === grade);
-    return option?.label || '관리자';
+    switch (grade) {
+      case 'admin':
+        return '원장';
+      case 'vice_owner':
+        return '부원장';
+      case 'staff':
+        return '스탭';
+      case 'teacher':
+        return '강사';
+      default:
+        return '스탭';
+    }
   };
 
   const getGradeIcon = (role: string, grade?: string) => {
     if (role === 'owner') return Crown;
-    const option = GRADE_OPTIONS.find(r => r.value === grade);
-    return option?.icon || UserCog;
+    switch (grade) {
+      case 'admin':
+        return Crown;
+      case 'vice_owner':
+        return Shield;
+      case 'staff':
+        return UserCog;
+      case 'teacher':
+        return GraduationCap;
+      default:
+        return UserCog;
+    }
   };
 
   // If not an approved member, don't show anything
@@ -387,7 +408,7 @@ const AcademyMemberManagement = ({ academyId }: AcademyMemberManagementProps) =>
 
         {/* Approved Members List */}
         <div className="space-y-3">
-          <h4 className="text-sm font-medium">현재 관리자</h4>
+          <h4 className="text-sm font-medium">현재 학원 멤버</h4>
           {loading ? (
             <div className="text-sm text-muted-foreground text-center py-4">
               로딩 중...
@@ -425,7 +446,7 @@ const AcademyMemberManagement = ({ academyId }: AcademyMemberManagementProps) =>
                       {/* Grade selector - available to those with manage_members permission, but not for owner */}
                       {hasManageMembersPermission && !isOwnerMember ? (
                         <Select
-                          value={member.grade || 'admin'}
+                          value={member.grade || 'staff'}
                           onValueChange={(value) => handleGradeChange(member.id, value)}
                         >
                           <SelectTrigger className="w-24 h-8 text-xs">
