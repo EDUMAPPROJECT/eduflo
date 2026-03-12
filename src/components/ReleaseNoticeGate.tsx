@@ -5,9 +5,9 @@ import FormalReleaseBanner from "./FormalReleaseBanner";
 
 /** 학원 관리자/학부모 커뮤니티는 허용하고, 그 외 커뮤니티 경로에서만 배너 표시 */
 function shouldBlockCommunityPath(pathname: string): boolean {
-  if (pathname === "/admin/community" || pathname === "/p/community") {
-    return false;
-  }
+  // if (pathname === "/admin/community" || pathname === "/p/community") {
+  //   return false;
+  // }
 
   return pathname.includes("/community");
 }
