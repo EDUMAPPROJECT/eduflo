@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Share2, ChevronRight, Bell, Calendar, PartyPopper, GraduationCap, Megaphone } from "lucide-react";
+import { Heart, Share2, ChevronRight, Bell, Calendar, PartyPopper, GraduationCap, Megaphone, MessageCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 interface FeedPost {
   id: string;
   academy_id: string | null;
-  type: 'notice' | 'seminar' | 'event' | 'admission';
+  type: 'notice' | 'admission' | 'seminar' | 'event' | 'academy-admission' | 'life-parenting' | 'free-talk';
   title: string;
   body: string | null;
   image_url: string | null;
@@ -29,7 +29,9 @@ interface FeedPost {
   author?: {
     user_name: string | null;
   } | null;
+  author_role_label?: string | null;
   is_liked?: boolean;
+  comment_count?: number;
 }
 
 interface FeedPostCardProps {
@@ -44,6 +46,9 @@ const typeConfig = {
   admission: { label: '입시 정보', icon: GraduationCap, color: 'bg-green-600 text-white' },
   seminar: { label: '설명회', icon: Calendar, color: 'bg-orange-500 text-white' },
   event: { label: '이벤트', icon: PartyPopper, color: 'bg-purple-500 text-white' },
+  'academy-admission': { label: '학원·입시정보', icon: GraduationCap, color: 'bg-green-600 text-white' },
+  'life-parenting': { label: '생활·육아', icon: Bell, color: 'bg-amber-500 text-white' },
+  'free-talk': { label: '자유수다', icon: MessageCircle, color: 'bg-slate-600 text-white' },
 };
 
 const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedPostCardProps) => {
@@ -85,7 +90,7 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedP
       try {
         await navigator.share({
           title: post.title,
-          text: `${post.academy.name}의 새 소식: ${post.title}`,
+          text: `${post.academy?.name || post.author?.user_name || "운영자"}의 새 소식: ${post.title}`,
           url: window.location.href,
         });
       } catch (error) {
@@ -94,22 +99,23 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedP
     }
   };
 
-  // Check if this is a super admin post (no academy)
-  const isSuperAdminPost = !post.academy_id || !post.academy;
-  const displayName = isSuperAdminPost 
-    ? (post.author?.user_name || '운영자') 
-    : (post.academy?.name || '학원');
+  // Academy post vs non-academy post(parent/super admin)
+  const isAcademyPost = !!post.academy_id && !!post.academy;
+  const displayName = isAcademyPost
+    ? (post.academy?.name || '학원')
+    : (post.author?.user_name || '운영자');
   const displayInitial = displayName.charAt(0);
-  const profileImage = isSuperAdminPost ? null : post.academy?.profile_image;
+  const profileImage = isAcademyPost ? post.academy?.profile_image : null;
+  const authorLabel = isAcademyPost ? '학원' : (post.author_role_label || '운영자');
 
   return (
     <Card className="overflow-hidden border-border">
       {/* Header */}
       <div 
-        className={`flex items-center gap-3 p-4 ${!isSuperAdminPost ? 'cursor-pointer hover:bg-secondary/50' : ''} transition-colors`}
-        onClick={() => !isSuperAdminPost && post.academy && onAcademyClick(post.academy.id)}
+        className={`flex items-center gap-3 p-4 ${isAcademyPost ? 'cursor-pointer hover:bg-secondary/50' : ''} transition-colors`}
+        onClick={() => isAcademyPost && post.academy && onAcademyClick(post.academy.id)}
       >
-        <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 ${isSuperAdminPost ? 'bg-primary/20' : 'bg-secondary'}`}>
+        <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 ${isAcademyPost ? 'bg-secondary' : 'bg-primary/20'}`}>
           {profileImage ? (
             <img
               src={profileImage}
@@ -117,7 +123,7 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedP
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className={`w-full h-full flex items-center justify-center font-bold ${isSuperAdminPost ? 'text-primary' : 'text-primary'}`}>
+            <div className="w-full h-full flex items-center justify-center font-bold text-primary">
               {displayInitial}
             </div>
           )}
@@ -127,8 +133,8 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedP
             <span className="font-medium text-sm text-foreground truncate">
               {displayName}
             </span>
-            <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 shrink-0 ${isSuperAdminPost ? 'bg-amber-500/20 text-amber-600' : 'bg-primary/10 text-primary'}`}>
-              {isSuperAdminPost ? '운영자' : '학원'}
+            <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 shrink-0 ${isAcademyPost ? 'bg-primary/10 text-primary' : 'bg-amber-500/20 text-amber-600'}`}>
+              {authorLabel}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">
@@ -236,6 +242,13 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedP
             )}>
               {post.like_count > 0 && post.like_count}
             </span>
+          </button>
+          <button
+            onClick={onCardClick}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <MessageCircle className="w-5 h-5" />
+            <span>{post.comment_count || 0}</span>
           </button>
           <button
             onClick={handleShare}

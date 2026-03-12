@@ -15,8 +15,10 @@ export function useInfiniteScroll<T>({ fetchFn, pageSize = 20 }: UseInfiniteScro
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const isFetchingRef = useRef(false);
+  const requestVersionRef = useRef(0);
 
   const reset = useCallback(() => {
+    requestVersionRef.current += 1;
     setItems([]);
     setPage(0);
     setHasMore(true);
@@ -28,19 +30,28 @@ export function useInfiniteScroll<T>({ fetchFn, pageSize = 20 }: UseInfiniteScro
   const loadMore = useCallback(async () => {
     if (isFetchingRef.current || !hasMore) return;
 
+    const requestVersion = ++requestVersionRef.current;
+    const currentPage = page;
     isFetchingRef.current = true;
     setLoadingMore(true);
     try {
-      const result = await fetchFn(page);
+      const result = await fetchFn(currentPage);
+
+      if (requestVersion !== requestVersionRef.current) {
+        return;
+      }
+
       setItems(prev => [...prev, ...result.data]);
       setHasMore(result.hasMore);
       setPage(prev => prev + 1);
     } catch (error) {
       console.error("Error loading more:", error);
     } finally {
-      setLoadingMore(false);
-      setLoading(false);
-      isFetchingRef.current = false;
+      if (requestVersion === requestVersionRef.current) {
+        setLoadingMore(false);
+        setLoading(false);
+        isFetchingRef.current = false;
+      }
     }
   }, [fetchFn, page, hasMore]);
 

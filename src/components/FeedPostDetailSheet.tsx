@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
-import { Heart, Share2, ChevronRight, ChevronLeft, Bell, Calendar, PartyPopper, X, Trash2, GraduationCap, Megaphone } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Heart, Share2, ChevronRight, ChevronLeft, Bell, Calendar, PartyPopper, X, Trash2, GraduationCap, Megaphone, MessageCircle, Send } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,11 +21,12 @@ import ImageViewer from "@/components/ImageViewer";
 import useEmblaCarousel from "embla-carousel-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { fetchPostComments, type PostCommentWithProfile } from "@/lib/postComments";
 
 interface FeedPost {
   id: string;
   academy_id: string | null;
-  type: 'notice' | 'seminar' | 'event' | 'admission';
+  type: 'notice' | 'admission' | 'seminar' | 'event' | 'academy-admission' | 'life-parenting' | 'free-talk';
   title: string;
   body: string | null;
   image_url: string | null;
@@ -40,7 +42,9 @@ interface FeedPost {
   author?: {
     user_name: string | null;
   } | null;
+  author_role_label?: string | null;
   is_liked?: boolean;
+  comment_count?: number;
 }
 
 interface FeedPostDetailSheetProps {
@@ -51,6 +55,7 @@ interface FeedPostDetailSheetProps {
   onAcademyClick: (academyId: string) => void;
   onSeminarClick?: (seminarId: string) => void;
   onDelete?: (postId: string) => void;
+  onCommentCountChange?: (postId: string, commentCount: number) => void;
 }
 
 const typeConfig = {
@@ -58,6 +63,26 @@ const typeConfig = {
   admission: { label: '입시 정보', icon: GraduationCap, color: 'bg-green-600 text-white' },
   seminar: { label: '설명회', icon: Calendar, color: 'bg-orange-500 text-white' },
   event: { label: '이벤트', icon: PartyPopper, color: 'bg-purple-500 text-white' },
+  'academy-admission': { label: '학원·입시정보', icon: GraduationCap, color: 'bg-green-600 text-white' },
+  'life-parenting': { label: '생활·육아', icon: Bell, color: 'bg-amber-500 text-white' },
+  'free-talk': { label: '자유수다', icon: MessageCircle, color: 'bg-slate-600 text-white' },
+};
+
+const formatCommentTimestamp = (createdAt: string) => {
+  const createdAtDate = new Date(createdAt);
+  const diffMs = Date.now() - createdAtDate.getTime();
+  const diffMinutes = Math.max(1, Math.floor(diffMs / (1000 * 60)));
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes}분 전`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours}시간 전`;
+  }
+
+  return format(createdAtDate, "M월 d일 HH:mm", { locale: ko });
 };
 
 const FeedPostDetailSheet = ({ 
@@ -67,40 +92,99 @@ const FeedPostDetailSheet = ({
   onLikeToggle, 
   onAcademyClick,
   onSeminarClick,
-  onDelete
+  onDelete,
+  onCommentCountChange,
 }: FeedPostDetailSheetProps) => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false });
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isOwner, setIsOwner] = useState(false);
+  const [canComment, setCanComment] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState("익명");
+  const [currentUserImageUrl, setCurrentUserImageUrl] = useState<string | null>(null);
+  const [comments, setComments] = useState<PostCommentWithProfile[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [submittingComment, setSubmittingComment] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const commentsSectionRef = useRef<HTMLDivElement | null>(null);
+  const commentInputRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
-    const checkOwnership = async () => {
-      if (!post) return;
+    const loadViewerState = async () => {
+      if (!post || !open) return;
+
+      setIsOwner(false);
+      setCanComment(false);
+      setCurrentUserId(null);
+      setCurrentUserName("익명");
+      setCurrentUserImageUrl(null);
+
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        // Check if user is the author (for super admin posts)
-        if (post.author_id === session.user.id) {
-          setIsOwner(true);
-          return;
-        }
-        // Check if user is academy owner
-        if (post.academy_id) {
-          const { data: academy } = await supabase
-            .from("academies")
-            .select("id")
-            .eq("id", post.academy_id)
-            .eq("owner_id", session.user.id)
-            .maybeSingle();
-          setIsOwner(!!academy);
-        }
+      if (!session?.user) return;
+
+      setCurrentUserId(session.user.id);
+
+      const [{ data: roleData }, { data: profileData }] = await Promise.all([
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("user_name, image_url")
+          .eq("id", session.user.id)
+          .maybeSingle(),
+      ]);
+
+      setCanComment(roleData?.role === "parent" || roleData?.role === "student");
+      setCurrentUserName(profileData?.user_name?.trim() || "익명");
+      setCurrentUserImageUrl(profileData?.image_url || null);
+
+      // Check if user is the author (for super admin posts)
+      if (post.author_id === session.user.id) {
+        setIsOwner(true);
+        return;
+      }
+
+      // Check if user is academy owner
+      if (post.academy_id) {
+        const { data: academy } = await supabase
+          .from("academies")
+          .select("id")
+          .eq("id", post.academy_id)
+          .eq("owner_id", session.user.id)
+          .maybeSingle();
+        setIsOwner(!!academy);
       }
     };
-    checkOwnership();
-  }, [post]);
+
+    loadViewerState();
+  }, [open, post?.id, post?.author_id, post?.academy_id]);
+
+  useEffect(() => {
+    const loadComments = async () => {
+      if (!post || !open) return;
+
+      setCommentsLoading(true);
+      try {
+        const nextComments = await fetchPostComments(post.id);
+        setComments(nextComments);
+        onCommentCountChange?.(post.id, nextComments.length);
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+        toast.error("댓글을 불러오지 못했습니다");
+      } finally {
+        setCommentsLoading(false);
+      }
+    };
+
+    loadComments();
+  }, [open, post?.id]);
 
   if (!post) return null;
 
@@ -161,7 +245,7 @@ const FeedPostDetailSheet = ({
       try {
         await navigator.share({
           title: post.title,
-          text: `${post.academy.name}의 새 소식: ${post.title}`,
+          text: `${post.academy?.name || post.author?.user_name || "운영자"}의 새 소식: ${post.title}`,
           url: window.location.href,
         });
       } catch (error) {
@@ -170,16 +254,16 @@ const FeedPostDetailSheet = ({
     }
   };
 
-  // Check if this is a super admin post
-  const isSuperAdminPost = !post.academy_id || !post.academy;
-  const displayName = isSuperAdminPost 
-    ? (post.author?.user_name || '운영자') 
-    : (post.academy?.name || '학원');
+  const isAcademyPost = !!post.academy_id && !!post.academy;
+  const displayName = isAcademyPost
+    ? (post.academy?.name || '학원')
+    : (post.author?.user_name || '운영자');
   const displayInitial = displayName.charAt(0);
-  const profileImage = isSuperAdminPost ? null : post.academy?.profile_image;
+  const profileImage = isAcademyPost ? post.academy?.profile_image : null;
+  const authorLabel = isAcademyPost ? '학원' : (post.author_role_label || '운영자');
 
   const handleAcademyClick = () => {
-    if (isSuperAdminPost || !post.academy) return;
+    if (!isAcademyPost || !post.academy) return;
     onClose();
     onAcademyClick(post.academy.id);
   };
@@ -191,19 +275,70 @@ const FeedPostDetailSheet = ({
     }
   };
 
+  const handleCommentButtonClick = () => {
+    commentsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => {
+      commentInputRef.current?.focus();
+    }, 250);
+  };
+
+  const handleCommentSubmit = async () => {
+    if (!post || !currentUserId || !commentText.trim() || !canComment) return;
+
+    setSubmittingComment(true);
+    try {
+      const trimmedContent = commentText.trim();
+      const { data, error } = await supabase
+        .from("post_comments")
+        .insert({
+          post_id: post.id,
+          user_id: currentUserId,
+          content: trimmedContent,
+        })
+        .select("id, post_id, user_id, content, created_at")
+        .single();
+
+      if (error) throw error;
+
+      const nextComment: PostCommentWithProfile = {
+        ...data,
+        profile: {
+          image_url: currentUserImageUrl,
+          user_name: currentUserName,
+        },
+      };
+
+      setComments((prev) => {
+        const nextComments = [...prev, nextComment];
+        onCommentCountChange?.(post.id, nextComments.length);
+        return nextComments;
+      });
+      setCommentText("");
+      toast.success("댓글이 등록되었습니다");
+    } catch (error) {
+      console.error("Error creating comment:", error);
+      toast.error("댓글 등록에 실패했습니다");
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
   return (
     <>
       <Sheet open={open} onOpenChange={onClose}>
-        <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl p-0 overflow-hidden">
+        <SheetContent
+          side="bottom"
+          className="left-0 right-0 mx-auto w-full max-w-lg h-[85vh] rounded-t-2xl p-0 overflow-hidden"
+        >
           {/* Header */}
           <div className="sticky top-0 bg-card border-b border-border z-10">
             <SheetHeader className="p-4">
               <div className="flex items-center justify-between">
                 <div 
-                  className={`flex items-center gap-3 ${!isSuperAdminPost ? 'cursor-pointer' : ''}`}
+                  className={`flex items-center gap-3 ${isAcademyPost ? 'cursor-pointer' : ''}`}
                   onClick={handleAcademyClick}
                 >
-                  <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 ${isSuperAdminPost ? 'bg-primary/20' : 'bg-secondary'}`}>
+                  <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 ${isAcademyPost ? 'bg-secondary' : 'bg-primary/20'}`}>
                     {profileImage ? (
                       <img
                         src={profileImage}
@@ -219,8 +354,11 @@ const FeedPostDetailSheet = ({
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-foreground">{displayName}</p>
-                      {isSuperAdminPost && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600">운영자</span>
+                      {!isAcademyPost && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600">{authorLabel}</span>
+                      )}
+                      {isAcademyPost && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">학원</span>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">
@@ -329,7 +467,7 @@ const FeedPostDetailSheet = ({
               )}
 
               {/* Event CTA Button - navigate to academy detail page's event section */}
-              {post.type === 'event' && (
+              {post.type === 'event' && isAcademyPost && (
                 <Button
                   variant="outline"
                   className="w-full mb-4 gap-2 border-purple-500/50 text-purple-600 hover:bg-purple-50"
@@ -345,12 +483,115 @@ const FeedPostDetailSheet = ({
               <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
                 {post.body || "내용이 없습니다."}
               </div>
+
+              {/* Comments */}
+              <div ref={commentsSectionRef} className="mt-6 border-t border-border pt-4">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="w-4 h-4 text-muted-foreground" />
+                    <h4 className="text-sm font-semibold text-foreground">
+                      댓글 {comments.length}
+                    </h4>
+                  </div>
+                  <button
+                    onClick={() => onLikeToggle(post.id, post.is_liked || false)}
+                    className="flex items-center gap-1.5 text-sm transition-colors"
+                  >
+                    <Heart
+                      className={cn(
+                        "w-4 h-4 transition-all",
+                        post.is_liked
+                          ? "fill-destructive text-destructive"
+                          : "text-muted-foreground hover:text-destructive"
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        post.is_liked ? "text-destructive" : "text-muted-foreground"
+                      )}
+                    >
+                      {post.like_count}
+                    </span>
+                  </button>
+                </div>
+
+                {canComment ? (
+                  <div className="space-y-3 mb-5">
+                    <Textarea
+                      ref={commentInputRef}
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      placeholder="댓글을 입력하세요"
+                      rows={3}
+                      maxLength={500}
+                    />
+                    <div className="flex items-center justify-end gap-3">
+                      <Button
+                        size="sm"
+                        className="gap-1"
+                        onClick={handleCommentSubmit}
+                        disabled={submittingComment || !commentText.trim()}
+                      >
+                        <Send className="w-4 h-4" />
+                        {submittingComment ? "등록 중..." : "댓글 등록"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-5 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+                    댓글 작성은 학부모/학생 계정에서 가능합니다.
+                  </div>
+                )}
+
+                {commentsLoading ? (
+                  <p className="text-sm text-muted-foreground">댓글을 불러오는 중...</p>
+                ) : comments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">첫 댓글을 남겨보세요.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {comments.map((comment) => {
+                      const commenterName = comment.profile?.user_name?.trim() || "익명";
+                      const commenterInitial = commenterName.charAt(0);
+                      const commenterImageUrl = comment.profile?.image_url;
+
+                      return (
+                        <div key={comment.id} className="rounded-lg bg-muted px-4 py-3">
+                          <div className="flex items-center gap-3 mb-2">
+                            {commenterImageUrl ? (
+                              <img
+                                src={commenterImageUrl}
+                                alt={commenterName}
+                                className="w-8 h-8 rounded-full object-cover shrink-0"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-primary/25 text-primary flex items-center justify-center shrink-0 text-base font-semibold">
+                                {commenterInitial}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+                              <p className="text-sm font-semibold text-foreground truncate">
+                                {commenterName}
+                              </p>
+                              <span className="text-xs text-muted-foreground shrink-0">
+                                {formatCommentTimestamp(comment.created_at)}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed pl-11">
+                            {comment.content}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Footer Actions */}
-          <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4">
-            <div className="flex items-center justify-between max-w-lg mx-auto">
+          <div className="absolute bottom-0 inset-x-0 bg-card border-t border-border p-4">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => onLikeToggle(post.id, post.is_liked || false)}
@@ -371,6 +612,13 @@ const FeedPostDetailSheet = ({
                   </span>
                 </button>
                 <button
+                  onClick={handleCommentButtonClick}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  <span>{comments.length}</span>
+                </button>
+                <button
                   onClick={handleShare}
                   className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
@@ -378,15 +626,19 @@ const FeedPostDetailSheet = ({
                 </button>
               </div>
 
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleAcademyClick}
-                className="gap-1"
-              >
-                학원 프로필 보기
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+              {isAcademyPost ? (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleAcademyClick}
+                  className="gap-1"
+                >
+                  학원 프로필 보기
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              ) : (
+                <div />
+              )}
             </div>
           </div>
         </SheetContent>

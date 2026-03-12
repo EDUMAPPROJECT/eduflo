@@ -9,6 +9,7 @@ import GlobalRegionSelector from "@/components/GlobalRegionSelector";
 import FeedPostCard from "@/components/FeedPostCard";
 import FeedPostDetailSheet from "@/components/FeedPostDetailSheet";
 import CreatePostDialog from "@/components/CreatePostDialog";
+import { fetchCommentCounts } from "@/lib/postComments";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -23,7 +24,7 @@ import {
 interface FeedPost {
   id: string;
   academy_id: string;
-  type: 'notice' | 'seminar' | 'event' | 'admission';
+  type: 'notice' | 'seminar' | 'event';
   title: string;
   body: string | null;
   image_url: string | null;
@@ -37,12 +38,12 @@ interface FeedPost {
     profile_image: string | null;
   };
   is_liked?: boolean;
+  comment_count?: number;
 }
 
 const filterOptions = [
   { id: 'all', label: '전체', icon: null },
   { id: 'notice', label: '학원 소식', icon: Megaphone },
-  { id: 'admission', label: '입시 정보', icon: GraduationCap },
   { id: 'seminar', label: '설명회', icon: Calendar },
   { id: 'event', label: '이벤트', icon: PartyPopper },
 ];
@@ -115,6 +116,14 @@ const AdminCommunityPage = () => {
         filteredPosts = filteredPosts.map(post => ({
           ...post,
           is_liked: likedPostIds.has(post.id)
+        }));
+      }
+
+      if (filteredPosts.length > 0) {
+        const commentCounts = await fetchCommentCounts(filteredPosts.map((post) => post.id));
+        filteredPosts = filteredPosts.map((post) => ({
+          ...post,
+          comment_count: commentCounts[post.id] || 0,
         }));
       }
 
@@ -258,7 +267,7 @@ const AdminCommunityPage = () => {
                 key={post.id}
                 post={post}
                 onLikeToggle={handleLikeToggle}
-                onAcademyClick={(id) => navigate(`/academy/${id}`)}
+                onAcademyClick={(id) => navigate(`/p/academy/${id}`)}
                 onCardClick={() => setSelectedPost(post)}
               />
             ))}
@@ -272,7 +281,14 @@ const AdminCommunityPage = () => {
         open={!!selectedPost}
         onClose={() => setSelectedPost(null)}
         onLikeToggle={handleLikeToggle}
-        onAcademyClick={(id) => navigate(`/academy/${id}`)}
+        onAcademyClick={(id) => navigate(`/p/academy/${id}`)}
+        onCommentCountChange={(postId, commentCount) => {
+          setPosts((prev) =>
+            prev.map((post) =>
+              post.id === postId ? { ...post, comment_count: commentCount } : post
+            )
+          );
+        }}
       />
 
       {/* FAB */}
