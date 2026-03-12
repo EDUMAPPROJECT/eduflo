@@ -95,77 +95,6 @@ interface ClassInfo {
   };
 }
 
-// Mock data for when DB is empty
-const mockInstructors: Teacher[] = [
-  {
-    id: 'mock-1',
-    name: '김에듀 원장',
-    subject: '수학',
-    bio: '서울대 수학교육과 졸 / 전 대치 명문학원 10년 경력 / 수능 수학의 본질을 꿰뚫는 강의',
-    image_url: null,
-  },
-  {
-    id: 'mock-2',
-    name: '이영어 선생님',
-    subject: '영어',
-    bio: '연세대 영문과 졸 / 토익 만점 / 문법부터 독해까지 한 번에 정리',
-    image_url: null,
-  },
-  {
-    id: 'mock-3',
-    name: '박논술 선생님',
-    subject: '국어/논술',
-    bio: '고려대 국어국문 졸 / 대입 논술 전문 / 꼼꼼한 첨삭 지도',
-    image_url: null,
-  },
-  {
-    id: 'mock-4',
-    name: '최과학 선생님',
-    subject: '과학(물리/화학)',
-    bio: 'KAIST 물리학과 졸 / 과학고 출신 / 원리부터 심화까지 체계적 강의',
-    image_url: null,
-  },
-];
-
-const mockCourses: ClassInfo[] = [
-  {
-    id: 'mock-c1',
-    name: '[고2] 수1/수2 심화 완성반',
-    target_grade: '고등학교 2학년',
-    schedule: '월/수/금 18:00~22:00',
-    fee: 450000,
-    description: '겨울방학 특강, 내신/수능 대비',
-    is_recruiting: true,
-  },
-  {
-    id: 'mock-c2',
-    name: '[중3] 예비고1 영어 문법 마스터',
-    target_grade: '중학교 3학년',
-    schedule: '화/목 17:00~20:00',
-    fee: 350000,
-    description: '고등 문법 기초, 서술형 대비',
-    is_recruiting: true,
-  },
-  {
-    id: 'mock-c3',
-    name: '[고3] 수능 국어 파이널 실전반',
-    target_grade: '고등학교 3학년',
-    schedule: '토 10:00~13:00',
-    fee: 280000,
-    description: '실전 모의고사, 1:1 클리닉',
-    is_recruiting: true,
-  },
-  {
-    id: 'mock-c4',
-    name: '[고1] 내신 대비 과학 집중반',
-    target_grade: '고등학교 1학년',
-    schedule: '화/목 19:00~22:00',
-    fee: 400000,
-    description: '물리/화학 내신 1등급 목표',
-    is_recruiting: false,
-  },
-];
-
 const AcademyDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -542,160 +471,157 @@ const AcademyDetailPage = () => {
 
           {/* Teachers Tab */}
           <TabsContent value="teachers" className="space-y-4">
-            {(() => {
-              const displayTeachers = teachers.length > 0 ? teachers : mockInstructors;
-              return (
-                <div className="space-y-3">
-                  {displayTeachers.map((teacher) => (
-                    <Card key={teacher.id} className="shadow-card overflow-hidden">
-                      <CardContent className="p-4">
-                        <div className="flex gap-4">
-                          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center overflow-hidden shrink-0">
-                            {teacher.image_url ? (
-                              <img
-                                src={teacher.image_url}
-                                alt={teacher.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <GraduationCap className="w-8 h-8 text-primary" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-semibold text-foreground">{teacher.name}</h4>
-                              <Badge variant="secondary" className="text-xs">
-                                {teacher.subject || "과목 미지정"}
-                              </Badge>
-                            </div>
-                            {teacher.bio && (
-                              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                                {teacher.bio}
-                              </p>
-                            )}
-                          </div>
+            {teachers.length === 0 ? (
+              <Card className="shadow-card">
+                <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                  등록된 강사가 없습니다
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {teachers.map((teacher) => (
+                  <Card key={teacher.id} className="shadow-card overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex gap-4">
+                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center overflow-hidden shrink-0">
+                          {teacher.image_url ? (
+                            <img
+                              src={teacher.image_url}
+                              alt={teacher.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <GraduationCap className="w-8 h-8 text-primary" />
+                          )}
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              );
-            })()}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-foreground">{teacher.name}</h4>
+                            <Badge variant="secondary" className="text-xs">
+                              {teacher.subject || "과목 미지정"}
+                            </Badge>
+                          </div>
+                          {teacher.bio && (
+                            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                              {teacher.bio}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           {/* Classes Tab */}
           <TabsContent value="classes" className="space-y-4">
-            {(() => {
-              const displayClasses = classes.length > 0 ? classes : mockCourses;
-              const isMockData = classes.length === 0;
-              return (
-                <div className="space-y-3">
-                  {isMockData && (
-                    <div className="text-center py-3 px-4 bg-amber-50 text-amber-700 rounded-lg text-sm mb-4">
-                      아래는 예시 강좌입니다. 실제 강좌는 학원에서 등록 후 확인하실 수 있습니다.
-                    </div>
-                  )}
-                  {displayClasses.map((cls) => {
-                    const isEnrolled = enrolledClasses.has(cls.id);
-                    const isMockClass = cls.id.startsWith('mock-');
-                    return (
-                      <Card 
-                        key={cls.id} 
-                        className="shadow-card overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-                        onClick={() => setSelectedClass(cls)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="space-y-3">
-                            {/* Title and badges */}
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <h4 className="font-semibold text-foreground text-sm">{cls.name}</h4>
-                              {cls.is_recruiting ? (
-                                <Badge className="bg-green-500 text-white text-[10px] px-1.5 py-0 shrink-0">모집중</Badge>
-                              ) : (
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">마감</Badge>
-                              )}
-                              {isEnrolled && (
-                                <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0 shrink-0">등록됨</Badge>
-                              )}
-                            </div>
-                            
-                            {/* Target grade and schedule */}
-                            <div className="flex items-center gap-1.5">
-                              {cls.target_grade && (
-                                <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0 shrink-0">
-                                  <Users className="w-2.5 h-2.5" />
-                                  {cls.target_grade}
-                                </Badge>
-                              )}
-                              {cls.schedule && (
-                                <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0 whitespace-nowrap">
-                                  <Clock className="w-2.5 h-2.5" />
-                                  {cls.schedule}
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            {/* Description tags */}
-                            {cls.description && (
-                              <div className="flex flex-wrap gap-1">
-                                {cls.description.split(',').map((tag, idx) => (
-                                  <span key={idx} className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                                    {tag.trim()}
-                                  </span>
-                                ))}
-                              </div>
+            {classes.length === 0 ? (
+              <Card className="shadow-card">
+                <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                  개설된 강좌가 없습니다
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {classes.map((cls) => {
+                  const isEnrolled = enrolledClasses.has(cls.id);
+                  return (
+                    <Card 
+                      key={cls.id} 
+                      className="shadow-card overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => setSelectedClass(cls)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          {/* Title and badges */}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="font-semibold text-foreground text-sm">{cls.name}</h4>
+                            {cls.is_recruiting ? (
+                              <Badge className="bg-green-500 text-white text-[10px] px-1.5 py-0 shrink-0">모집중</Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">마감</Badge>
                             )}
-                            
-                            {/* Price and enrollment button - bottom */}
-                            <div className="flex items-center justify-between pt-2 border-t border-border">
-                              <div className="flex items-baseline gap-1">
-                                {cls.fee ? (
-                                  <>
-                                    <span className="font-bold text-primary text-base">
-                                      {cls.fee.toLocaleString()}원
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">/월</span>
-                                  </>
-                                ) : (
-                                  <span className="text-sm text-muted-foreground">가격 문의</span>
-                                )}
-                              </div>
-                              
-                              {!isMockClass && (
-                                <Button
-                                  size="sm"
-                                  variant={isEnrolled ? "secondary" : "default"}
-                                  className="gap-1"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (!isEnrolled) {
-                                      handleOpenEnrollDialog(cls);
-                                    }
-                                  }}
-                                  disabled={isEnrolled}
-                                >
-                                  {isEnrolled ? (
-                                    <>
-                                      <Check className="w-3 h-3" />
-                                      등록됨
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Plus className="w-3 h-3" />
-                                      등록
-                                    </>
-                                  )}
-                                </Button>
+                            {isEnrolled && (
+                              <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0 shrink-0">등록됨</Badge>
+                            )}
+                          </div>
+                          
+                          {/* Target grade and schedule */}
+                          <div className="flex items-center gap-1.5">
+                            {cls.target_grade && (
+                              <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0 shrink-0">
+                                <Users className="w-2.5 h-2.5" />
+                                {cls.target_grade}
+                              </Badge>
+                            )}
+                            {cls.schedule && (
+                              <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0 whitespace-nowrap">
+                                <Clock className="w-2.5 h-2.5" />
+                                {cls.schedule}
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {/* Description tags */}
+                          {cls.description && (
+                            <div className="flex flex-wrap gap-1">
+                              {cls.description.split(',').map((tag, idx) => (
+                                <span key={idx} className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                                  {tag.trim()}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Price and enrollment button - bottom */}
+                          <div className="flex items-center justify-between pt-2 border-t border-border">
+                            <div className="flex items-baseline gap-1">
+                              {cls.fee ? (
+                                <>
+                                  <span className="font-bold text-primary text-base">
+                                    {cls.fee.toLocaleString()}원
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">/월</span>
+                                </>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">가격 문의</span>
                               )}
                             </div>
+                            
+                            <Button
+                              size="sm"
+                              variant={isEnrolled ? "secondary" : "default"}
+                              className="gap-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isEnrolled) {
+                                  handleOpenEnrollDialog(cls);
+                                }
+                              }}
+                              disabled={isEnrolled}
+                            >
+                              {isEnrolled ? (
+                                <>
+                                  <Check className="w-3 h-3" />
+                                  등록됨
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="w-3 h-3" />
+                                  등록
+                                </>
+                              )}
+                            </Button>
                           </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              );
-            })()}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 

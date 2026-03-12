@@ -10,6 +10,8 @@ import Logo from "@/components/Logo";
 import GlobalRegionSelector from "@/components/GlobalRegionSelector";
 import FeedPostCard from "@/components/FeedPostCard";
 import FeedPostDetailSheet from "@/components/FeedPostDetailSheet";
+import ParentCommunityPostDialog from "@/components/ParentCommunityPostDialog";
+import { fetchCommentCounts } from "@/lib/postComments";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -21,13 +23,15 @@ import {
   Search,
   Loader2,
   GraduationCap,
-  Megaphone
+  Megaphone,
+  MessageCircle,
+  Plus,
 } from "lucide-react";
 
 interface FeedPost {
   id: string;
   academy_id: string | null;
-  type: 'notice' | 'seminar' | 'event' | 'admission';
+  type: 'notice' | 'admission' | 'seminar' | 'event' | 'academy-admission' | 'life-parenting' | 'free-talk';
   title: string;
   body: string | null;
   image_url: string | null;
@@ -44,17 +48,26 @@ interface FeedPost {
   author?: {
     user_name: string | null;
   } | null;
+  author_role_label?: string | null;
   is_liked?: boolean;
+  comment_count?: number;
 }
 
 const PAGE_SIZE = 15;
 
-const filterOptions = [
+const academyFilterOptions = [
   { id: 'all', label: '전체', icon: null },
   { id: 'notice', label: '학원 소식', icon: Megaphone },
   { id: 'admission', label: '입시 정보', icon: GraduationCap },
   { id: 'seminar', label: '설명회', icon: Calendar },
   { id: 'event', label: '이벤트', icon: PartyPopper },
+];
+
+const parentFilterOptions = [
+  { id: 'all', label: '전체', icon: null },
+  { id: 'academy-admission', label: '학원·입시정보', icon: GraduationCap },
+  { id: 'life-parenting', label: '생활·육아', icon: Bell },
+  { id: 'free-talk', label: '자유수다', icon: MessageCircle },
 ];
 
 const CommunityPage = () => {
@@ -63,14 +76,98 @@ const CommunityPage = () => {
   const { selectedRegion } = useRegion();
   const prefix = useRoutePrefix();
   
+  const [activeCommunityTab, setActiveCommunityTab] = useState<'academy' | 'parent'>('academy');
   const [activeFilter, setActiveFilter] = useState('all');
   const [userId, setUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [bookmarkedAcademies, setBookmarkedAcademies] = useState<string[]>([]);
   const [selectedPost, setSelectedPost] = useState<FeedPost | null>(null);
+  const [isParentPostDialogOpen, setIsParentPostDialogOpen] = useState(false);
 
   // Fetch function for infinite scroll
   const fetchPosts = useCallback(async (page: number): Promise<{ data: FeedPost[]; hasMore: boolean }> => {
     try {
+      if (activeCommunityTab === 'parent') {
+        let parentQuery = supabase
+          .from("feed_posts")
+          .select("*")
+          .is("academy_id", null)
+          .in("type", ["academy-admission", "life-parenting", "free-talk"]);
+
+        if (activeFilter !== 'all') {
+          parentQuery = parentQuery.eq("type", activeFilter);
+        }
+
+        const { data: parentPosts, error: parentPostsError } = await parentQuery.order("created_at", { ascending: false });
+        if (parentPostsError) throw parentPostsError;
+
+        const authorIds = [...new Set((parentPosts || []).filter((post) => post.author_id).map((post) => post.author_id))] as string[];
+        let authorsMap: Record<string, { user_name: string | null; role: string | null; is_super_admin: boolean | null }> = {};
+
+        if (authorIds.length > 0) {
+          const [{ data: profiles }, { data: roles }] = await Promise.all([
+            supabase.from("profiles").select("id, user_name").in("id", authorIds),
+            supabase.from("user_roles").select("user_id, role, is_super_admin").in("user_id", authorIds),
+          ]);
+
+          const roleMap = (roles || []).reduce<Record<string, { role: string | null; is_super_admin: boolean | null }>>((acc, role) => {
+            acc[role.user_id] = { role: role.role, is_super_admin: role.is_super_admin };
+            return acc;
+          }, {});
+
+          authorsMap = (profiles || []).reduce<Record<string, { user_name: string | null; role: string | null; is_super_admin: boolean | null }>>((acc, profile) => {
+            acc[profile.id] = {
+              user_name: profile.user_name,
+              role: roleMap[profile.id]?.role || null,
+              is_super_admin: roleMap[profile.id]?.is_super_admin || false,
+            };
+            return acc;
+          }, authorsMap);
+        }
+
+        let allPosts = (parentPosts || [])
+          .filter((post) => {
+            const meta = post.author_id ? authorsMap[post.author_id] : null;
+            return meta?.role === "parent" && !meta?.is_super_admin;
+          })
+          .map((post) => ({
+            ...(post as FeedPost),
+            academy: null,
+            author: { user_name: post.author_id ? authorsMap[post.author_id]?.user_name || "학부모" : "학부모" },
+            author_role_label: "학부모",
+          }));
+
+        allPosts = Array.from(new Map(allPosts.map((post) => [post.id, post])).values());
+        allPosts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+        let posts = allPosts.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+        if (userId && posts.length > 0) {
+          const postIds = posts.map((p) => p.id);
+          const { data: likes } = await supabase
+            .from("post_likes")
+            .select("post_id")
+            .eq("user_id", userId)
+            .in("post_id", postIds);
+
+          const likedPostIds = new Set(likes?.map((like) => like.post_id) || []);
+          posts = posts.map((post) => ({
+            ...post,
+            is_liked: likedPostIds.has(post.id),
+          }));
+        }
+
+        if (posts.length > 0) {
+          const commentCounts = await fetchCommentCounts(posts.map((post) => post.id));
+          posts = posts.map((post) => ({
+            ...post,
+            comment_count: commentCounts[post.id] || 0,
+          }));
+        }
+
+        return { data: posts, hasMore: posts.length === PAGE_SIZE };
+      }
+
       let academyIds: string[] | null = null;
 
       // "전체"가 아닐 때만 지역별 학원 필터 적용
@@ -104,7 +201,8 @@ const CommunityPage = () => {
       let superAdminQuery = supabase
         .from("feed_posts")
         .select("*")
-        .is("academy_id", null);
+        .is("academy_id", null)
+        .in("type", ["notice", "admission", "seminar", "event"]);
 
       if (activeFilter !== 'all' && activeFilter !== 'bookmarked') {
         academyQuery = academyQuery.eq("type", activeFilter);
@@ -126,30 +224,49 @@ const CommunityPage = () => {
       // Add super admin posts with author info
       if (superAdminResult.data && superAdminResult.data.length > 0) {
         const authorIds = [...new Set(superAdminResult.data.filter(p => p.author_id).map(p => p.author_id))];
-        let authorsMap: Record<string, string> = {};
+        let authorsMap: Record<string, { user_name: string | null; role: string | null; is_super_admin: boolean | null }> = {};
         
         if (authorIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("id, user_name")
-            .in("id", authorIds);
-          
+          const [{ data: profiles }, { data: roles }] = await Promise.all([
+            supabase.from("profiles").select("id, user_name").in("id", authorIds),
+            supabase.from("user_roles").select("user_id, role, is_super_admin").in("user_id", authorIds),
+          ]);
+
+          const roleMap = (roles || []).reduce<Record<string, { role: string | null; is_super_admin: boolean | null }>>((acc, role) => {
+            acc[role.user_id] = { role: role.role, is_super_admin: role.is_super_admin };
+            return acc;
+          }, {});
+
           if (profiles) {
             authorsMap = profiles.reduce((acc, p) => {
-              acc[p.id] = p.user_name || '관리자';
+              acc[p.id] = {
+                user_name: p.user_name,
+                role: roleMap[p.id]?.role || null,
+                is_super_admin: roleMap[p.id]?.is_super_admin || false,
+              };
               return acc;
-            }, {} as Record<string, string>);
+            }, {} as Record<string, { user_name: string | null; role: string | null; is_super_admin: boolean | null }>);
           }
         }
 
-        const superAdminPosts = superAdminResult.data.map(post => ({
-          ...post,
-          academy: null,
-          author: { user_name: post.author_id ? authorsMap[post.author_id] || '관리자' : '관리자' }
-        })) as unknown as FeedPost[];
+        const superAdminPosts = superAdminResult.data
+          .filter((post) => {
+            const meta = post.author_id ? authorsMap[post.author_id] : null;
+            return !!meta?.is_super_admin;
+          })
+          .map(post => ({
+            ...post,
+            academy: null,
+            author: { user_name: post.author_id ? authorsMap[post.author_id]?.user_name || '관리자' : '관리자' },
+            author_role_label: '운영자',
+          })) as unknown as FeedPost[];
 
         allPosts = [...allPosts, ...superAdminPosts];
       }
+
+      allPosts = Array.from(
+        new Map(allPosts.map((post) => [post.id, post])).values()
+      );
 
       // Sort by created_at
       allPosts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -179,12 +296,20 @@ const CommunityPage = () => {
         }));
       }
 
+      if (posts.length > 0) {
+        const commentCounts = await fetchCommentCounts(posts.map((post) => post.id));
+        posts = posts.map((post) => ({
+          ...post,
+          comment_count: commentCounts[post.id] || 0,
+        }));
+      }
+
       return { data: posts, hasMore: posts.length === PAGE_SIZE };
     } catch (error) {
       console.error("Error fetching posts:", error);
       return { data: [], hasMore: false };
     }
-  }, [selectedRegion, activeFilter, bookmarkedAcademies, userId]);
+  }, [activeCommunityTab, selectedRegion, activeFilter, bookmarkedAcademies, userId]);
 
   const {
     items: posts,
@@ -201,6 +326,12 @@ const CommunityPage = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUserId(session.user.id);
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        setUserRole(roleData?.role || null);
 
         // Get bookmarked academies
         const { data: bookmarks } = await supabase
@@ -219,7 +350,9 @@ const CommunityPage = () => {
   // Reset and refetch when filter or region changes
   useEffect(() => {
     reset();
-  }, [selectedRegion, activeFilter, reset]);
+  }, [activeCommunityTab, selectedRegion, activeFilter, reset]);
+
+  const currentFilterOptions = activeCommunityTab === 'academy' ? academyFilterOptions : parentFilterOptions;
 
   const handleLikeToggle = async (postId: string, isLiked: boolean) => {
     if (!userId) {
@@ -269,16 +402,44 @@ const CommunityPage = () => {
           </div>
           <div className="flex items-center gap-2">
             <Newspaper className="w-5 h-5 text-primary" />
-            <span className="text-sm font-semibold">학원 소식</span>
+            <span className="text-sm font-semibold">{activeCommunityTab === 'academy' ? '학원 소식' : '학부모 커뮤니티'}</span>
           </div>
         </div>
       </header>
 
-      {/* Filter Chips */}
+      {/* Community Tabs + Filter Chips */}
       <div className="sticky top-14 bg-background/95 backdrop-blur-sm z-30 border-b border-border">
-        <div className="max-w-lg mx-auto px-4 py-3">
+        <div className="max-w-lg mx-auto px-4 py-3 space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => {
+                setActiveCommunityTab('academy');
+                setActiveFilter('all');
+              }}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                activeCommunityTab === 'academy'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              학원
+            </button>
+            <button
+              onClick={() => {
+                setActiveCommunityTab('parent');
+                setActiveFilter('all');
+              }}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                activeCommunityTab === 'parent'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              학부모
+            </button>
+          </div>
           <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-            {filterOptions.map((option) => {
+            {currentFilterOptions.map((option) => {
               const Icon = option.icon;
               const isActive = activeFilter === option.id;
               return (
@@ -327,21 +488,23 @@ const CommunityPage = () => {
               <Newspaper className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="font-semibold text-foreground mb-2">
-              아직 등록된 소식이 없어요
+              {activeCommunityTab === 'academy' ? '아직 등록된 소식이 없어요' : '아직 등록된 글이 없어요'}
             </h3>
             <p className="text-sm text-muted-foreground mb-6">
-              {activeFilter === 'bookmarked' 
-                ? "관심 학원을 찜해보세요" 
-                : "새로운 학원 소식을 기다려주세요"}
+              {activeCommunityTab === 'academy'
+                ? "새로운 학원 소식을 기다려주세요"
+                : "학부모 커뮤니티 글이 준비되면 여기에 표시됩니다"}
             </p>
-            <Button 
-              variant="outline" 
-              onClick={() => navigate(`${prefix}/explore`)}
-              className="gap-2"
-            >
-              <Search className="w-4 h-4" />
-              탐색하러 가기
-            </Button>
+            {activeCommunityTab === 'academy' && (
+              <Button 
+                variant="outline" 
+                onClick={() => navigate(`${prefix}/explore`)}
+                className="gap-2"
+              >
+                <Search className="w-4 h-4" />
+                탐색하러 가기
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -389,7 +552,32 @@ const CommunityPage = () => {
         }}
         onAcademyClick={(id) => navigate(`${prefix}/academy/${id}`)}
         onSeminarClick={(seminarId) => navigate(`${prefix}/seminar/${seminarId}`)}
+        onCommentCountChange={(postId, commentCount) => {
+          setPosts((prev) =>
+            prev.map((post) =>
+              post.id === postId ? { ...post, comment_count: commentCount } : post
+            )
+          );
+        }}
       />
+
+      {activeCommunityTab === 'parent' && userRole === 'parent' && (
+        <>
+          <button
+            onClick={() => setIsParentPostDialogOpen(true)}
+            className="fixed bottom-24 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center z-40 hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="w-6 h-6" />
+          </button>
+          <ParentCommunityPostDialog
+            open={isParentPostDialogOpen}
+            onOpenChange={setIsParentPostDialogOpen}
+            onSuccess={() => {
+              reset();
+            }}
+          />
+        </>
+      )}
 
       <BottomNavigation />
     </div>

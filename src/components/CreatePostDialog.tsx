@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import MultiImageUpload from "@/components/MultiImageUpload";
-import { Bell, Calendar, PartyPopper, Loader2, Link2 } from "lucide-react";
+import { Megaphone, Calendar, PartyPopper, Loader2, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Seminar {
@@ -46,7 +46,7 @@ interface CreatePostDialogProps {
 }
 
 const postTypes = [
-  { value: 'notice', label: '공지', icon: Bell, description: '학원 공지사항' },
+  { value: 'notice', label: '학원 소식', icon: Megaphone, description: '학원 공지사항' },
   { value: 'seminar', label: '설명회', icon: Calendar, description: '설명회 안내' },
   { value: 'event', label: '이벤트', icon: PartyPopper, description: '이벤트/프로모션' },
 ];

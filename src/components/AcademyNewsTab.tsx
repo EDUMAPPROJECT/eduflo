@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
-import { Bell, Calendar, PartyPopper, Newspaper, Heart, ChevronRight } from "lucide-react";
+import { Megaphone, Calendar, PartyPopper, Newspaper, Heart, ChevronRight, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FeedPostDetailSheet from "@/components/FeedPostDetailSheet";
+import { fetchCommentCounts } from "@/lib/postComments";
 
 interface FeedPost {
   id: string;
@@ -27,6 +28,7 @@ interface FeedPost {
     profile_image: string | null;
   };
   is_liked?: boolean;
+  comment_count?: number;
 }
 
 interface AcademyNewsTabProps {
@@ -36,7 +38,7 @@ interface AcademyNewsTabProps {
 }
 
 const typeConfig = {
-  notice: { label: '공지', icon: Bell, color: 'bg-blue-500 text-white' },
+  notice: { label: '학원 소식', icon: Megaphone, color: 'bg-blue-500 text-white' },
   seminar: { label: '설명회', icon: Calendar, color: 'bg-orange-500 text-white' },
   event: { label: '이벤트', icon: PartyPopper, color: 'bg-purple-500 text-white' },
 };
@@ -94,6 +96,14 @@ const AcademyNewsTab = ({ academyId, academyName, academyProfileImage }: Academy
           postsWithAcademy = postsWithAcademy.map(post => ({
             ...post,
             is_liked: likedPostIds.has(post.id)
+          }));
+        }
+
+        if (postsWithAcademy.length > 0) {
+          const commentCounts = await fetchCommentCounts(postsWithAcademy.map((post) => post.id));
+          postsWithAcademy = postsWithAcademy.map((post) => ({
+            ...post,
+            comment_count: commentCounts[post.id] || 0,
           }));
         }
 
@@ -238,9 +248,15 @@ const AcademyNewsTab = ({ academyId, academyName, academyProfileImage }: Academy
 
                 {/* Actions */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Heart className={cn("w-4 h-4", post.is_liked && "fill-destructive text-destructive")} />
-                    <span>{post.like_count}</span>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Heart className={cn("w-4 h-4", post.is_liked && "fill-destructive text-destructive")} />
+                      <span>{post.like_count}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <MessageCircle className="w-4 h-4" />
+                      <span>{post.comment_count || 0}</span>
+                    </div>
                   </div>
                   
                   {/* Seminar CTA - Direct to seminar detail page */}
@@ -273,6 +289,13 @@ const AcademyNewsTab = ({ academyId, academyName, academyProfileImage }: Academy
         onLikeToggle={handleLikeToggle}
         onAcademyClick={() => {}} // Already on academy page
         onSeminarClick={(seminarId) => navigate(`/seminar/${seminarId}`)}
+        onCommentCountChange={(postId, commentCount) => {
+          setPosts((prev) =>
+            prev.map((post) =>
+              post.id === postId ? { ...post, comment_count: commentCount } : post
+            )
+          );
+        }}
       />
     </>
   );

@@ -838,6 +838,38 @@ export type Database = {
           },
         ]
       }
+      post_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           academy_id: string
@@ -908,6 +940,7 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          image_url: string | null
           learning_style: string | null
           phone: string | null
           profile_tags: string[] | null
@@ -918,6 +951,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id: string
+          image_url?: string | null
           learning_style?: string | null
           phone?: string | null
           profile_tags?: string[] | null
@@ -928,6 +962,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          image_url?: string | null
           learning_style?: string | null
           phone?: string | null
           profile_tags?: string[] | null

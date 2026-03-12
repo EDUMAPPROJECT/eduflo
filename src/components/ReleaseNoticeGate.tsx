@@ -3,8 +3,12 @@ import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import FormalReleaseBanner from "./FormalReleaseBanner";
 
-/** 커뮤니티 관련 경로에서만 배너 표시 */
-function isCommunityPath(pathname: string): boolean {
+/** 학원 관리자/학부모 커뮤니티는 허용하고, 그 외 커뮤니티 경로에서만 배너 표시 */
+function shouldBlockCommunityPath(pathname: string): boolean {
+  if (pathname === "/admin/community" || pathname === "/p/community") {
+    return false;
+  }
+
   return pathname.includes("/community");
 }
 
@@ -48,7 +52,7 @@ const ReleaseNoticeGate = ({ children }: ReleaseNoticeGateProps) => {
   const showBanner =
     hasSession === true &&
     !isSuperAdmin &&
-    isCommunityPath(pathname);
+    shouldBlockCommunityPath(pathname);
 
   return (
     <>
