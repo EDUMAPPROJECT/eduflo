@@ -255,6 +255,11 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
         .update({ updated_at: new Date().toISOString() })
         .eq('id', chatRoomId);
 
+      // 쏘다 알림톡 발송 (fire-and-forget)
+      supabase.functions.invoke('notify-chat-message', {
+        body: { chatRoomId, messageContent: validatedContent },
+      }).catch(() => {});
+
       return { success: true };
     } catch (error) {
       logError('ChatMessages Send', error);
