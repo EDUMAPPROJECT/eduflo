@@ -400,61 +400,60 @@ const CommunityPage = () => {
             <Logo size="sm" showText={false} />
             <GlobalRegionSelector />
           </div>
-          <div className="flex items-center gap-2">
-            <Newspaper className="w-5 h-5 text-primary" />
-            <span className="text-sm font-semibold">{activeCommunityTab === 'academy' ? '학원 소식' : '학부모 커뮤니티'}</span>
-          </div>
         </div>
       </header>
 
       {/* Community Tabs + Filter Chips */}
       <div className="sticky top-14 bg-background/95 backdrop-blur-sm z-30 border-b border-border">
-        <div className="max-w-lg mx-auto px-4 py-3 space-y-3">
-          <div className="grid grid-cols-2 gap-2">
+        <div className="max-w-lg mx-auto px-4 pt-3 pb-0">
+          {/* Top tabs: 학원 / 학부모 */}
+          <div className="flex border-b border-border">
             <button
               onClick={() => {
-                setActiveCommunityTab('academy');
-                setActiveFilter('all');
+                setActiveCommunityTab("academy");
+                setActiveFilter("all");
               }}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                activeCommunityTab === 'academy'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-muted-foreground hover:text-foreground'
+              className={`flex-1 pb-2 text-center text-sm font-medium transition-colors border-b-2 ${
+                activeCommunityTab === "academy"
+                  ? "text-primary border-primary"
+                  : "text-muted-foreground border-transparent"
               }`}
             >
               학원
             </button>
             <button
               onClick={() => {
-                setActiveCommunityTab('parent');
-                setActiveFilter('all');
+                setActiveCommunityTab("parent");
+                setActiveFilter("all");
               }}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                activeCommunityTab === 'parent'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-muted-foreground hover:text-foreground'
+              className={`flex-1 pb-2 text-center text-sm font-medium transition-colors border-b-2 ${
+                activeCommunityTab === "parent"
+                  ? "text-primary border-primary"
+                  : "text-muted-foreground border-transparent"
               }`}
             >
               학부모
             </button>
           </div>
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+
+          {/* Category chips (text only) */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide mt-3 mb-3">
             {currentFilterOptions.map((option) => {
-              const Icon = option.icon;
               const isActive = activeFilter === option.id;
               return (
                 <button
                   key={option.id}
                   onClick={() => setActiveFilter(option.id)}
                   className={`
-                    flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap
+                    px-3 py-1.5 rounded-full text-sm whitespace-nowrap
                     transition-all border shrink-0
-                    ${isActive 
-                      ? 'bg-primary text-primary-foreground border-primary' 
-                      : 'bg-background text-muted-foreground border-border hover:border-primary'}
+                    ${
+                      isActive
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-muted-foreground border-border hover:border-primary"
+                    }
                   `}
                 >
-                  {Icon && <Icon className="w-3.5 h-3.5" />}
                   {option.label}
                 </button>
               );

@@ -4,7 +4,7 @@ import { Heart, Share2, ChevronRight, Bell, Calendar, PartyPopper, GraduationCap
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import ImageViewer from "@/components/ImageViewer";
@@ -49,6 +49,23 @@ const typeConfig = {
   'academy-admission': { label: '학원·입시정보', icon: GraduationCap, color: 'bg-green-600 text-white' },
   'life-parenting': { label: '생활·육아', icon: Bell, color: 'bg-amber-500 text-white' },
   'free-talk': { label: '자유수다', icon: MessageCircle, color: 'bg-slate-600 text-white' },
+};
+
+const formatPostTimestamp = (createdAt: string) => {
+  const createdAtDate = new Date(createdAt);
+  const diffMs = Date.now() - createdAtDate.getTime();
+  const diffMinutes = Math.max(1, Math.floor(diffMs / (1000 * 60)));
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes}분 전`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours}시간 전`;
+  }
+
+  return format(createdAtDate, "M월 d일 HH:mm", { locale: ko });
 };
 
 const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedPostCardProps) => {
@@ -138,7 +155,7 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedP
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ko })}
+            {formatPostTimestamp(post.created_at)}
           </p>
         </div>
       </div>
@@ -149,8 +166,7 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedP
         onClick={onCardClick}
       >
         <div className="flex items-center gap-2 mb-2">
-          <Badge className={cn("text-xs px-2 py-0.5 gap-1", config.color)}>
-            <TypeIcon className="w-3 h-3" />
+          <Badge className={cn("text-xs px-2 py-0.5", config.color)}>
             {config.label}
           </Badge>
           {/* Seminar direct link button */}
@@ -257,16 +273,6 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedP
             <Share2 className="w-5 h-5" />
           </button>
         </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onCardClick}
-          className="gap-1"
-        >
-          자세히 보기
-          <ChevronRight className="w-4 h-4" />
-        </Button>
       </div>
     </Card>
   );

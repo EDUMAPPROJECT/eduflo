@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Heart, Share2, ChevronRight, ChevronLeft, Bell, Calendar, PartyPopper, X, Trash2, GraduationCap, Megaphone, MessageCircle, Send } from "lucide-react";
+import { Heart, Share2, ChevronRight, ChevronLeft, Bell, Calendar, PartyPopper, X, MoreVertical, GraduationCap, Megaphone, MessageCircle, Send } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -354,15 +354,17 @@ const FeedPostDetailSheet = ({
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-foreground">{displayName}</p>
-                      {!isAcademyPost && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600">{authorLabel}</span>
-                      )}
-                      {isAcademyPost && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">학원</span>
-                      )}
+                      <Badge
+                        variant="secondary"
+                        className={`text-[10px] px-1.5 py-0 shrink-0 ${
+                          isAcademyPost ? 'bg-primary/10 text-primary' : 'bg-amber-500/20 text-amber-600'
+                        }`}
+                      >
+                        {authorLabel}
+                      </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(post.created_at), "yyyy년 M월 d일 HH:mm", { locale: ko })}
+                      {formatCommentTimestamp(post.created_at)}
                     </p>
                   </div>
                 </div>
@@ -372,9 +374,9 @@ const FeedPostDetailSheet = ({
                       variant="ghost" 
                       size="icon" 
                       onClick={() => setDeleteDialogOpen(true)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="text-muted-foreground hover:text-foreground hover:bg-muted"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <MoreVertical className="w-5 h-5" />
                     </Button>
                   )}
                   <Button variant="ghost" size="icon" onClick={onClose}>
@@ -390,8 +392,7 @@ const FeedPostDetailSheet = ({
             <div className="p-4">
               {/* Type Badge & Title */}
               <div className="flex items-center gap-2 mb-3">
-                <Badge className={cn("text-xs px-2 py-0.5 gap-1", config.color)}>
-                  <TypeIcon className="w-3 h-3" />
+                <Badge className={cn("text-xs px-2 py-0.5", config.color)}>
                   {config.label}
                 </Badge>
               </div>
@@ -485,10 +486,12 @@ const FeedPostDetailSheet = ({
               </div>
 
               {/* Comments */}
-              <div ref={commentsSectionRef} className="mt-6 border-t border-border pt-4">
+              <div
+                ref={commentsSectionRef}
+                className="mt-6 -mx-4 border-t-8 border-slate-100 pt-4 px-4"
+              >
                 <div className="flex items-center justify-between gap-3 mb-4">
                   <div className="flex items-center gap-2">
-                    <MessageCircle className="w-4 h-4 text-muted-foreground" />
                     <h4 className="text-sm font-semibold text-foreground">
                       댓글 {comments.length}
                     </h4>
@@ -515,39 +518,9 @@ const FeedPostDetailSheet = ({
                   </button>
                 </div>
 
-                {canComment ? (
-                  <div className="space-y-3 mb-5">
-                    <Textarea
-                      ref={commentInputRef}
-                      value={commentText}
-                      onChange={(e) => setCommentText(e.target.value)}
-                      placeholder="댓글을 입력하세요"
-                      rows={3}
-                      maxLength={500}
-                    />
-                    <div className="flex items-center justify-end gap-3">
-                      <Button
-                        size="sm"
-                        className="gap-1"
-                        onClick={handleCommentSubmit}
-                        disabled={submittingComment || !commentText.trim()}
-                      >
-                        <Send className="w-4 h-4" />
-                        {submittingComment ? "등록 중..." : "댓글 등록"}
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mb-5 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
-                    댓글 작성은 학부모/학생 계정에서 가능합니다.
-                  </div>
-                )}
-
                 {commentsLoading ? (
                   <p className="text-sm text-muted-foreground">댓글을 불러오는 중...</p>
-                ) : comments.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">첫 댓글을 남겨보세요.</p>
-                ) : (
+                ) : comments.length === 0 ? null : (
                   <div className="space-y-3">
                     {comments.map((comment) => {
                       const commenterName = comment.profile?.user_name?.trim() || "익명";
@@ -583,6 +556,38 @@ const FeedPostDetailSheet = ({
                         </div>
                       );
                     })}
+                  </div>
+                )}
+
+                {canComment ? (
+                  <div className="mt-4">
+                    <div className="flex items-center">
+                      <div className="flex-1">
+                        <div className="flex items-center h-12 rounded-full bg-muted border border-slate-300 pl-4 pr-3">
+                          <Textarea
+                            ref={commentInputRef}
+                            value={commentText}
+                            onChange={(e) => setCommentText(e.target.value)}
+                            placeholder="댓글을 입력하세요"
+                            rows={1}
+                            maxLength={500}
+                            className="flex-1 h-12 min-h-0 border-0 bg-transparent px-0 py-3.5 text-sm leading-5 resize-none focus-visible:ring-0 focus-visible:outline-none focus-visible:ring-offset-0"
+                          />
+                          <Button
+                            size="icon"
+                            className="ml-2 rounded-full w-9 h-9"
+                            onClick={handleCommentSubmit}
+                            disabled={submittingComment || !commentText.trim()}
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+                    댓글 작성은 학부모/학생 계정에서 가능합니다.
                   </div>
                 )}
               </div>
@@ -654,7 +659,7 @@ const FeedPostDetailSheet = ({
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle>게시글 삭제</AlertDialogTitle>
             <AlertDialogDescription>
