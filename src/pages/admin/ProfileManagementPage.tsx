@@ -14,6 +14,7 @@ import CurriculumEditor from "@/components/CurriculumEditor";
 
 import ClassScheduleInput from "@/components/ClassScheduleInput";
 import AddressSearch from "@/components/AddressSearch";
+import { loadNaverMapScript, geocodeAddress } from "@/utils/naverMap";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -382,19 +383,47 @@ const ProfileManagementPage = () => {
 
     setSaving(true);
     try {
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      const trimmedAddress = (address || "").trim();
+      if (trimmedAddress) {
+        const clientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
+        if (clientId) {
+          try {
+            await loadNaverMapScript(clientId);
+            const coords = await geocodeAddress(trimmedAddress);
+            if (coords) {
+              latitude = coords.lat;
+              longitude = coords.lng;
+            }
+          } catch {
+            // 지오코딩 실패 시 주소만 저장
+          }
+        }
+      }
+
+      const updatePayload: Record<string, unknown> = {
+        name: validatedData.name,
+        address: trimmedAddress || null,
+        description: validatedData.description,
+        profile_image: validatedData.profile_image,
+        banner_image: bannerImage || null,
+        tags: validatedData.tags,
+        target_regions: targetRegions,
+        target_tags: targetTags,
+        updated_at: new Date().toISOString(),
+      };
+      if (latitude != null && longitude != null) {
+        updatePayload.latitude = latitude;
+        updatePayload.longitude = longitude;
+      } else {
+        updatePayload.latitude = null;
+        updatePayload.longitude = null;
+      }
+
       const { error } = await supabase
         .from("academies")
-        .update({
-          name: validatedData.name,
-          address: address || null,
-          description: validatedData.description,
-          profile_image: validatedData.profile_image,
-          banner_image: bannerImage || null,
-          tags: validatedData.tags,
-          target_regions: targetRegions,
-          target_tags: targetTags,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq("id", academy.id);
 
       if (error) throw error;

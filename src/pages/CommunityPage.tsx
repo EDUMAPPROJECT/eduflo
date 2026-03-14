@@ -9,7 +9,6 @@ import BottomNavigation from "@/components/BottomNavigation";
 import Logo from "@/components/Logo";
 import GlobalRegionSelector from "@/components/GlobalRegionSelector";
 import FeedPostCard from "@/components/FeedPostCard";
-import FeedPostDetailSheet from "@/components/FeedPostDetailSheet";
 import ParentCommunityPostDialog from "@/components/ParentCommunityPostDialog";
 import { fetchCommentCounts } from "@/lib/postComments";
 import { Button } from "@/components/ui/button";
@@ -81,7 +80,6 @@ const CommunityPage = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [bookmarkedAcademies, setBookmarkedAcademies] = useState<string[]>([]);
-  const [selectedPost, setSelectedPost] = useState<FeedPost | null>(null);
   const [isParentPostDialogOpen, setIsParentPostDialogOpen] = useState(false);
 
   // Fetch function for infinite scroll
@@ -404,7 +402,7 @@ const CommunityPage = () => {
       </header>
 
       {/* Community Tabs + Filter Chips */}
-      <div className="sticky top-14 bg-background/95 backdrop-blur-sm z-30 border-b border-border">
+      <div className="sticky top-14 bg-white z-30 border-b border-border">
         <div className="max-w-lg mx-auto px-4 pt-3 pb-0">
           {/* Top tabs: 학원 / 학부모 */}
           <div className="flex border-b border-border">
@@ -450,7 +448,7 @@ const CommunityPage = () => {
                     ${
                       isActive
                         ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background text-muted-foreground border-border hover:border-primary"
+                        : "bg-background text-muted-foreground border-transparent"
                     }
                   `}
                 >
@@ -513,7 +511,7 @@ const CommunityPage = () => {
                 post={post}
                 onLikeToggle={handleLikeToggle}
                 onAcademyClick={(id) => navigate(`${prefix}/academy/${id}`)}
-                onCardClick={() => setSelectedPost(post)}
+                onCardClick={() => navigate(`${prefix}/community/post/${post.id}`, { state: { post } })}
               />
             ))}
             
@@ -532,33 +530,6 @@ const CommunityPage = () => {
           </div>
         )}
       </main>
-
-      {/* Post Detail Sheet */}
-      <FeedPostDetailSheet
-        post={selectedPost}
-        open={!!selectedPost}
-        onClose={() => setSelectedPost(null)}
-        onLikeToggle={(postId, isLiked) => {
-          handleLikeToggle(postId, isLiked);
-          // Update selected post state as well
-          if (selectedPost && selectedPost.id === postId) {
-            setSelectedPost(prev => prev ? {
-              ...prev,
-              is_liked: !isLiked,
-              like_count: prev.like_count + (isLiked ? -1 : 1)
-            } : null);
-          }
-        }}
-        onAcademyClick={(id) => navigate(`${prefix}/academy/${id}`)}
-        onSeminarClick={(seminarId) => navigate(`${prefix}/seminar/${seminarId}`)}
-        onCommentCountChange={(postId, commentCount) => {
-          setPosts((prev) =>
-            prev.map((post) =>
-              post.id === postId ? { ...post, comment_count: commentCount } : post
-            )
-          );
-        }}
-      />
 
       {activeCommunityTab === 'parent' && userRole === 'parent' && (
         <>

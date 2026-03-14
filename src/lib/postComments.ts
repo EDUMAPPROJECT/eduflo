@@ -12,6 +12,7 @@ export interface PostCommentWithProfile extends PostComment {
   profile: {
     image_url: string | null;
     user_name: string | null;
+    role_label?: string | null;
   } | null;
 }
 
@@ -48,22 +49,25 @@ export async function fetchPostComments(postId: string): Promise<PostCommentWith
 
   const userIds = [...new Set((comments || []).map((comment) => comment.user_id))];
   let profileMap: Record<string, { user_name: string | null; image_url: string | null }> = {};
+  let roleMap: Record<string, string | null> = {};
 
   if (userIds.length > 0) {
-    const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id, user_name, image_url")
-      .in("id", userIds);
+    const [profilesRes, rolesRes] = await Promise.all([
+      supabase.from("profiles").select("id, user_name, image_url").in("id", userIds),
+      supabase.from("user_roles").select("user_id, role").in("user_id", userIds),
+    ]);
 
-    if (profilesError) {
-      throw profilesError;
-    }
+    if (profilesRes.error) throw profilesRes.error;
+    if (rolesRes.error) throw rolesRes.error;
 
-    profileMap = (profiles || []).reduce<Record<string, { user_name: string | null; image_url: string | null }>>((acc, profile) => {
-      acc[profile.id] = {
-        user_name: profile.user_name,
-        image_url: profile.image_url,
-      };
+    profileMap = (profilesRes.data || []).reduce<Record<string, { user_name: string | null; image_url: string | null }>>((acc, profile) => {
+      acc[profile.id] = { user_name: profile.user_name, image_url: profile.image_url };
+      return acc;
+    }, {});
+
+    roleMap = (rolesRes.data || []).reduce<Record<string, string | null>>((acc, row) => {
+      const label = row.role === "parent" ? "학부모" : row.role === "student" ? "학생" : row.role === "admin" ? "학원" : null;
+      acc[row.user_id] = label ?? acc[row.user_id] ?? null;
       return acc;
     }, {});
   }
@@ -73,6 +77,7 @@ export async function fetchPostComments(postId: string): Promise<PostCommentWith
     profile: {
       user_name: profileMap[comment.user_id]?.user_name ?? null,
       image_url: profileMap[comment.user_id]?.image_url ?? null,
+      role_label: roleMap[comment.user_id] ?? null,
     },
   }));
 }

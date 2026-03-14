@@ -3,11 +3,18 @@ import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import FormalReleaseBanner from "./FormalReleaseBanner";
 
-/** 학원 관리자/학부모 커뮤니티는 허용하고, 그 외 커뮤니티 경로에서만 배너 표시 */
+/** 학원 관리자/학부모 커뮤니티·게시물 상세는 허용하고, 그 외 커뮤니티 경로에서만 배너 표시 */
 function shouldBlockCommunityPath(pathname: string): boolean {
-  // if (pathname === "/admin/community" || pathname === "/p/community") {
-  //   return false;
-  // }
+  if (pathname === "/admin/community" || pathname === "/p/community") {
+    return false;
+  }
+  if (
+    pathname.startsWith("/p/community/post/") ||
+    pathname.startsWith("/s/community/post/") ||
+    pathname.startsWith("/admin/community/post/")
+  ) {
+    return false;
+  }
 
   return pathname.includes("/community");
 }

@@ -7,7 +7,6 @@ import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import Logo from "@/components/Logo";
 import GlobalRegionSelector from "@/components/GlobalRegionSelector";
 import FeedPostCard from "@/components/FeedPostCard";
-import FeedPostDetailSheet from "@/components/FeedPostDetailSheet";
 import CreatePostDialog from "@/components/CreatePostDialog";
 import { fetchCommentCounts } from "@/lib/postComments";
 import { Button } from "@/components/ui/button";
@@ -59,7 +58,6 @@ const AdminCommunityPage = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [academyId, setAcademyId] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [selectedPost, setSelectedPost] = useState<FeedPost | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -268,28 +266,12 @@ const AdminCommunityPage = () => {
                 post={post}
                 onLikeToggle={handleLikeToggle}
                 onAcademyClick={(id) => navigate(`/p/academy/${id}`)}
-                onCardClick={() => setSelectedPost(post)}
+                onCardClick={() => navigate(`/admin/community/post/${post.id}`, { state: { post } })}
               />
             ))}
           </div>
         )}
       </main>
-
-      {/* Post Detail Sheet */}
-      <FeedPostDetailSheet
-        post={selectedPost}
-        open={!!selectedPost}
-        onClose={() => setSelectedPost(null)}
-        onLikeToggle={handleLikeToggle}
-        onAcademyClick={(id) => navigate(`/p/academy/${id}`)}
-        onCommentCountChange={(postId, commentCount) => {
-          setPosts((prev) =>
-            prev.map((post) =>
-              post.id === postId ? { ...post, comment_count: commentCount } : post
-            )
-          );
-        }}
-      />
 
       {/* FAB */}
       {academyId && (

@@ -13,6 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import Logo from "@/components/Logo";
 import ImageUpload from "@/components/ImageUpload";
 import AddressSearch from "@/components/AddressSearch";
+import { loadNaverMapScript, geocodeAddress } from "@/utils/naverMap";
 import { ArrowLeft, Building2, MapPin, BookOpen, GraduationCap, FileCheck, ShieldAlert } from "lucide-react";
 
 const SUBJECTS = ["수학", "영어", "국어", "과학", "사회", "음악", "미술", "체육", "코딩", "기타"];
@@ -105,18 +106,38 @@ const AcademySetupPage = () => {
         .map(id => TARGET_GRADES.find(g => g.id === id)?.label)
         .join("/");
 
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      const trimmedAddress = address.trim();
+      if (trimmedAddress) {
+        const clientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
+        if (clientId) {
+          try {
+            await loadNaverMapScript(clientId);
+            const coords = await geocodeAddress(trimmedAddress);
+            if (coords) {
+              latitude = coords.lat;
+              longitude = coords.lng;
+            }
+          } catch {
+            // 지오코딩 실패 시 주소만 저장
+          }
+        }
+      }
+
       // Create academy
       const { data: academyData, error: academyError } = await supabase
         .from("academies")
         .insert({
           name: name.trim(),
-          address: address,
+          address: trimmedAddress,
           subject,
           target_grade: targetGradeStr,
           profile_image: profileImage || null,
           description: description.trim() || null,
           owner_id: user.id,
           tags: [],
+          ...(latitude != null && longitude != null ? { latitude, longitude } : {}),
         })
         .select('id')
         .single();
