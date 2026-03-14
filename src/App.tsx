@@ -11,6 +11,7 @@ import AuthPage from "./pages/AuthPage";
 import HomePage from "./pages/HomePage";
 import ExplorePage from "./pages/ExplorePage";
 import CommunityPage from "./pages/CommunityPage";
+import PostDetailPage from "./pages/PostDetailPage";
 import MyPage from "./pages/MyPage";
 import MyClassesPage from "./pages/MyClassesPage";
 import MyBookmarksPage from "./pages/MyBookmarksPage";
@@ -116,6 +117,7 @@ const App = () => {
               <Route path="/p/home" element={<HomePage />} />
               <Route path="/p/explore" element={<ExplorePage />} />
               <Route path="/p/community" element={<CommunityPage />} />
+              <Route path="/p/community/post/:postId" element={<PostDetailPage />} />
               <Route path="/p/my" element={<MyPage />} />
               <Route path="/p/my/profile" element={<MyProfilePage />} />
               <Route path="/p/my/classes" element={<MyClassesPage />} />
@@ -143,6 +145,7 @@ const App = () => {
               <Route path="/s/home" element={<StudentHomePage />} />
               <Route path="/s/explore" element={<ExplorePage />} />
               <Route path="/s/community" element={<CommunityPage />} />
+              <Route path="/s/community/post/:postId" element={<PostDetailPage />} />
               <Route path="/s/my" element={<StudentMyPage />} />
               <Route path="/s/my/profile" element={<MyProfilePage />} />
               <Route path="/s/my/classes" element={<MyClassesPage />} />
@@ -185,6 +188,7 @@ const App = () => {
               <Route path="/admin/chats" element={<ProtectedAdminRoute><AdminChatListPage /></ProtectedAdminRoute>} />
               <Route path="/admin/chats/:id" element={<ProtectedAdminRoute><AdminChatRoomPage /></ProtectedAdminRoute>} />
               <Route path="/admin/community" element={<ProtectedAdminRoute><AdminCommunityPage /></ProtectedAdminRoute>} />
+              <Route path="/admin/community/post/:postId" element={<ProtectedAdminRoute><PostDetailPage /></ProtectedAdminRoute>} />
               <Route path="/admin/verification" element={<ProtectedAdminRoute><BusinessVerificationPage /></ProtectedAdminRoute>} />
               <Route path="/admin/verification-review" element={<ProtectedAdminRoute><VerificationReviewPage /></ProtectedAdminRoute>} />
               <Route path="/admin/super" element={<ProtectedAdminRoute><SuperAdminPage /></ProtectedAdminRoute>} />

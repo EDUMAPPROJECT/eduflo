@@ -29,7 +29,7 @@ export const loadNaverMapScript = (clientId: string): Promise<void> => {
     }
 
     const script = document.createElement("script");
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}`;
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}&submodules=geocoder`;
     script.async = true;
     script.defer = true;
     script.onload = () => {
@@ -59,20 +59,23 @@ export const geocodeAddress = async (
     return new Promise((resolve) => {
       window.naver.maps.Service.geocode(
         {
-          query: address,
+          address,
         },
         (status: any, response: any) => {
-          if (status === window.naver.maps.Service.Status.ERROR) {
+          if (status !== window.naver.maps.Service.Status.OK) {
             resolve(null);
             return;
           }
 
           if (response.v2?.addresses?.length > 0) {
             const addr = response.v2.addresses[0];
-            resolve({
-              lat: parseFloat(addr.y),
-              lng: parseFloat(addr.x),
-            });
+            const lat = parseFloat(addr.y);
+            const lng = parseFloat(addr.x);
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+              resolve({ lat, lng });
+            } else {
+              resolve(null);
+            }
           } else {
             resolve(null);
           }

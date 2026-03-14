@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRoutePrefix } from "@/hooks/useRoutePrefix";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,6 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Megaphone, Calendar, PartyPopper, Newspaper, Heart, ChevronRight, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import FeedPostDetailSheet from "@/components/FeedPostDetailSheet";
 import { fetchCommentCounts } from "@/lib/postComments";
 
 interface FeedPost {
@@ -45,9 +45,9 @@ const typeConfig = {
 
 const AcademyNewsTab = ({ academyId, academyName, academyProfileImage }: AcademyNewsTabProps) => {
   const navigate = useNavigate();
+  const prefix = useRoutePrefix();
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPost, setSelectedPost] = useState<FeedPost | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -129,7 +129,7 @@ const AcademyNewsTab = ({ academyId, academyName, academyProfileImage }: Academy
   };
 
   const handleSeminarClick = (seminarId: string) => {
-    navigate(`/seminar/${seminarId}`);
+    navigate(`${prefix}/seminar/${seminarId}`);
   };
 
   const handleLikeToggle = async (postId: string, isLiked: boolean) => {
@@ -159,14 +159,6 @@ const AcademyNewsTab = ({ academyId, academyName, academyProfileImage }: Academy
         return post;
       }));
 
-      // Update selected post as well
-      if (selectedPost && selectedPost.id === postId) {
-        setSelectedPost(prev => prev ? {
-          ...prev,
-          is_liked: !isLiked,
-          like_count: prev.like_count + (isLiked ? -1 : 1)
-        } : null);
-      }
     } catch (error) {
       console.error("Error toggling like:", error);
     }
@@ -211,7 +203,7 @@ const AcademyNewsTab = ({ academyId, academyName, academyProfileImage }: Academy
             <Card 
               key={post.id} 
               className="shadow-card overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => setSelectedPost(post)}
+              onClick={() => navigate(`${prefix}/community/post/${post.id}`, { state: { post } })}
             >
               <CardContent className="p-4">
                 {/* Type Badge & Title */}
@@ -280,23 +272,6 @@ const AcademyNewsTab = ({ academyId, academyName, academyProfileImage }: Academy
           );
         })}
       </div>
-
-      {/* Post Detail Sheet */}
-      <FeedPostDetailSheet
-        post={selectedPost}
-        open={!!selectedPost}
-        onClose={() => setSelectedPost(null)}
-        onLikeToggle={handleLikeToggle}
-        onAcademyClick={() => {}} // Already on academy page
-        onSeminarClick={(seminarId) => navigate(`/seminar/${seminarId}`)}
-        onCommentCountChange={(postId, commentCount) => {
-          setPosts((prev) =>
-            prev.map((post) =>
-              post.id === postId ? { ...post, comment_count: commentCount } : post
-            )
-          );
-        }}
-      />
     </>
   );
 };

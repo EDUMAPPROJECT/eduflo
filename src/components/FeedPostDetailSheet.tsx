@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Heart, Share2, ChevronRight, ChevronLeft, Bell, Calendar, PartyPopper, X, Trash2, GraduationCap, Megaphone, MessageCircle, Send } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Heart, Share2, ChevronRight, ChevronLeft, Bell, Calendar, PartyPopper, MoreVertical, GraduationCap, Megaphone, MessageCircle, Send, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,13 +48,14 @@ interface FeedPost {
 
 interface FeedPostDetailSheetProps {
   post: FeedPost | null;
-  open: boolean;
-  onClose: () => void;
+  open?: boolean;
+  onClose?: () => void;
   onLikeToggle: (postId: string, isLiked: boolean) => void;
   onAcademyClick: (academyId: string) => void;
   onSeminarClick?: (seminarId: string) => void;
   onDelete?: (postId: string) => void;
   onCommentCountChange?: (postId: string, commentCount: number) => void;
+  onBack: () => void;
 }
 
 const typeConfig = {
@@ -94,6 +94,7 @@ const FeedPostDetailSheet = ({
   onSeminarClick,
   onDelete,
   onCommentCountChange,
+  onBack,
 }: FeedPostDetailSheetProps) => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
@@ -104,6 +105,7 @@ const FeedPostDetailSheet = ({
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserName, setCurrentUserName] = useState("익명");
   const [currentUserImageUrl, setCurrentUserImageUrl] = useState<string | null>(null);
+  const [currentUserRoleLabel, setCurrentUserRoleLabel] = useState<string | null>(null);
   const [comments, setComments] = useState<PostCommentWithProfile[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentText, setCommentText] = useState("");
@@ -115,13 +117,14 @@ const FeedPostDetailSheet = ({
 
   useEffect(() => {
     const loadViewerState = async () => {
-      if (!post || !open) return;
+      if (!post) return;
 
       setIsOwner(false);
       setCanComment(false);
       setCurrentUserId(null);
       setCurrentUserName("익명");
       setCurrentUserImageUrl(null);
+      setCurrentUserRoleLabel(null);
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
@@ -142,6 +145,8 @@ const FeedPostDetailSheet = ({
       ]);
 
       setCanComment(roleData?.role === "parent" || roleData?.role === "student");
+      const roleLabel = roleData?.role === "parent" ? "학부모" : roleData?.role === "student" ? "학생" : roleData?.role === "admin" ? "학원" : null;
+      setCurrentUserRoleLabel(roleLabel);
       setCurrentUserName(profileData?.user_name?.trim() || "익명");
       setCurrentUserImageUrl(profileData?.image_url || null);
 
@@ -164,11 +169,11 @@ const FeedPostDetailSheet = ({
     };
 
     loadViewerState();
-  }, [open, post?.id, post?.author_id, post?.academy_id]);
+  }, [post?.id, post?.author_id, post?.academy_id]);
 
   useEffect(() => {
     const loadComments = async () => {
-      if (!post || !open) return;
+      if (!post) return;
 
       setCommentsLoading(true);
       try {
@@ -184,7 +189,7 @@ const FeedPostDetailSheet = ({
     };
 
     loadComments();
-  }, [open, post?.id]);
+  }, [post?.id]);
 
   if (!post) return null;
 
@@ -305,6 +310,7 @@ const FeedPostDetailSheet = ({
         profile: {
           image_url: currentUserImageUrl,
           user_name: currentUserName,
+          role_label: currentUserRoleLabel,
         },
       };
 
@@ -324,91 +330,69 @@ const FeedPostDetailSheet = ({
   };
 
   return (
-    <>
-      <Sheet open={open} onOpenChange={onClose}>
-        <SheetContent
-          side="bottom"
-          className="left-0 right-0 mx-auto w-full max-w-lg h-[85vh] rounded-t-2xl p-0 overflow-hidden"
-        >
-          {/* Header */}
-          <div className="sticky top-0 bg-card border-b border-border z-10">
-            <SheetHeader className="p-4">
-              <div className="flex items-center justify-between">
-                <div 
-                  className={`flex items-center gap-3 ${isAcademyPost ? 'cursor-pointer' : ''}`}
-                  onClick={handleAcademyClick}
-                >
-                  <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 ${isAcademyPost ? 'bg-secondary' : 'bg-primary/20'}`}>
-                    {profileImage ? (
-                      <img
-                        src={profileImage}
-                        alt={displayName}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-primary font-bold">
-                        {displayInitial}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-foreground">{displayName}</p>
-                      {!isAcademyPost && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600">{authorLabel}</span>
-                      )}
-                      {isAcademyPost && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">학원</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(post.created_at), "yyyy년 M월 d일 HH:mm", { locale: ko })}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  {isOwner && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => setDeleteDialogOpen(true)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="icon" onClick={onClose}>
-                    <X className="w-5 h-5" />
-                  </Button>
-                </div>
-              </div>
-            </SheetHeader>
+      <div className="min-h-screen bg-white">
+        <div className="fixed top-0 left-0 right-0 z-20 bg-card border-b">
+          <div className="max-w-md mx-auto px-4 h-14 flex items-center justify-between">
+            <Button variant="ghost" size="icon" onClick={onBack} aria-label="뒤로가기">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <span className="font-semibold">글 상세</span>
+            {isOwner ? (
+              <Button variant="ghost" size="icon" onClick={() => setDeleteDialogOpen(true)}>
+                <MoreVertical className="w-5 h-5" />
+              </Button>
+            ) : <div className="w-10" />}
           </div>
-
-          {/* Content */}
-          <div className="overflow-y-auto h-[calc(85vh-80px)] pb-20">
-            <div className="p-4">
-              {/* Type Badge & Title */}
+        </div>
+        <div className="pt-14 h-[calc(100vh-3.5rem)] overflow-y-auto flex flex-col">
+          <div className="max-w-md mx-auto bg-background flex-1 min-h-0 flex flex-col w-full min-h-[calc(100vh-3.5rem)] pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
+          <div className="px-4 py-4 shrink-0">
+            <div
+              className={`flex items-center gap-3 ${isAcademyPost ? 'cursor-pointer' : ''}`}
+              onClick={handleAcademyClick}
+              role={isAcademyPost ? 'button' : undefined}
+            >
+              <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 ${isAcademyPost ? 'bg-secondary' : 'bg-primary/20'}`}>
+                {profileImage ? (
+                  <img src={profileImage} alt={displayName} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-primary font-bold">
+                    {displayInitial}
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground">{displayName}</p>
+                  <Badge
+                    variant="secondary"
+                    className={`text-[10px] px-1.5 py-0 shrink-0 ${isAcademyPost ? 'bg-primary/10 text-primary' : 'bg-amber-500/20 text-amber-600'}`}
+                  >
+                    {authorLabel}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {formatCommentTimestamp(post.created_at)}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="overflow-y-auto flex-1">
+            <div className="px-4 pb-4">
               <div className="flex items-center gap-2 mb-3">
-                <Badge className={cn("text-xs px-2 py-0.5 gap-1", config.color)}>
-                  <TypeIcon className="w-3 h-3" />
+                <Badge className={cn("text-xs px-2 py-0.5", config.color)}>
                   {config.label}
                 </Badge>
               </div>
-              <SheetTitle className="text-left text-lg font-bold mb-4">
+              <h1 className="text-left text-lg font-bold mb-4">
                 {post.title}
-              </SheetTitle>
-
-              {/* Images Carousel */}
+              </h1>
               {imageUrls.length > 0 && (
                 <div className="mb-4 relative">
                   <div className="overflow-hidden rounded-lg" ref={emblaRef}>
                     <div className="flex">
                       {imageUrls.map((url, index) => (
-                        <div
-                          key={index}
-                          className="flex-[0_0_100%] min-w-0"
-                        >
+                        <div key={index} className="flex-[0_0_100%] min-w-0">
                           <img
                             src={url}
                             alt={`${post.title} ${index + 1}`}
@@ -419,24 +403,22 @@ const FeedPostDetailSheet = ({
                       ))}
                     </div>
                   </div>
-                  
-                  {/* Navigation arrows */}
                   {imageUrls.length > 1 && (
                     <>
                       <button
+                        type="button"
                         onClick={scrollPrev}
                         className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
                       >
                         <ChevronLeft className="w-5 h-5" />
                       </button>
                       <button
+                        type="button"
                         onClick={scrollNext}
                         className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
                       >
                         <ChevronRight className="w-5 h-5" />
                       </button>
-                      
-                      {/* Dots indicator */}
                       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
                         {imageUrls.map((_, index) => (
                           <div
@@ -452,21 +434,13 @@ const FeedPostDetailSheet = ({
                   )}
                 </div>
               )}
-
-              {/* Seminar CTA Button - always navigate to seminar detail page */}
               {post.type === 'seminar' && onSeminarClick && post.seminar_id && (
-                <Button
-                  variant="default"
-                  className="w-full mb-4 gap-2"
-                  onClick={handleSeminarClick}
-                >
+                <Button variant="default" className="w-full mb-4 gap-2" onClick={handleSeminarClick}>
                   <Calendar className="w-4 h-4" />
                   설명회 신청하기
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               )}
-
-              {/* Event CTA Button - navigate to academy detail page's event section */}
               {post.type === 'event' && isAcademyPost && (
                 <Button
                   variant="outline"
@@ -478,100 +452,40 @@ const FeedPostDetailSheet = ({
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               )}
-
-              {/* Body Content */}
               <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
                 {post.body || "내용이 없습니다."}
               </div>
-
-              {/* Comments */}
-              <div ref={commentsSectionRef} className="mt-6 border-t border-border pt-4">
-                <div className="flex items-center justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-2">
-                    <MessageCircle className="w-4 h-4 text-muted-foreground" />
-                    <h4 className="text-sm font-semibold text-foreground">
-                      댓글 {comments.length}
-                    </h4>
-                  </div>
-                  <button
-                    onClick={() => onLikeToggle(post.id, post.is_liked || false)}
-                    className="flex items-center gap-1.5 text-sm transition-colors"
-                  >
-                    <Heart
-                      className={cn(
-                        "w-4 h-4 transition-all",
-                        post.is_liked
-                          ? "fill-destructive text-destructive"
-                          : "text-muted-foreground hover:text-destructive"
-                      )}
-                    />
-                    <span
-                      className={cn(
-                        post.is_liked ? "text-destructive" : "text-muted-foreground"
-                      )}
-                    >
-                      {post.like_count}
-                    </span>
-                  </button>
+            </div>
+          </div>
+          <div ref={commentsSectionRef} className="w-full border-t-8 border-slate-100 bg-background pt-4 px-4 flex-1 min-h-0 flex flex-col">
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold text-foreground">댓글 {comments.length}</h4>
                 </div>
-
-                {canComment ? (
-                  <div className="space-y-3 mb-5">
-                    <Textarea
-                      ref={commentInputRef}
-                      value={commentText}
-                      onChange={(e) => setCommentText(e.target.value)}
-                      placeholder="댓글을 입력하세요"
-                      rows={3}
-                      maxLength={500}
-                    />
-                    <div className="flex items-center justify-end gap-3">
-                      <Button
-                        size="sm"
-                        className="gap-1"
-                        onClick={handleCommentSubmit}
-                        disabled={submittingComment || !commentText.trim()}
-                      >
-                        <Send className="w-4 h-4" />
-                        {submittingComment ? "등록 중..." : "댓글 등록"}
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mb-5 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
-                    댓글 작성은 학부모/학생 계정에서 가능합니다.
-                  </div>
-                )}
-
                 {commentsLoading ? (
                   <p className="text-sm text-muted-foreground">댓글을 불러오는 중...</p>
-                ) : comments.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">첫 댓글을 남겨보세요.</p>
-                ) : (
+                ) : comments.length === 0 ? null : (
                   <div className="space-y-3">
                     {comments.map((comment) => {
                       const commenterName = comment.profile?.user_name?.trim() || "익명";
                       const commenterInitial = commenterName.charAt(0);
                       const commenterImageUrl = comment.profile?.image_url;
-
+                      const roleLabel = comment.profile?.role_label || "회원";
+                      const isAcademyRole = roleLabel === "학원";
                       return (
-                        <div key={comment.id} className="rounded-lg bg-muted px-4 py-3">
-                          <div className="flex items-center gap-3 mb-2">
+                        <div key={comment.id} className="py-3">
+                          <div className="flex items-center gap-2 mb-1.5">
                             {commenterImageUrl ? (
-                              <img
-                                src={commenterImageUrl}
-                                alt={commenterName}
-                                className="w-8 h-8 rounded-full object-cover shrink-0"
-                              />
+                              <img src={commenterImageUrl} alt={commenterName} className="w-8 h-8 rounded-full object-cover shrink-0" />
                             ) : (
                               <div className="w-8 h-8 rounded-full bg-primary/25 text-primary flex items-center justify-center shrink-0 text-base font-semibold">
                                 {commenterInitial}
                               </div>
                             )}
-                            <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
-                              <p className="text-sm font-semibold text-foreground truncate">
-                                {commenterName}
-                              </p>
+                            <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0 shrink-0", isAcademyRole ? "bg-primary/10 text-primary" : "bg-amber-500/20 text-amber-600")}>
+                              {roleLabel}
+                            </Badge>
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-foreground truncate">{commenterName}</p>
                               <span className="text-xs text-muted-foreground shrink-0">
                                 {formatCommentTimestamp(comment.created_at)}
                               </span>
@@ -585,96 +499,112 @@ const FeedPostDetailSheet = ({
                     })}
                   </div>
                 )}
+                {canComment ? (
+                  <div className="mt-4">
+                    <div className="flex items-center">
+                      <div className="flex-1">
+                        <div className="flex items-center h-12 rounded-full bg-muted border border-slate-300 pl-6 pr-3">
+                          <Textarea
+                            ref={commentInputRef}
+                            value={commentText}
+                            onChange={(e) => setCommentText(e.target.value)}
+                            placeholder="댓글을 입력하세요"
+                            rows={1}
+                            maxLength={500}
+                            className="flex-1 h-12 min-h-0 border-0 bg-transparent px-0 py-3.5 text-sm leading-5 resize-none focus-visible:ring-0 focus-visible:outline-none focus-visible:ring-offset-0"
+                          />
+                          <Button
+                            size="icon"
+                            className="ml-2 rounded-full w-9 h-9"
+                            onClick={handleCommentSubmit}
+                            disabled={submittingComment || !commentText.trim()}
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+                    댓글 작성은 학부모/학생 계정에서 가능합니다.
+                  </div>
+                )}
               </div>
-            </div>
           </div>
-
-          {/* Footer Actions */}
-          <div className="absolute bottom-0 inset-x-0 bg-card border-t border-border p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => onLikeToggle(post.id, post.is_liked || false)}
-                  className="flex items-center gap-1.5 text-sm transition-colors"
-                >
-                  <Heart
-                    className={cn(
-                      "w-5 h-5 transition-all",
-                      post.is_liked
-                        ? "fill-destructive text-destructive"
-                        : "text-muted-foreground hover:text-destructive"
-                    )}
-                  />
-                  <span className={cn(
-                    post.is_liked ? "text-destructive" : "text-muted-foreground"
-                  )}>
-                    {post.like_count > 0 && post.like_count}
-                  </span>
-                </button>
-                <button
-                  onClick={handleCommentButtonClick}
-                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  <span>{comments.length}</span>
-                </button>
-                <button
-                  onClick={handleShare}
-                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Share2 className="w-5 h-5" />
-                </button>
-              </div>
-
-              {isAcademyPost ? (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleAcademyClick}
-                  className="gap-1"
-                >
-                  학원 프로필 보기
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              ) : (
-                <div />
-              )}
+        </div>
+        <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-10 pb-[env(safe-area-inset-bottom,0px)]">
+          <div className="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => onLikeToggle(post.id, post.is_liked || false)}
+                className="flex items-center gap-1.5 text-sm transition-colors"
+              >
+                <Heart
+                  className={cn(
+                    "w-5 h-5 transition-all",
+                    post.is_liked ? "fill-destructive text-destructive" : "text-muted-foreground hover:text-destructive"
+                  )}
+                />
+                <span className={cn(post.is_liked ? "text-destructive" : "text-muted-foreground")}>
+                  {post.like_count > 0 && post.like_count}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={handleCommentButtonClick}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <MessageCircle className="w-5 h-5" />
+                <span>{comments.length}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleShare}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Share2 className="w-5 h-5" />
+              </button>
             </div>
+            {isAcademyPost ? (
+              <Button variant="default" size="sm" onClick={handleAcademyClick} className="gap-1">
+                학원 프로필 보기
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            ) : (
+              <div />
+            )}
           </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Image Viewer */}
-      <ImageViewer
-        images={imageUrls}
-        initialIndex={viewerIndex}
-        open={viewerOpen}
-        onClose={() => setViewerOpen(false)}
-      />
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>게시글 삭제</AlertDialogTitle>
-            <AlertDialogDescription>
-              이 게시글을 삭제하시겠습니까? 삭제된 게시글은 복구할 수 없습니다.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>취소</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleting ? "삭제 중..." : "삭제"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
-  );
+        </div>
+        <ImageViewer
+          images={imageUrls}
+          initialIndex={viewerIndex}
+          open={viewerOpen}
+          onClose={() => setViewerOpen(false)}
+        />
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent className="max-w-sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>게시글 삭제</AlertDialogTitle>
+              <AlertDialogDescription>
+                이 게시글을 삭제하시겠습니까? 삭제된 게시글은 복구할 수 없습니다.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>취소</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                disabled={deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting ? "삭제 중..." : "삭제"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    );
 };
 
 export default FeedPostDetailSheet;

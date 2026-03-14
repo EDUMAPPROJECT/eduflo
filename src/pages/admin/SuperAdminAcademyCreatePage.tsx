@@ -50,6 +50,7 @@ import {
 } from "lucide-react";
 import CurriculumEditor from "@/components/CurriculumEditor";
 import ClassScheduleInput from "@/components/ClassScheduleInput";
+import { loadNaverMapScript, geocodeAddress } from "@/utils/naverMap";
 
 interface Teacher {
   id: string;
@@ -138,18 +139,38 @@ const SuperAdminAcademyCreatePage = () => {
 
     setSaving(true);
     try {
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      const trimmedAddress = address.trim();
+      if (trimmedAddress) {
+        const clientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
+        if (clientId) {
+          try {
+            await loadNaverMapScript(clientId);
+            const coords = await geocodeAddress(trimmedAddress);
+            if (coords) {
+              latitude = coords.lat;
+              longitude = coords.lng;
+            }
+          } catch {
+            // 지오코딩 실패 시 주소만 저장
+          }
+        }
+      }
+
       const { data, error } = await supabase
         .from("academies")
         .insert({
           name: name.trim(),
           subject: subject.trim(),
-          address: address.trim() || null,
+          address: trimmedAddress || null,
           description: description.trim() || null,
           profile_image: profileImage || null,
           tags: tags,
           target_regions: targetRegions,
           target_tags: targetTags,
           owner_id: null,
+          ...(latitude != null && longitude != null ? { latitude, longitude } : {}),
         })
         .select("id")
         .single();
