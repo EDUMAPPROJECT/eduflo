@@ -31,9 +31,8 @@ interface SsodaaResponse {
 
 // 채팅 알림 공통 메시지 (학원 → 학부모/학생)
 const CHAT_TO_USER_MSG = [
-  "#{academyName}에서 답장이 도착했습니다",
-  "",
-  "지금 확인하고 이어서 상담해 보세요.",
+  "회원님께서 문의하신 내용에 대해",
+  "#{academyName}에서 답장을 보냈습니다.",
   "",
   "- 도착시간: #{receivedAt}",
   "",
@@ -53,12 +52,24 @@ const SEMINAR_APPLY_DONE_MSG = [
   "변경/취소 및 상세 안내는 아래에서 확인해 주세요.",
 ].join("\n");
 
-// 신규 설명회 등록 공통 메시지
-const NEW_SEMINAR_PUBLISHED_MSG = [
+// 신규 설명회 등록 메시지 (학생용)
+const NEW_SEMINAR_PUBLISHED_STUDENT_MSG = [
   "새로운 설명회가 등록되었습니다",
   "",
   "- 설명회: #{seminarTitle}",
   "- 주관: #{academyName}",
+  "- 일시: #{seminarAt}",
+  "- 대상: #{targetGrade}",
+  "",
+  "아래에서 상세 확인 후 신청해 주세요.",
+].join("\n");
+
+// 신규 설명회 등록 메시지 (학부모용)
+const NEW_SEMINAR_PUBLISHED_PARENT_MSG = [
+  "설명회 알림을 신청하신 #{academyName}에서",
+  "새로운 설명회가 등록되었습니다.",
+  "",
+  "- 설명회: #{seminarTitle}",
   "- 일시: #{seminarAt}",
   "- 대상: #{targetGrade}",
   "",
@@ -154,15 +165,15 @@ const TEMPLATES: Record<string, TemplateDefinition> = {
   // ── 7. 신규 설명회 등록 알림 (학부모) ── 21자
   TPL_NEW_SEM_PARENT_V1: {
     code: "TPL_NEW_SEM_PARENT_V1",
-    messageTemplate: NEW_SEMINAR_PUBLISHED_MSG,
-    variableKeys: ["seminarTitle", "academyName", "seminarAt", "targetGrade"],
+    messageTemplate: NEW_SEMINAR_PUBLISHED_PARENT_MSG,
+    variableKeys: ["academyName", "seminarTitle", "seminarAt", "targetGrade"],
     buttonNames: ["설명회 상세보기", "전체 설명회 보기"],
   },
 
   // ── 8. 신규 설명회 등록 알림 (학생) ── 22자
   TPL_NEW_SEM_STUDENT_V1: {
     code: "TPL_NEW_SEM_STUDENT_V1",
-    messageTemplate: NEW_SEMINAR_PUBLISHED_MSG,
+    messageTemplate: NEW_SEMINAR_PUBLISHED_STUDENT_MSG,
     variableKeys: ["seminarTitle", "academyName", "seminarAt", "targetGrade"],
     buttonNames: ["설명회 상세보기", "전체 설명회 보기"],
   },

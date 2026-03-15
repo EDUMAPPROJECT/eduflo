@@ -116,7 +116,12 @@ const handler = async (req: Request): Promise<Response> => {
         const detailUrl = seminarDetailUrlFor(userRole, seminarId);
         const buttons: NotificationButton[] = [
           { name: "신청내역 확인", url: detailUrl },
-          { name: "길찾기", url: mapUrlOrFallback(seminarPlace, detailUrl) },
+          {
+            name: "길찾기",
+            url: userRole === "parent"
+              ? detailUrl
+              : mapUrlOrFallback(seminarPlace, detailUrl),
+          },
         ];
 
         const r1 = await sendNotification(supabase, {
