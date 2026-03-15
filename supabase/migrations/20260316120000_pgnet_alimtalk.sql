@@ -13,25 +13,13 @@ CREATE OR REPLACE FUNCTION public.send_alimtalk(
 LANGUAGE plpgsql SECURITY DEFINER
 AS $$
 DECLARE
-  v_api_key text;
-  v_token_key text;
-  v_sender_key text;
   v_body jsonb;
   v_request_id bigint;
 BEGIN
-  -- 비밀값은 DB 설정(app.settings.*)으로 주입한다.
-  v_api_key := current_setting('app.settings.ssodaa_api_key', true);
-  v_token_key := current_setting('app.settings.ssodaa_token_key', true);
-  v_sender_key := current_setting('app.settings.ssodaa_sender_key', true);
-
-  IF v_api_key IS NULL OR v_token_key IS NULL OR v_sender_key IS NULL THEN
-    RAISE EXCEPTION 'Missing Ssodaa settings. Configure app.settings.ssodaa_api_key, app.settings.ssodaa_token_key, app.settings.ssodaa_sender_key';
-  END IF;
-
   v_body := jsonb_build_object(
-    'token_key', v_token_key,
+    'token_key', 'gSM30q84w0O1e0P70K3w7GG7kF9q15P6A250pc0f',
     'dest_phone', p_dest_phone,
-    'sender_key', v_sender_key,
+    'sender_key', 'e94498449c04571b56f2e25dd82fb66dec672d62',
     'template_code', p_template_code,
     'msg_body', p_msg_body,
     'failover', jsonb_build_object('use', 'Y', 'msg_body', p_msg_body)
@@ -45,7 +33,7 @@ BEGIN
     url := 'https://apis.ssodaa.com/kakao/send/alimtalk'::text,
     body := v_body,
     params := '{}'::jsonb,
-    headers := jsonb_build_object('x-api-key', v_api_key)
+    headers := jsonb_build_object('x-api-key', '40771159375430028007')
   ) INTO v_request_id;
 
   RETURN v_request_id;
