@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Heart, Share2, ChevronRight, ChevronLeft, Bell, Calendar, PartyPopper, MoreVertical, GraduationCap, Megaphone, MessageCircle, Send, ArrowLeft } from "lucide-react";
+import { Heart, ChevronRight, ChevronLeft, Bell, Calendar, PartyPopper, MoreVertical, GraduationCap, Megaphone, MessageCircle, Send, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +20,7 @@ import ImageViewer from "@/components/ImageViewer";
 import useEmblaCarousel from "embla-carousel-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { fetchPostComments, type PostCommentWithProfile } from "@/lib/postComments";
+import { fetchPostComments, toggleCommentLike, type PostCommentWithProfile } from "@/lib/postComments";
 
 interface FeedPost {
   id: string;
@@ -107,6 +107,7 @@ const FeedPostDetailSheet = ({
   const [currentUserImageUrl, setCurrentUserImageUrl] = useState<string | null>(null);
   const [currentUserRoleLabel, setCurrentUserRoleLabel] = useState<string | null>(null);
   const [comments, setComments] = useState<PostCommentWithProfile[]>([]);
+  const [commentSortOrder, setCommentSortOrder] = useState<'latest' | 'popular'>('latest');
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -177,7 +178,7 @@ const FeedPostDetailSheet = ({
 
       setCommentsLoading(true);
       try {
-        const nextComments = await fetchPostComments(post.id);
+        const nextComments = await fetchPostComments(post.id, currentUserId);
         setComments(nextComments);
         onCommentCountChange?.(post.id, nextComments.length);
       } catch (error) {
@@ -189,7 +190,7 @@ const FeedPostDetailSheet = ({
     };
 
     loadComments();
-  }, [post?.id]);
+  }, [post?.id, currentUserId]);
 
   if (!post) return null;
 
@@ -235,27 +236,13 @@ const FeedPostDetailSheet = ({
 
       toast.success("게시글이 삭제되었습니다");
       setDeleteDialogOpen(false);
-      onClose();
+      onClose?.();
       onDelete?.(post.id);
     } catch (error) {
       console.error("Error deleting post:", error);
       toast.error("게시글 삭제에 실패했습니다");
     } finally {
       setDeleting(false);
-    }
-  };
-
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: post.title,
-          text: `${post.academy?.name || post.author?.user_name || "운영자"}의 새 소식: ${post.title}`,
-          url: window.location.href,
-        });
-      } catch (error) {
-        console.log('Share cancelled');
-      }
     }
   };
 
@@ -269,13 +256,13 @@ const FeedPostDetailSheet = ({
 
   const handleAcademyClick = () => {
     if (!isAcademyPost || !post.academy) return;
-    onClose();
+    onClose?.();
     onAcademyClick(post.academy.id);
   };
 
   const handleSeminarClick = () => {
     if (post.seminar_id && onSeminarClick) {
-      onClose();
+      onClose?.();
       onSeminarClick(post.seminar_id);
     }
   };
@@ -285,6 +272,32 @@ const FeedPostDetailSheet = ({
     window.setTimeout(() => {
       commentInputRef.current?.focus();
     }, 250);
+  };
+
+  const handleCommentLikeToggle = async (comment: PostCommentWithProfile) => {
+    if (!currentUserId) return;
+    const isLiked = comment.is_liked ?? false;
+    setComments((prev) =>
+      prev.map((c) =>
+        c.id === comment.id
+          ? { ...c, is_liked: !isLiked, like_count: c.like_count + (isLiked ? -1 : 1) }
+          : c
+      )
+    );
+    try {
+      const result = await toggleCommentLike(comment.id, currentUserId, isLiked);
+      setComments((prev) =>
+        prev.map((c) => (c.id === comment.id ? { ...c, like_count: result.like_count, is_liked: result.is_liked } : c))
+      );
+    } catch (error) {
+      console.error("Error toggling comment like:", error);
+      toast.error("좋아요 처리에 실패했습니다");
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === comment.id ? { ...c, is_liked: isLiked, like_count: comment.like_count } : c
+        )
+      );
+    }
   };
 
   const handleCommentSubmit = async () => {
@@ -307,6 +320,8 @@ const FeedPostDetailSheet = ({
 
       const nextComment: PostCommentWithProfile = {
         ...data,
+        like_count: 0,
+        is_liked: false,
         profile: {
           image_url: currentUserImageUrl,
           user_name: currentUserName,
@@ -330,7 +345,7 @@ const FeedPostDetailSheet = ({
   };
 
   return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen h-screen overflow-y-auto bg-background">
         <div className="fixed top-0 left-0 right-0 z-20 bg-card border-b">
           <div className="max-w-md mx-auto px-4 h-14 flex items-center justify-between">
             <Button variant="ghost" size="icon" onClick={onBack} aria-label="뒤로가기">
@@ -344,9 +359,10 @@ const FeedPostDetailSheet = ({
             ) : <div className="w-10" />}
           </div>
         </div>
-        <div className="pt-14 h-[calc(100vh-3.5rem)] overflow-y-auto flex flex-col">
-          <div className="max-w-md mx-auto bg-background flex-1 min-h-0 flex flex-col w-full min-h-[calc(100vh-3.5rem)] pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
-          <div className="px-4 py-4 shrink-0">
+        <div className="pt-14 min-h-full bg-background">
+          <div className="max-w-md mx-auto w-full min-h-[calc(100vh-3.5rem)] bg-white pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))]">
+            {/* 상단 작성자: 가로 패딩은 제목/내용과 동일 px-4 */}
+            <div className="px-4 py-4">
             <div
               className={`flex items-center gap-3 ${isAcademyPost ? 'cursor-pointer' : ''}`}
               onClick={handleAcademyClick}
@@ -375,9 +391,8 @@ const FeedPostDetailSheet = ({
                   {formatCommentTimestamp(post.created_at)}
                 </p>
               </div>
+              </div>
             </div>
-          </div>
-          <div className="overflow-y-auto flex-1">
             <div className="px-4 pb-4">
               <div className="flex items-center gap-2 mb-3">
                 <Badge className={cn("text-xs px-2 py-0.5", config.color)}>
@@ -456,16 +471,48 @@ const FeedPostDetailSheet = ({
                 {post.body || "내용이 없습니다."}
               </div>
             </div>
-          </div>
-          <div ref={commentsSectionRef} className="w-full border-t-8 border-slate-100 bg-background pt-4 px-4 flex-1 min-h-0 flex flex-col">
-                <div className="mb-4">
+            <div ref={commentsSectionRef} className="w-full border-t-8 border-slate-100 bg-white px-4 pt-4">
+                <div className="mb-4 flex items-center justify-between gap-2">
                   <h4 className="text-sm font-semibold text-foreground">댓글 {comments.length}</h4>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setCommentSortOrder('latest')}
+                      className={cn(
+                        "px-2 py-1 text-xs rounded-md transition-colors",
+                        commentSortOrder === 'latest'
+                          ? "bg-primary text-primary-foreground font-medium"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      )}
+                    >
+                      최신순
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCommentSortOrder('popular')}
+                      className={cn(
+                        "px-2 py-1 text-xs rounded-md transition-colors",
+                        commentSortOrder === 'popular'
+                          ? "bg-primary text-primary-foreground font-medium"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      )}
+                    >
+                      추천순
+                    </button>
+                  </div>
                 </div>
                 {commentsLoading ? (
                   <p className="text-sm text-muted-foreground">댓글을 불러오는 중...</p>
                 ) : comments.length === 0 ? null : (
                   <div className="space-y-3">
-                    {comments.map((comment) => {
+                    {[...comments]
+                      .sort((a, b) => {
+                        if (commentSortOrder === 'latest') {
+                          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                        }
+                        return (b.like_count ?? 0) - (a.like_count ?? 0);
+                      })
+                      .map((comment) => {
                       const commenterName = comment.profile?.user_name?.trim() || "익명";
                       const commenterInitial = commenterName.charAt(0);
                       const commenterImageUrl = comment.profile?.image_url;
@@ -473,7 +520,7 @@ const FeedPostDetailSheet = ({
                       const isAcademyRole = roleLabel === "학원";
                       return (
                         <div key={comment.id} className="py-3">
-                          <div className="flex items-center gap-2 mb-1.5">
+                          <div className="flex items-center gap-2 mb-0.5">
                             {commenterImageUrl ? (
                               <img src={commenterImageUrl} alt={commenterName} className="w-8 h-8 rounded-full object-cover shrink-0" />
                             ) : (
@@ -494,48 +541,39 @@ const FeedPostDetailSheet = ({
                           <p className="text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed pl-11">
                             {comment.content}
                           </p>
+                          <div className="flex items-center gap-1.5 pl-11 mt-3.5">
+                            <button
+                              type="button"
+                              onClick={() => handleCommentLikeToggle(comment)}
+                              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                              aria-label={comment.is_liked ? "좋아요 취소" : "좋아요"}
+                            >
+                              <Heart
+                                className={cn(
+                                  "w-4 h-4 transition-all",
+                                  comment.is_liked ? "fill-destructive text-destructive" : ""
+                                )}
+                              />
+                              {comment.like_count > 0 && (
+                                <span className={cn(comment.is_liked && "text-destructive")}>
+                                  {comment.like_count}
+                                </span>
+                              )}
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
                   </div>
                 )}
-                {canComment ? (
-                  <div className="mt-4">
-                    <div className="flex items-center">
-                      <div className="flex-1">
-                        <div className="flex items-center h-12 rounded-full bg-muted border border-slate-300 pl-6 pr-3">
-                          <Textarea
-                            ref={commentInputRef}
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            placeholder="댓글을 입력하세요"
-                            rows={1}
-                            maxLength={500}
-                            className="flex-1 h-12 min-h-0 border-0 bg-transparent px-0 py-3.5 text-sm leading-5 resize-none focus-visible:ring-0 focus-visible:outline-none focus-visible:ring-offset-0"
-                          />
-                          <Button
-                            size="icon"
-                            className="ml-2 rounded-full w-9 h-9"
-                            onClick={handleCommentSubmit}
-                            disabled={submittingComment || !commentText.trim()}
-                          >
-                            <Send className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-4 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
-                    댓글 작성은 학부모/학생 계정에서 가능합니다.
-                  </div>
-                )}
               </div>
+            </div>
           </div>
-        </div>
+        {/* 하단 고정: 액션 바(좋아요·댓글 수) + 댓글 입력창 - 가로 패딩은 헤더(뒤로가기·글 상세)와 동일 */}
         <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-10 pb-[env(safe-area-inset-bottom,0px)]">
-          <div className="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="max-w-md mx-auto px-4">
+            {/* 액션 바: 좋아요, 댓글 수만 */}
+            <div className="py-3 flex items-center gap-4">
               <button
                 type="button"
                 onClick={() => onLikeToggle(post.id, post.is_liked || false)}
@@ -547,8 +585,8 @@ const FeedPostDetailSheet = ({
                     post.is_liked ? "fill-destructive text-destructive" : "text-muted-foreground hover:text-destructive"
                   )}
                 />
-                <span className={cn(post.is_liked ? "text-destructive" : "text-muted-foreground")}>
-                  {post.like_count > 0 && post.like_count}
+                <span className={cn("text-foreground", post.is_liked && "text-destructive")}>
+                  {post.like_count > 0 ? post.like_count : ""}
                 </span>
               </button>
               <button
@@ -557,23 +595,36 @@ const FeedPostDetailSheet = ({
                 className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 <MessageCircle className="w-5 h-5" />
-                <span>{comments.length}</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleShare}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Share2 className="w-5 h-5" />
+                <span className="text-foreground">{comments.length}</span>
               </button>
             </div>
-            {isAcademyPost ? (
-              <Button variant="default" size="sm" onClick={handleAcademyClick} className="gap-1">
-                학원 프로필 보기
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+            {/* 댓글 입력창 */}
+            {canComment ? (
+              <div className="flex items-center gap-2 pb-3">
+                <div className="flex-1 flex items-center min-h-11 rounded-full bg-muted border border-input pl-4 pr-2">
+                  <Textarea
+                    ref={commentInputRef}
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder="댓글을 입력하세요..."
+                    rows={1}
+                    maxLength={500}
+                    className="flex-1 min-h-0 border-0 bg-transparent px-0 py-3 text-sm leading-5 resize-none focus-visible:ring-0 focus-visible:outline-none focus-visible:ring-offset-0"
+                  />
+                  <Button
+                    size="icon"
+                    className="rounded-full w-9 h-9 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground"
+                    onClick={handleCommentSubmit}
+                    disabled={submittingComment || !commentText.trim()}
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
             ) : (
-              <div />
+              <div className="pb-3 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+                댓글 작성은 학부모/학생 계정에서 가능합니다.
+              </div>
             )}
           </div>
         </div>

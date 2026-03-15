@@ -6,6 +6,8 @@ export interface PostComment {
   user_id: string;
   content: string;
   created_at: string;
+  like_count: number;
+  is_liked?: boolean;
 }
 
 export interface PostCommentWithProfile extends PostComment {
@@ -36,15 +38,30 @@ export async function fetchCommentCounts(postIds: string[]): Promise<Record<stri
   }, {});
 }
 
-export async function fetchPostComments(postId: string): Promise<PostCommentWithProfile[]> {
+export async function fetchPostComments(
+  postId: string,
+  currentUserId?: string | null
+): Promise<PostCommentWithProfile[]> {
   const { data: comments, error } = await supabase
     .from("post_comments")
-    .select("id, post_id, user_id, content, created_at")
+    .select("id, post_id, user_id, content, created_at, like_count")
     .eq("post_id", postId)
     .order("created_at", { ascending: true });
 
   if (error) {
     throw error;
+  }
+
+  const commentIds = (comments || []).map((c) => c.id);
+  let likedCommentIds = new Set<string>();
+
+  if (currentUserId && commentIds.length > 0) {
+    const { data: likes } = await supabase
+      .from("comment_likes")
+      .select("comment_id")
+      .eq("user_id", currentUserId)
+      .in("comment_id", commentIds);
+    likedCommentIds = new Set((likes || []).map((r) => r.comment_id));
   }
 
   const userIds = [...new Set((comments || []).map((comment) => comment.user_id))];
@@ -74,10 +91,36 @@ export async function fetchPostComments(postId: string): Promise<PostCommentWith
 
   return (comments || []).map((comment) => ({
     ...comment,
+    like_count: comment.like_count ?? 0,
+    is_liked: likedCommentIds.has(comment.id),
     profile: {
       user_name: profileMap[comment.user_id]?.user_name ?? null,
       image_url: profileMap[comment.user_id]?.image_url ?? null,
       role_label: roleMap[comment.user_id] ?? null,
     },
   }));
+}
+
+export async function toggleCommentLike(
+  commentId: string,
+  userId: string,
+  isCurrentlyLiked: boolean
+): Promise<{ like_count: number; is_liked: boolean }> {
+  if (isCurrentlyLiked) {
+    await supabase.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", userId);
+    const { data: comment } = await supabase
+      .from("post_comments")
+      .select("like_count")
+      .eq("id", commentId)
+      .single();
+    return { like_count: Math.max(0, (comment?.like_count ?? 1) - 1), is_liked: false };
+  } else {
+    await supabase.from("comment_likes").insert({ comment_id: commentId, user_id: userId });
+    const { data: comment } = await supabase
+      .from("post_comments")
+      .select("like_count")
+      .eq("id", commentId)
+      .single();
+    return { like_count: (comment?.like_count ?? 0) + 1, is_liked: true };
+  }
 }
