@@ -31,9 +31,8 @@ interface SsodaaResponse {
 
 // 채팅 알림 공통 메시지 (학원 → 학부모/학생)
 const CHAT_TO_USER_MSG = [
-  "#{academyName}에서 답장이 도착했습니다",
-  "",
-  "지금 확인하고 이어서 상담해 보세요.",
+  "회원님께서 문의하신 내용에 대해",
+  "#{academyName}에서 답장을 보냈습니다.",
   "",
   "- 도착시간: #{receivedAt}",
   "",
@@ -53,12 +52,24 @@ const SEMINAR_APPLY_DONE_MSG = [
   "변경/취소 및 상세 안내는 아래에서 확인해 주세요.",
 ].join("\n");
 
-// 신규 설명회 등록 공통 메시지
-const NEW_SEMINAR_PUBLISHED_MSG = [
+// 신규 설명회 등록 메시지 (학생용)
+const NEW_SEMINAR_PUBLISHED_STUDENT_MSG = [
   "새로운 설명회가 등록되었습니다",
   "",
   "- 설명회: #{seminarTitle}",
   "- 주관: #{academyName}",
+  "- 일시: #{seminarAt}",
+  "- 대상: #{targetGrade}",
+  "",
+  "아래에서 상세 확인 후 신청해 주세요.",
+].join("\n");
+
+// 신규 설명회 등록 메시지 (학부모용)
+const NEW_SEMINAR_PUBLISHED_PARENT_MSG = [
+  "설명회 알림을 신청하신 #{academyName}에서",
+  "새로운 설명회가 등록되었습니다.",
+  "",
+  "- 설명회: #{seminarTitle}",
   "- 일시: #{seminarAt}",
   "- 대상: #{targetGrade}",
   "",
@@ -154,15 +165,15 @@ const TEMPLATES: Record<string, TemplateDefinition> = {
   // ── 7. 신규 설명회 등록 알림 (학부모) ── 21자
   TPL_NEW_SEM_PARENT_V1: {
     code: "TPL_NEW_SEM_PARENT_V1",
-    messageTemplate: NEW_SEMINAR_PUBLISHED_MSG,
-    variableKeys: ["seminarTitle", "academyName", "seminarAt", "targetGrade"],
+    messageTemplate: NEW_SEMINAR_PUBLISHED_PARENT_MSG,
+    variableKeys: ["academyName", "seminarTitle", "seminarAt", "targetGrade"],
     buttonNames: ["설명회 상세보기", "전체 설명회 보기"],
   },
 
   // ── 8. 신규 설명회 등록 알림 (학생) ── 22자
   TPL_NEW_SEM_STUDENT_V1: {
     code: "TPL_NEW_SEM_STUDENT_V1",
-    messageTemplate: NEW_SEMINAR_PUBLISHED_MSG,
+    messageTemplate: NEW_SEMINAR_PUBLISHED_STUDENT_MSG,
     variableKeys: ["seminarTitle", "academyName", "seminarAt", "targetGrade"],
     buttonNames: ["설명회 상세보기", "전체 설명회 보기"],
   },
@@ -291,18 +302,20 @@ export async function checkRateLimit(
   return (count ?? 0) < maxCount;
 }
 
-// ─── Ssodaa (쏘다) API Adapter ──────────────────────────────────
-// API Docs: https://apis.ssodaa.com
-// 알림톡 발송: POST /kakao/send/alimtalk
-// 필수 헤더: x-api-key, Content-Type: application/json; charset=utf-8
-const SSODAA_BASE_URL = "https://apis.ssodaa.com";
+// ─── Ssodaa (쏘다) API via pg_net ───────────────────────────────
+// Edge Function의 IP가 고정되지 않아 Ssodaa IP 화이트리스트 문제 발생.
+// DB 서버(pg_net)는 고정 IP이므로 RPC를 통해 발송.
+// Flow: Edge Function → supabase.rpc('send_alimtalk') → pg_net → Ssodaa API
 
-export async function callSsodaaApi(params: {
-  templateCode: string;
-  phone: string;
-  message: string;
-  buttons: NotificationButton[];
-}): Promise<SsodaaResponse> {
+export async function callSsodaaApi(
+  supabase: SupabaseClient,
+  params: {
+    templateCode: string;
+    phone: string;
+    message: string;
+    buttons: NotificationButton[];
+  }
+): Promise<SsodaaResponse> {
   const dryRun = Deno.env.get("SSODAA_DRY_RUN") === "true";
 
   if (dryRun) {
@@ -315,61 +328,31 @@ export async function callSsodaaApi(params: {
     return { success: true, resultCode: "DRY_RUN" };
   }
 
-  const apiKey = Deno.env.get("SSODAA_API_KEY");
-  const tokenKey = Deno.env.get("SSODAA_TOKEN_KEY");
-  const senderKey = Deno.env.get("SSODAA_SENDER_KEY");
-
-  if (!apiKey || !tokenKey || !senderKey) {
-    return { success: false, error: "Missing Ssodaa API configuration (SSODAA_API_KEY, SSODAA_TOKEN_KEY, SSODAA_SENDER_KEY)" };
-  }
+  // 버튼 배열 → Ssodaa 형식으로 변환
+  const buttonArray = params.buttons.map((b) => ({
+    name: b.name,
+    type: "WL",
+    url_mobile: b.url,
+  }));
 
   try {
-    const body: Record<string, unknown> = {
-      token_key: tokenKey,
-      dest_phone: params.phone,
-      sender_key: senderKey,
-      template_code: params.templateCode,
-      msg_body: params.message,
-      failover: {
-        use: "Y",
-        msg_body: params.message,
-      },
-    };
-
-    // 버튼이 있는 경우 button 배열 추가
-    if (params.buttons.length > 0) {
-      body.button = params.buttons.map((b) => ({
-        name: b.name,
-        type: "WL",
-        url_mobile: b.url,
-        url_pc: b.url,
-      }));
-    }
-
-    const response = await fetch(`${SSODAA_BASE_URL}/kakao/send/alimtalk`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "x-api-key": apiKey,
-      },
-      body: JSON.stringify(body),
+    const { data, error } = await supabase.rpc("send_alimtalk", {
+      p_template_code: params.templateCode,
+      p_dest_phone: params.phone,
+      p_msg_body: params.message,
+      p_buttons: buttonArray,
     });
 
-    const data = await response.json();
-
-    if (data.code !== "200") {
-      return {
-        success: false,
-        resultCode: data.code || String(response.status),
-        data,
-        error: data.error || "Ssodaa API request failed",
-      };
+    if (error) {
+      return { success: false, error: error.message };
     }
 
+    // pg_net은 비동기이므로 request_id만 반환됨
+    // 실제 결과는 process_alimtalk_responses 크론에서 처리
     return {
       success: true,
-      resultCode: data.code || "200",
-      data,
+      resultCode: "QUEUED",
+      data: { pgnet_request_id: data },
     };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -496,8 +479,8 @@ export async function sendNotification(
   // 메시지 본문 빌드 (#{variableName} → 실제 값)
   const message = buildMessage(template, params.variables);
 
-  // API 호출
-  const apiResult = await callSsodaaApi({
+  // pg_net을 통해 API 호출 (DB 서버의 고정 IP 사용)
+  const apiResult = await callSsodaaApi(supabase, {
     templateCode: template.code,
     phone,
     message,
@@ -505,6 +488,7 @@ export async function sendNotification(
   });
 
   // 로그 기록
+  const pgnetRequestId = apiResult.data?.pgnet_request_id ?? null;
   const { data: logData } = await supabase
     .from("notification_logs")
     .insert({
@@ -518,11 +502,12 @@ export async function sendNotification(
       chat_room_id: params.chatRoomId || null,
       seminar_id: params.seminarId || null,
       academy_id: params.academyId || null,
-      status: apiResult.success ? "sent" : "failed",
+      status: apiResult.success ? "pending" : "failed",
       api_response: apiResult.data || null,
       error_message: apiResult.error || null,
       provider_result_code: apiResult.resultCode || null,
       rate_limit_key: params.rateLimitKey || null,
+      pgnet_request_id: pgnetRequestId,
     })
     .select("id")
     .single();

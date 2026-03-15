@@ -9,3 +9,23 @@ entrypoint = "./functions/auth-phone-verify/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/auth-phone-verify/*.html" ]
+
+[functions.notify-chat-message]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/notify-chat-message/index.ts"
+
+[functions.notify-seminar-event]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/notify-seminar-event/index.ts"
+
+[functions.send-seminar-reminders]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/send-seminar-reminders/index.ts"
+
+[functions.retry-notification]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/retry-notification/index.ts"

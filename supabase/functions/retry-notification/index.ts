@@ -106,7 +106,7 @@ const handler = async (req: Request): Promise<Response> => {
           })
         : [];
 
-      const apiResult = await callSsodaaApi({
+      const apiResult = await callSsodaaApi(supabase, {
         templateCode: template.code,
         phone,
         message,
