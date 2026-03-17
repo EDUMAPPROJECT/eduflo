@@ -251,11 +251,11 @@ const ExplorePage = () => {
         {/* Header */}
         <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
           <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+            <GlobalRegionSelector />
             <div className="flex items-center gap-2">
+              <AdminHeader />
               <Logo size="sm" showText={false} />
-              <GlobalRegionSelector />
             </div>
-            <AdminHeader />
           </div>
         </header>
 

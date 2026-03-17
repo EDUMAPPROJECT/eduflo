@@ -103,6 +103,7 @@ interface Class {
   teacher_id: string | null;
   is_recruiting: boolean | null;
   curriculum?: CurriculumStep[];
+  tags?: string[] | null;
 }
 
 const ProfileManagementPage = () => {
@@ -152,13 +153,14 @@ const ProfileManagementPage = () => {
 
   // Class form
   const [className, setClassName] = useState("");
-  const [classGrade, setClassGrade] = useState("");
-  const [classYear, setClassYear] = useState("");
+  const [classYears, setClassYears] = useState<string[]>([]);
   const [classSchedule, setClassSchedule] = useState("");
   const [classFee, setClassFee] = useState("");
   const [classDescription, setClassDescription] = useState("");
   const [classTeacherId, setClassTeacherId] = useState("");
   const [classCurriculum, setClassCurriculum] = useState<CurriculumStep[]>([]);
+  const [classTags, setClassTags] = useState<string[]>([]);
+  const [classNewTag, setClassNewTag] = useState("");
 
   const { toast } = useToast();
 
@@ -344,10 +346,11 @@ const ProfileManagementPage = () => {
       .eq("academy_id", academyId)
       .order("created_at");
     
-    // Parse curriculum JSON for each class
+    // Parse curriculum JSON for each class and ensure tags array
     const classesWithCurriculum = (data || []).map((cls: any) => ({
       ...cls,
-      curriculum: Array.isArray(cls.curriculum) ? cls.curriculum : []
+      curriculum: Array.isArray(cls.curriculum) ? cls.curriculum : [],
+      tags: Array.isArray(cls.tags) ? cls.tags : []
     })) as Class[];
     setClasses(classesWithCurriculum);
   };
@@ -572,30 +575,68 @@ const ProfileManagementPage = () => {
 
   // Class CRUD
   const parseTargetGrade = (target?: string | null) => {
-    let group = "";
-    let year = "";
-    if (!target) return { group, year };
+    let years: string[] = [];
+    if (!target) return { years };
 
-    if (target.includes("초등 저학년")) group = "초등 저학년";
-    else if (target.includes("초등 고학년")) group = "초등 고학년";
-    else if (target.includes("중학생") || target.includes("중학교")) group = "중학생";
-    else if (target.includes("고등학생") || target.includes("고등학교")) group = "고등학생";
+    // 1) 이미 토큰(유아, 초1, 중2, 고3, 성인 등)들이 들어있는 경우
+    const tokenMatches = target.match(/(유아|성인|초[1-6]|중[1-3]|고[1-3])/g);
+    if (tokenMatches) {
+      years = Array.from(new Set(tokenMatches));
+      return { years };
+    }
 
-    const match = target.match(/[1-6]학년/);
-    if (match) year = match[0];
+    // 2) 구버전: "초등학생 초1, 초2" 형태에서 토큰만 추출
+    const legacyTokenMatches = target.match(/(초[1-6]|중[1-3]|고[1-3])/g);
+    if (legacyTokenMatches) {
+      years = Array.from(new Set(legacyTokenMatches));
+      return { years };
+    }
 
-    return { group, year };
+    // 3) 더 구버전: "초등 저학년 1학년" 같은 형태
+    const legacyMatch = target.match(/([1-6])학년/);
+    if (legacyMatch) {
+      const num = legacyMatch[1];
+      if (target.includes("초등")) years = [`초${num}`];
+      else if (target.includes("중")) years = [`중${Math.min(Number(num), 3)}`];
+      else if (target.includes("고")) years = [`고${Math.min(Number(num), 3)}`];
+    }
+
+    return { years };
+  };
+
+  const gradeChipOptions = [
+    "유아",
+    "초1",
+    "초2",
+    "초3",
+    "초4",
+    "초5",
+    "초6",
+    "중1",
+    "중2",
+    "중3",
+    "고1",
+    "고2",
+    "고3",
+    "성인",
+  ] as const;
+
+  const toggleClassYear = (year: string) => {
+    setClassYears((prev) =>
+      prev.includes(year) ? prev.filter((y) => y !== year) : [...prev, year]
+    );
   };
 
   const resetClassForm = () => {
     setClassName("");
-    setClassGrade("");
-    setClassYear("");
+    setClassYears([]);
     setClassSchedule("");
     setClassFee("");
     setClassDescription("");
     setClassTeacherId("");
     setClassCurriculum([]);
+    setClassTags([]);
+    setClassNewTag("");
     setEditingClass(null);
   };
 
@@ -603,30 +644,37 @@ const ProfileManagementPage = () => {
     if (cls) {
       setEditingClass(cls);
       setClassName(cls.name);
-      const { group, year } = parseTargetGrade(cls.target_grade || "");
-      setClassGrade(group || "");
-      setClassYear(year || "");
+      const { years } = parseTargetGrade(cls.target_grade || "");
+      setClassYears(years || []);
       setClassSchedule(cls.schedule || "");
       setClassFee(cls.fee?.toString() || "");
       setClassDescription(cls.description || "");
       setClassTeacherId(cls.teacher_id || "");
       setClassCurriculum(cls.curriculum || []);
+      setClassTags(cls.tags || []);
+      setClassNewTag("");
     } else {
       resetClassForm();
     }
     setIsClassDialogOpen(true);
   };
 
+  const handleAddClassTag = () => {
+    if (classNewTag.trim() && !classTags.includes(classNewTag.trim())) {
+      setClassTags([...classTags, classNewTag.trim()]);
+      setClassNewTag("");
+    }
+  };
+
+  const handleRemoveClassTag = (tagToRemove: string) => {
+    setClassTags(classTags.filter((tag) => tag !== tagToRemove));
+  };
+
   const handleSaveClass = async () => {
     if (!academy || !className.trim()) return;
 
     try {
-      const composedTargetGrade =
-        classGrade
-          ? (classGrade === "초등 저학년" || classGrade === "초등 고학년")
-            ? `${classGrade} ${classYear || ""}`.trim()
-            : classGrade
-          : null;
+      const composedTargetGrade = classYears.length > 0 ? classYears.join(", ") : null;
 
       const classData = {
         name: className,
@@ -636,21 +684,25 @@ const ProfileManagementPage = () => {
         description: classDescription || null,
         teacher_id: classTeacherId || null,
         curriculum: classCurriculum as unknown as any,
+        tags: classTags,
       };
 
       if (editingClass) {
-        await supabase.from("classes").update(classData).eq("id", editingClass.id);
+        const { error } = await supabase.from("classes").update(classData).eq("id", editingClass.id);
+        if (error) throw error;
       } else {
-        await supabase.from("classes").insert([{ ...classData, academy_id: academy.id }]);
+        const { error } = await supabase.from("classes").insert([{ ...classData, academy_id: academy.id }]);
+        if (error) throw error;
       }
 
       toast({ title: "저장 완료" });
       setIsClassDialogOpen(false);
       resetClassForm();
-      fetchClasses(academy.id);
+      await fetchClasses(academy.id);
     } catch (error) {
       console.error("Error saving class:", error);
-      toast({ title: "오류", variant: "destructive" });
+      const message = error instanceof Error ? error.message : undefined;
+      toast({ title: "오류", description: message || "강좌 저장에 실패했습니다.", variant: "destructive" });
     }
   };
 
@@ -1251,143 +1303,175 @@ const ProfileManagementPage = () => {
             )}
           </TabsContent>
 
-          {/* Classes Tab */}
-          <TabsContent value="classes" className="space-y-4">
-            <Dialog open={isClassDialogOpen} onOpenChange={setIsClassDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="w-full" onClick={() => openClassDialog()}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  강좌 추가
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="w-[calc(100vw-2rem)] max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden">
-                <DialogHeader>
-                  <DialogTitle>{editingClass ? "강좌 수정" : "강좌 추가"}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label>강좌명 *</Label>
-                    <Input value={className} onChange={(e) => setClassName(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>대상 학생</Label>
-                    <Select value={classGrade} onValueChange={setClassGrade}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="초등 저학년">초등 저학년</SelectItem>
-                        <SelectItem value="초등 고학년">초등 고학년</SelectItem>
-                        <SelectItem value="중학생">중학생</SelectItem>
-                        <SelectItem value="고등학생">고등학생</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>대상 학년</Label>
-                    <Select value={classYear} onValueChange={setClassYear}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(classGrade === "초등 고학년" ? ["4학년", "5학년", "6학년"] : ["1학년", "2학년", "3학년"]).map((grade) => (
-                          <SelectItem key={grade} value={grade}>
-                            {grade}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <ClassScheduleInput value={classSchedule} onChange={setClassSchedule} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>수강료 (원)</Label>
-                    <Input type="number" value={classFee} onChange={(e) => setClassFee(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>담당 강사</Label>
-                    <Select value={classTeacherId} onValueChange={setClassTeacherId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {teachers.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>설명</Label>
-                    <Textarea value={classDescription} onChange={(e) => setClassDescription(e.target.value)} rows={3} />
-                  </div>
-                  
-                  {/* Curriculum Editor */}
-                  <div className="border-t pt-4">
-                    <CurriculumEditor
-                      curriculum={classCurriculum}
-                      onChange={setClassCurriculum}
-                    />
-                  </div>
-                  
-                  <Button className="w-full" onClick={handleSaveClass}>
-                    저장
+          <TabsContent
+            value="classes"
+            className="bg-card border-0 focus-visible:ring-0 focus-visible:outline-none p-0"
+          >
+            <div className="space-y-4">
+              <Dialog open={isClassDialogOpen} onOpenChange={setIsClassDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="w-full" onClick={() => openClassDialog()}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    강좌 추가
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+              <DialogContent className="w-[calc(100vw-2rem)] max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden bg-card border-0 shadow-lg">
+                  <DialogHeader>
+                    <DialogTitle>{editingClass ? "강좌 수정" : "강좌 추가"}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>강좌명 *</Label>
+                      <Input value={className} onChange={(e) => setClassName(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>대상 학년</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {gradeChipOptions.map((year) => (
+                          <Button
+                            key={year}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className={`rounded-full px-3 h-8 text-xs min-w-[44px] ${
+                              classYears.includes(year)
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background text-foreground"
+                            }`}
+                            onClick={() => toggleClassYear(year)}
+                          >
+                            {year}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <ClassScheduleInput value={classSchedule} onChange={setClassSchedule} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>수강료 (원)</Label>
+                      <Input type="number" value={classFee} onChange={(e) => setClassFee(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>담당 강사</Label>
+                      <Select value={classTeacherId} onValueChange={setClassTeacherId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="선택" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {teachers.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Tags className="w-4 h-4 text-primary" />
+                        특징 태그
+                      </Label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {classTags.map((tag) => (
+                          <Badge key={tag} variant="secondary" className="gap-1 pr-1">
+                            {tag}
+                            <button onClick={() => handleRemoveClassTag(tag)} className="ml-1 p-0.5">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="태그 입력"
+                          value={classNewTag}
+                          onChange={(e) => setClassNewTag(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handleAddClassTag()}
+                        />
+                        <Button variant="outline" size="icon" onClick={handleAddClassTag}>
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>설명</Label>
+                      <Textarea value={classDescription} onChange={(e) => setClassDescription(e.target.value)} rows={3} />
+                    </div>
+                    
+                    {/* Curriculum Editor */}
+                    <div className="border-t pt-4">
+                      <CurriculumEditor
+                        curriculum={classCurriculum}
+                        onChange={setClassCurriculum}
+                      />
+                    </div>
+                    
+                    <Button className="w-full" onClick={handleSaveClass}>
+                      저장
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
 
-            {classes.length === 0 ? (
-              <Card className="shadow-card">
-                <CardContent className="p-6 text-center">
-                  <BookOpen className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">등록된 강좌가 없습니다</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {classes.map((cls) => (
-                  <Card key={cls.id} className="shadow-card">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h4 className="font-medium text-foreground">{cls.name}</h4>
-                          <p className="text-xs text-muted-foreground">{cls.target_grade || "대상 학년 미정"}</p>
+              {classes.length === 0 ? (
+                <Card className="shadow-card">
+                  <CardContent className="p-6 text-center">
+                    <BookOpen className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">등록된 강좌가 없습니다</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {classes.map((cls) => (
+                    <Card key={cls.id} className="shadow-card">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="font-medium text-foreground">{cls.name}</h4>
+                            <p className="text-xs text-muted-foreground">{cls.target_grade || "대상 학년 미정"}</p>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => openClassDialog(cls)}>
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteClass(cls.id)}>
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openClassDialog(cls)}>
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteClass(cls.id)}>
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          {cls.schedule && <p>📅 {cls.schedule}</p>}
+                          {cls.fee && <p>💰 {cls.fee.toLocaleString()}원</p>}
                         </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        {cls.schedule && <p>📅 {cls.schedule}</p>}
-                        {cls.fee && <p>💰 {cls.fee.toLocaleString()}원</p>}
-                      </div>
-                      {/* Recruiting Status Toggle */}
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                        <span className="text-xs text-muted-foreground">모집 상태</span>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs font-medium ${cls.is_recruiting ? 'text-primary' : 'text-muted-foreground'}`}>
-                            {cls.is_recruiting ? '모집중' : '마감'}
-                          </span>
-                          <Switch
-                            checked={cls.is_recruiting ?? true}
-                            onCheckedChange={(checked) => handleToggleRecruiting(cls.id, checked)}
-                          />
+                      {Array.isArray(cls.tags) && cls.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {cls.tags.map((tag) => (
+                            <Badge key={tag} variant="secondary" className="text-[10px] px-2 py-0.5">
+                              {tag}
+                            </Badge>
+                          ))}
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                      )}
+                        {/* Recruiting Status Toggle */}
+                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                          <span className="text-xs text-muted-foreground">모집 상태</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-medium ${cls.is_recruiting ? 'text-primary' : 'text-muted-foreground'}`}>
+                              {cls.is_recruiting ? '모집중' : '마감'}
+                            </span>
+                            <Switch
+                              checked={cls.is_recruiting ?? true}
+                              onCheckedChange={(checked) => handleToggleRecruiting(cls.id, checked)}
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
           </TabsContent>
 
         </Tabs>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Heart, Share2, ChevronRight, ChevronLeft, Bell, Calendar, PartyPopper, MoreVertical, GraduationCap, Megaphone, MessageCircle, Send, ArrowLeft } from "lucide-react";
+import { Heart, ChevronRight, ChevronLeft, Bell, Calendar, PartyPopper, MoreVertical, GraduationCap, Megaphone, MessageCircle, Send, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +20,7 @@ import ImageViewer from "@/components/ImageViewer";
 import useEmblaCarousel from "embla-carousel-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { fetchPostComments, type PostCommentWithProfile } from "@/lib/postComments";
+import { fetchPostComments, toggleCommentLike, insertReplyComment, type PostCommentWithProfile } from "@/lib/postComments";
 
 interface FeedPost {
   id: string;
@@ -107,9 +107,13 @@ const FeedPostDetailSheet = ({
   const [currentUserImageUrl, setCurrentUserImageUrl] = useState<string | null>(null);
   const [currentUserRoleLabel, setCurrentUserRoleLabel] = useState<string | null>(null);
   const [comments, setComments] = useState<PostCommentWithProfile[]>([]);
+  const [commentSortOrder, setCommentSortOrder] = useState<'latest' | 'popular'>('latest');
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const [replyDraft, setReplyDraft] = useState("");
+  const [submittingReply, setSubmittingReply] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const commentsSectionRef = useRef<HTMLDivElement | null>(null);
@@ -144,7 +148,8 @@ const FeedPostDetailSheet = ({
           .maybeSingle(),
       ]);
 
-      setCanComment(roleData?.role === "parent" || roleData?.role === "student");
+      // parent/student은 항상 댓글 작성 가능, 학원 계정은 "해당 학원 글"에 한해 멤버면 가능
+      let nextCanComment = roleData?.role === "parent" || roleData?.role === "student";
       const roleLabel = roleData?.role === "parent" ? "학부모" : roleData?.role === "student" ? "학생" : roleData?.role === "admin" ? "학원" : null;
       setCurrentUserRoleLabel(roleLabel);
       setCurrentUserName(profileData?.user_name?.trim() || "익명");
@@ -153,19 +158,33 @@ const FeedPostDetailSheet = ({
       // Check if user is the author (for super admin posts)
       if (post.author_id === session.user.id) {
         setIsOwner(true);
+        setCanComment(nextCanComment);
         return;
       }
 
-      // Check if user is academy owner
+      // Academy post: allow manage actions (edit/delete) for members with manage_posts
+      // and allow commenting for approved academy members (admin role only).
       if (post.academy_id) {
-        const { data: academy } = await supabase
-          .from("academies")
-          .select("id")
-          .eq("id", post.academy_id)
-          .eq("owner_id", session.user.id)
+        const { data: member } = await supabase
+          .from("academy_members")
+          .select("role, status, permissions")
+          .eq("academy_id", post.academy_id)
+          .eq("user_id", session.user.id)
+          .eq("status", "approved")
           .maybeSingle();
-        setIsOwner(!!academy);
+
+        const perms = (member as any)?.permissions as any;
+        const canManagePosts = !!member && (member.role === "owner" || perms?.manage_posts === true);
+        if (canManagePosts) {
+          setIsOwner(true);
+        }
+
+        if (!nextCanComment && roleData?.role === "admin") {
+          nextCanComment = !!member;
+        }
       }
+
+      setCanComment(nextCanComment);
     };
 
     loadViewerState();
@@ -177,7 +196,7 @@ const FeedPostDetailSheet = ({
 
       setCommentsLoading(true);
       try {
-        const nextComments = await fetchPostComments(post.id);
+        const nextComments = await fetchPostComments(post.id, currentUserId);
         setComments(nextComments);
         onCommentCountChange?.(post.id, nextComments.length);
       } catch (error) {
@@ -189,7 +208,7 @@ const FeedPostDetailSheet = ({
     };
 
     loadComments();
-  }, [post?.id]);
+  }, [post?.id, currentUserId]);
 
   if (!post) return null;
 
@@ -235,27 +254,13 @@ const FeedPostDetailSheet = ({
 
       toast.success("게시글이 삭제되었습니다");
       setDeleteDialogOpen(false);
-      onClose();
+      onClose?.();
       onDelete?.(post.id);
     } catch (error) {
       console.error("Error deleting post:", error);
       toast.error("게시글 삭제에 실패했습니다");
     } finally {
       setDeleting(false);
-    }
-  };
-
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: post.title,
-          text: `${post.academy?.name || post.author?.user_name || "운영자"}의 새 소식: ${post.title}`,
-          url: window.location.href,
-        });
-      } catch (error) {
-        console.log('Share cancelled');
-      }
     }
   };
 
@@ -269,13 +274,13 @@ const FeedPostDetailSheet = ({
 
   const handleAcademyClick = () => {
     if (!isAcademyPost || !post.academy) return;
-    onClose();
+    onClose?.();
     onAcademyClick(post.academy.id);
   };
 
   const handleSeminarClick = () => {
     if (post.seminar_id && onSeminarClick) {
-      onClose();
+      onClose?.();
       onSeminarClick(post.seminar_id);
     }
   };
@@ -285,6 +290,32 @@ const FeedPostDetailSheet = ({
     window.setTimeout(() => {
       commentInputRef.current?.focus();
     }, 250);
+  };
+
+  const handleCommentLikeToggle = async (comment: PostCommentWithProfile) => {
+    if (!currentUserId) return;
+    const isLiked = comment.is_liked ?? false;
+    setComments((prev) =>
+      prev.map((c) =>
+        c.id === comment.id
+          ? { ...c, is_liked: !isLiked, like_count: c.like_count + (isLiked ? -1 : 1) }
+          : c
+      )
+    );
+    try {
+      const result = await toggleCommentLike(comment.id, currentUserId, isLiked);
+      setComments((prev) =>
+        prev.map((c) => (c.id === comment.id ? { ...c, like_count: result.like_count, is_liked: result.is_liked } : c))
+      );
+    } catch (error) {
+      console.error("Error toggling comment like:", error);
+      toast.error("좋아요 처리에 실패했습니다");
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === comment.id ? { ...c, is_liked: isLiked, like_count: comment.like_count } : c
+        )
+      );
+    }
   };
 
   const handleCommentSubmit = async () => {
@@ -307,6 +338,9 @@ const FeedPostDetailSheet = ({
 
       const nextComment: PostCommentWithProfile = {
         ...data,
+        like_count: 0,
+        is_liked: false,
+        parent_comment_id: null,
         profile: {
           image_url: currentUserImageUrl,
           user_name: currentUserName,
@@ -329,8 +363,151 @@ const FeedPostDetailSheet = ({
     }
   };
 
+  const handleReplySubmit = async (parentCommentId: string) => {
+    if (!post || !currentUserId || !replyDraft.trim() || !canComment) return;
+    setSubmittingReply(true);
+    try {
+      const newReply = await insertReplyComment(
+        post.id,
+        parentCommentId,
+        currentUserId,
+        replyDraft.trim(),
+        {
+          image_url: currentUserImageUrl,
+          user_name: currentUserName,
+          role_label: currentUserRoleLabel,
+        }
+      );
+      setComments((prev) => {
+        const next = [...prev, newReply];
+        onCommentCountChange?.(post.id, next.length);
+        return next;
+      });
+      setReplyDraft("");
+      setReplyingToCommentId(null);
+      toast.success("답글이 등록되었습니다");
+    } catch (error) {
+      console.error("Error creating reply:", error);
+      toast.error("답글 등록에 실패했습니다");
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
+
+  const roots = comments.filter((c) => !c.parent_comment_id);
+  const repliesByParent = comments
+    .filter((c) => c.parent_comment_id)
+    .reduce<Record<string, PostCommentWithProfile[]>>((acc, c) => {
+      const pid = c.parent_comment_id!;
+      if (!acc[pid]) acc[pid] = [];
+      acc[pid].push(c);
+      return acc;
+    }, {});
+
+  const renderCommentBlock = (comment: PostCommentWithProfile, isReply: boolean) => {
+    const commenterName = comment.profile?.user_name?.trim() || "익명";
+    const commenterInitial = commenterName.charAt(0);
+    const commenterImageUrl = comment.profile?.image_url;
+    const roleLabel = comment.profile?.role_label || "회원";
+    const isAcademyRole = roleLabel === "학원";
+    const replies = repliesByParent[comment.id] ?? [];
+    const isReplyingThis = replyingToCommentId === comment.id;
+
+    return (
+      <div key={comment.id} className={cn("py-3", isReply && "pl-8 border-l-2 border-muted/60")}>
+        <div className={cn("flex items-center gap-2 mb-0.5", isReply && "pl-3")}>
+          {commenterImageUrl ? (
+            <img src={commenterImageUrl} alt={commenterName} className="w-8 h-8 rounded-full object-cover shrink-0" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-primary/25 text-primary flex items-center justify-center shrink-0 text-base font-semibold">
+              {commenterInitial}
+            </div>
+          )}
+          <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0 shrink-0", isAcademyRole ? "bg-primary/10 text-primary" : "bg-amber-500/20 text-amber-600")}>
+            {roleLabel}
+          </Badge>
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <p className="text-sm font-semibold text-foreground truncate">{commenterName}</p>
+            <span className="text-xs text-muted-foreground shrink-0">
+              {formatCommentTimestamp(comment.created_at)}
+            </span>
+          </div>
+        </div>
+        <p className={cn("text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed", isReply ? "pl-14" : "pl-11")}>
+          {comment.content}
+        </p>
+        <div className={cn("flex items-center gap-3 pl-11 mt-2.5", isReply && "pl-14")}>
+          <button
+            type="button"
+            onClick={() => handleCommentLikeToggle(comment)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+            aria-label={comment.is_liked ? "좋아요 취소" : "좋아요"}
+          >
+            <Heart
+              className={cn(
+                "w-4 h-4 transition-all",
+                comment.is_liked ? "fill-destructive text-destructive" : ""
+              )}
+            />
+            {comment.like_count > 0 && (
+              <span className={cn(comment.is_liked && "text-destructive")}>
+                {comment.like_count}
+              </span>
+            )}
+          </button>
+          {!isReply && canComment && (
+            <button
+              type="button"
+              onClick={() => setReplyingToCommentId(comment.id)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              답글
+            </button>
+          )}
+        </div>
+        {!isReply && isReplyingThis && (
+          <div className="mt-5 pl-11 flex flex-col gap-2">
+            <Textarea
+              value={replyDraft}
+              onChange={(e) => setReplyDraft(e.target.value)}
+              placeholder="답글을 입력하세요..."
+              rows={2}
+              maxLength={500}
+              className="text-sm resize-none"
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => handleReplySubmit(comment.id)}
+                disabled={submittingReply || !replyDraft.trim()}
+                className="gap-1"
+              >
+                <Send className="w-3.5 h-3.5" />
+                등록
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => { setReplyingToCommentId(null); setReplyDraft(""); }}
+              >
+                취소
+              </Button>
+            </div>
+          </div>
+        )}
+        {replies.length > 0 && (
+          <div className="mt-2 space-y-0">
+            {replies
+              .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+              .map((r) => renderCommentBlock(r, true))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen h-screen overflow-y-auto bg-background">
         <div className="fixed top-0 left-0 right-0 z-20 bg-card border-b">
           <div className="max-w-md mx-auto px-4 h-14 flex items-center justify-between">
             <Button variant="ghost" size="icon" onClick={onBack} aria-label="뒤로가기">
@@ -344,9 +521,10 @@ const FeedPostDetailSheet = ({
             ) : <div className="w-10" />}
           </div>
         </div>
-        <div className="pt-14 h-[calc(100vh-3.5rem)] overflow-y-auto flex flex-col">
-          <div className="max-w-md mx-auto bg-background flex-1 min-h-0 flex flex-col w-full min-h-[calc(100vh-3.5rem)] pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
-          <div className="px-4 py-4 shrink-0">
+        <div className="pt-14 min-h-full bg-background">
+          <div className="max-w-md mx-auto w-full min-h-[calc(100vh-3.5rem)] bg-white pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))]">
+            {/* 상단 작성자: 가로 패딩은 제목/내용과 동일 px-4 */}
+            <div className="px-4 py-4">
             <div
               className={`flex items-center gap-3 ${isAcademyPost ? 'cursor-pointer' : ''}`}
               onClick={handleAcademyClick}
@@ -375,9 +553,8 @@ const FeedPostDetailSheet = ({
                   {formatCommentTimestamp(post.created_at)}
                 </p>
               </div>
+              </div>
             </div>
-          </div>
-          <div className="overflow-y-auto flex-1">
             <div className="px-4 pb-4">
               <div className="flex items-center gap-2 mb-3">
                 <Badge className={cn("text-xs px-2 py-0.5", config.color)}>
@@ -456,86 +633,58 @@ const FeedPostDetailSheet = ({
                 {post.body || "내용이 없습니다."}
               </div>
             </div>
-          </div>
-          <div ref={commentsSectionRef} className="w-full border-t-8 border-slate-100 bg-background pt-4 px-4 flex-1 min-h-0 flex flex-col">
-                <div className="mb-4">
+            <div ref={commentsSectionRef} className="w-full border-t-8 border-slate-100 bg-white px-4 pt-4">
+                <div className="mb-4 flex items-center justify-between gap-2">
                   <h4 className="text-sm font-semibold text-foreground">댓글 {comments.length}</h4>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setCommentSortOrder('latest')}
+                      className={cn(
+                        "px-2 py-1 text-xs rounded-md transition-colors",
+                        commentSortOrder === 'latest'
+                          ? "bg-primary text-primary-foreground font-medium"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      )}
+                    >
+                      최신순
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCommentSortOrder('popular')}
+                      className={cn(
+                        "px-2 py-1 text-xs rounded-md transition-colors",
+                        commentSortOrder === 'popular'
+                          ? "bg-primary text-primary-foreground font-medium"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      )}
+                    >
+                      추천순
+                    </button>
+                  </div>
                 </div>
                 {commentsLoading ? (
                   <p className="text-sm text-muted-foreground">댓글을 불러오는 중...</p>
                 ) : comments.length === 0 ? null : (
                   <div className="space-y-3">
-                    {comments.map((comment) => {
-                      const commenterName = comment.profile?.user_name?.trim() || "익명";
-                      const commenterInitial = commenterName.charAt(0);
-                      const commenterImageUrl = comment.profile?.image_url;
-                      const roleLabel = comment.profile?.role_label || "회원";
-                      const isAcademyRole = roleLabel === "학원";
-                      return (
-                        <div key={comment.id} className="py-3">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            {commenterImageUrl ? (
-                              <img src={commenterImageUrl} alt={commenterName} className="w-8 h-8 rounded-full object-cover shrink-0" />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-primary/25 text-primary flex items-center justify-center shrink-0 text-base font-semibold">
-                                {commenterInitial}
-                              </div>
-                            )}
-                            <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0 shrink-0", isAcademyRole ? "bg-primary/10 text-primary" : "bg-amber-500/20 text-amber-600")}>
-                              {roleLabel}
-                            </Badge>
-                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-foreground truncate">{commenterName}</p>
-                              <span className="text-xs text-muted-foreground shrink-0">
-                                {formatCommentTimestamp(comment.created_at)}
-                              </span>
-                            </div>
-                          </div>
-                          <p className="text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed pl-11">
-                            {comment.content}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {canComment ? (
-                  <div className="mt-4">
-                    <div className="flex items-center">
-                      <div className="flex-1">
-                        <div className="flex items-center h-12 rounded-full bg-muted border border-slate-300 pl-6 pr-3">
-                          <Textarea
-                            ref={commentInputRef}
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            placeholder="댓글을 입력하세요"
-                            rows={1}
-                            maxLength={500}
-                            className="flex-1 h-12 min-h-0 border-0 bg-transparent px-0 py-3.5 text-sm leading-5 resize-none focus-visible:ring-0 focus-visible:outline-none focus-visible:ring-offset-0"
-                          />
-                          <Button
-                            size="icon"
-                            className="ml-2 rounded-full w-9 h-9"
-                            onClick={handleCommentSubmit}
-                            disabled={submittingComment || !commentText.trim()}
-                          >
-                            <Send className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-4 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
-                    댓글 작성은 학부모/학생 계정에서 가능합니다.
+                    {[...roots]
+                      .sort((a, b) => {
+                        if (commentSortOrder === 'latest') {
+                          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                        }
+                        return (b.like_count ?? 0) - (a.like_count ?? 0);
+                      })
+                      .map((root) => renderCommentBlock(root, false))}
                   </div>
                 )}
               </div>
+            </div>
           </div>
-        </div>
+        {/* 하단 고정: 액션 바(좋아요·댓글 수) + 댓글 입력창 - 가로 패딩은 헤더(뒤로가기·글 상세)와 동일 */}
         <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-10 pb-[env(safe-area-inset-bottom,0px)]">
-          <div className="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="max-w-md mx-auto px-4">
+            {/* 액션 바: 좋아요, 댓글 수만 */}
+            <div className="py-3 flex items-center gap-4">
               <button
                 type="button"
                 onClick={() => onLikeToggle(post.id, post.is_liked || false)}
@@ -547,8 +696,8 @@ const FeedPostDetailSheet = ({
                     post.is_liked ? "fill-destructive text-destructive" : "text-muted-foreground hover:text-destructive"
                   )}
                 />
-                <span className={cn(post.is_liked ? "text-destructive" : "text-muted-foreground")}>
-                  {post.like_count > 0 && post.like_count}
+                <span className={cn("text-foreground", post.is_liked && "text-destructive")}>
+                  {post.like_count > 0 ? post.like_count : ""}
                 </span>
               </button>
               <button
@@ -557,24 +706,45 @@ const FeedPostDetailSheet = ({
                 className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 <MessageCircle className="w-5 h-5" />
-                <span>{comments.length}</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleShare}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Share2 className="w-5 h-5" />
+                <span className="text-foreground">{comments.length}</span>
               </button>
             </div>
-            {isAcademyPost ? (
-              <Button variant="default" size="sm" onClick={handleAcademyClick} className="gap-1">
-                학원 프로필 보기
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            ) : (
-              <div />
-            )}
+            {/* 댓글 입력창 (작성 불가 시에도 UI는 노출하되 disabled) */}
+            <div className="flex items-center gap-2 pb-3">
+              <div
+                className={cn(
+                  "flex-1 flex items-center min-h-11 rounded-full border pl-4 pr-2",
+                  canComment ? "bg-muted border-input" : "bg-muted/40 border-border"
+                )}
+              >
+                <Textarea
+                  ref={commentInputRef}
+                  value={commentText}
+                  onChange={(e) => {
+                    if (!canComment) return;
+                    setCommentText(e.target.value);
+                  }}
+                  placeholder={canComment ? "댓글을 입력하세요..." : "댓글 작성은 학부모/학생 계정에서 가능합니다."}
+                  rows={1}
+                  maxLength={500}
+                  disabled={!canComment}
+                  className="flex-1 min-h-0 border-0 bg-transparent px-0 py-3 text-sm leading-5 resize-none focus-visible:ring-0 focus-visible:outline-none focus-visible:ring-offset-0 disabled:opacity-100"
+                />
+                <Button
+                  size="icon"
+                  className={cn(
+                    "rounded-full w-9 h-9 shrink-0",
+                    canComment
+                      ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                  onClick={handleCommentSubmit}
+                  disabled={!canComment || submittingComment || !commentText.trim()}
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
         <ImageViewer

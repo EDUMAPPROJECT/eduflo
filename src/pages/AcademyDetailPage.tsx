@@ -347,19 +347,20 @@ const AcademyDetailPage = () => {
         </div>
       </header>
 
-      {/* Hero Image - Use banner_image for hero, fallback to profile_image */}
-      <div className="max-w-lg mx-auto h-48 bg-gradient-to-br from-primary/20 to-accent/20">
+      {/* Hero Image - Use banner_image for hero, fallback to profile_image.
+          비율을 유지하면서 사진 전체가 보이도록 object-contain 사용 */}
+      <div className="max-w-lg mx-auto h-48 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center overflow-hidden">
         {academy.banner_image ? (
           <img
             src={academy.banner_image}
             alt={academy.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         ) : academy.profile_image ? (
           <img
             src={academy.profile_image}
             alt={academy.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">

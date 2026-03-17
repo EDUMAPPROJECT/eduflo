@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, MapPin, GraduationCap, User, MessageSquare, Map, Copy, Building2 } from "lucide-react";
 import { toast } from "sonner";
+import { formatStudentGrade } from "@/lib/formatStudentGrade";
 
 interface ReservationDetailSheetProps {
   open: boolean;
@@ -108,8 +109,11 @@ const ReservationDetailSheet = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
-        <SheetHeader className="mb-4">
+      <SheetContent
+        side="bottom"
+        className="rounded-t-2xl max-h-[80vh] flex flex-col p-0 overflow-hidden"
+      >
+        <SheetHeader className="flex-shrink-0 px-6 pt-6 pb-2">
           <div className="flex items-center justify-between">
             <SheetTitle className="text-lg">
               {type === "reservation" ? "방문 상담 상세" : "설명회 신청 상세"}
@@ -119,7 +123,7 @@ const ReservationDetailSheet = ({
           </div>
         </SheetHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 space-y-4">
           {/* Academy/Seminar Info */}
           <div className="bg-muted/50 rounded-xl p-4">
             <h3 className="font-semibold text-foreground mb-1">
@@ -276,7 +280,7 @@ const ReservationDetailSheet = ({
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">학년</p>
-                  <p className="font-medium">{data.studentGrade}</p>
+                  <p className="font-medium">{formatStudentGrade(data.studentGrade)}</p>
                 </div>
               </div>
             )}

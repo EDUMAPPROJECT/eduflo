@@ -23,7 +23,7 @@ const Logo = ({ size = "md", showText = true }: LogoProps) => {
       <img 
         src={logoImage} 
         alt="에듀맵 로고" 
-        className={cn(sizeClasses[size], "rounded-xl")}
+        className={cn(sizeClasses[size], "rounded-md")}
       />
       {showText && (
         <div className={cn("font-bold text-foreground", textSizeClasses[size])}>

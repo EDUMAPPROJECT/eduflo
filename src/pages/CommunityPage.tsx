@@ -24,7 +24,8 @@ import {
   GraduationCap,
   Megaphone,
   MessageCircle,
-  Plus,
+  Pencil,
+  FileText,
 } from "lucide-react";
 
 interface FeedPost {
@@ -77,6 +78,7 @@ const CommunityPage = () => {
   
   const [activeCommunityTab, setActiveCommunityTab] = useState<'academy' | 'parent'>('academy');
   const [activeFilter, setActiveFilter] = useState('all');
+  const [feedSortOrder, setFeedSortOrder] = useState<'latest' | 'popular'>('latest');
   const [userId, setUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [bookmarkedAcademies, setBookmarkedAcademies] = useState<string[]>([]);
@@ -136,7 +138,11 @@ const CommunityPage = () => {
           }));
 
         allPosts = Array.from(new Map(allPosts.map((post) => [post.id, post])).values());
-        allPosts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        allPosts.sort((a, b) =>
+          feedSortOrder === 'latest'
+            ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            : (b.like_count ?? 0) - (a.like_count ?? 0)
+        );
 
         let posts = allPosts.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
@@ -266,8 +272,11 @@ const CommunityPage = () => {
         new Map(allPosts.map((post) => [post.id, post])).values()
       );
 
-      // Sort by created_at
-      allPosts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      allPosts.sort((a, b) =>
+        feedSortOrder === 'latest'
+          ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          : (b.like_count ?? 0) - (a.like_count ?? 0)
+      );
 
       // Paginate
       const paginatedPosts = allPosts.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -307,7 +316,7 @@ const CommunityPage = () => {
       console.error("Error fetching posts:", error);
       return { data: [], hasMore: false };
     }
-  }, [activeCommunityTab, selectedRegion, activeFilter, bookmarkedAcademies, userId]);
+  }, [activeCommunityTab, selectedRegion, activeFilter, feedSortOrder, bookmarkedAcademies, userId]);
 
   const {
     items: posts,
@@ -345,10 +354,10 @@ const CommunityPage = () => {
     init();
   }, []);
 
-  // Reset and refetch when filter or region changes
+  // Reset and refetch when filter, region, or sort changes
   useEffect(() => {
     reset();
-  }, [activeCommunityTab, selectedRegion, activeFilter, reset]);
+  }, [activeCommunityTab, selectedRegion, activeFilter, feedSortOrder, reset]);
 
   const currentFilterOptions = activeCommunityTab === 'academy' ? academyFilterOptions : parentFilterOptions;
 
@@ -394,10 +403,8 @@ const CommunityPage = () => {
       {/* Header */}
       <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Logo size="sm" showText={false} />
-            <GlobalRegionSelector />
-          </div>
+          <GlobalRegionSelector />
+          <Logo size="sm" showText={false} />
         </div>
       </header>
 
@@ -435,7 +442,7 @@ const CommunityPage = () => {
           </div>
 
           {/* Category chips (text only) */}
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide mt-3 mb-3">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide mt-3">
             {currentFilterOptions.map((option) => {
               const isActive = activeFilter === option.id;
               return (
@@ -456,6 +463,33 @@ const CommunityPage = () => {
                 </button>
               );
             })}
+          </div>
+
+          {/* Sort: 최신순 / 인기순 - 오른쪽 정렬 */}
+          <div className="flex items-center justify-end gap-1 mt-2 mb-3">
+            <button
+              type="button"
+              onClick={() => setFeedSortOrder('latest')}
+              className={`text-sm transition-colors ${
+                feedSortOrder === 'latest'
+                  ? "font-medium text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              최신
+            </button>
+            <span className="text-muted-foreground/60">|</span>
+            <button
+              type="button"
+              onClick={() => setFeedSortOrder('popular')}
+              className={`text-sm transition-colors ${
+                feedSortOrder === 'popular'
+                  ? "font-medium text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              인기
+            </button>
           </div>
         </div>
       </div>
@@ -480,26 +514,33 @@ const CommunityPage = () => {
             ))}
           </div>
         ) : posts.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
-              <Newspaper className="w-8 h-8 text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center py-20 px-4">
+            <div className="w-20 h-20 flex items-center justify-center mx-auto mb-6 text-muted-foreground/80">
+              <FileText className="w-16 h-16" strokeWidth={1.25} />
             </div>
-            <h3 className="font-semibold text-foreground mb-2">
-              {activeCommunityTab === 'academy' ? '아직 등록된 소식이 없어요' : '아직 등록된 글이 없어요'}
+            <h3 className="text-lg font-semibold text-foreground mb-2 text-center">
+              {activeCommunityTab === 'academy' ? '아직 등록된 소식이 없어요' : '아직 작성된 글이 없어요'}
             </h3>
-            <p className="text-sm text-muted-foreground mb-6">
+            <p className="text-sm text-muted-foreground mb-8 text-center">
               {activeCommunityTab === 'academy'
                 ? "새로운 학원 소식을 기다려주세요"
-                : "학부모 커뮤니티 글이 준비되면 여기에 표시됩니다"}
+                : "첫 번째 글을 작성해보세요!"}
             </p>
-            {activeCommunityTab === 'academy' && (
-              <Button 
-                variant="outline" 
+            {activeCommunityTab === 'academy' ? (
+              <Button
                 onClick={() => navigate(`${prefix}/explore`)}
-                className="gap-2"
+                className="gap-2 rounded-xl px-6"
               >
                 <Search className="w-4 h-4" />
                 탐색하러 가기
+              </Button>
+            ) : (
+              <Button
+                onClick={() => setIsParentPostDialogOpen(true)}
+                className="gap-2 rounded-xl px-6"
+              >
+                <Pencil className="w-4 h-4" />
+                글 작성하기
               </Button>
             )}
           </div>
@@ -536,8 +577,9 @@ const CommunityPage = () => {
           <button
             onClick={() => setIsParentPostDialogOpen(true)}
             className="fixed bottom-24 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center z-40 hover:bg-primary/90 transition-colors"
+            aria-label="글쓰기"
           >
-            <Plus className="w-6 h-6" />
+            <Pencil className="w-6 h-6" />
           </button>
           <ParentCommunityPostDialog
             open={isParentPostDialogOpen}
