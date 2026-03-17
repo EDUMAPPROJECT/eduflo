@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { GraduationCap, Clock, CheckCircle, Calendar, X, ArrowLeft, Settings, ChevronDown, ChevronUp } from "lucide-react";
+import { GraduationCap, Clock, CheckCircle, Calendar, X, ArrowLeft, Settings, ChevronDown, ChevronUp, MessageCircle } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
+import { formatStudentGrade } from "@/lib/formatStudentGrade";
 
 type ConsultationReservation = Database["public"]["Tables"]["consultation_reservations"]["Row"];
 
@@ -20,6 +21,7 @@ const ConsultationManagementPage = () => {
   const [user, setUser] = useState<any>(null);
   const [academyId, setAcademyId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [openingChatFor, setOpeningChatFor] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -98,6 +100,61 @@ const ConsultationManagementPage = () => {
       toast({ title: "완료", description: `예약이 ${statusText} 처리되었습니다.` });
     } catch {
       toast({ title: "오류", description: "상태 변경에 실패했습니다.", variant: "destructive" });
+    }
+  };
+
+  const handleOpenChat = async (reservation: ConsultationReservation) => {
+    if (!user?.id || !academyId) return;
+    if (!reservation.parent_id) return;
+
+    setOpeningChatFor(reservation.id);
+    try {
+      // Find existing room for academy + parent (unique in DB)
+      const { data: existingRoom, error: findError } = await supabase
+        .from("chat_rooms")
+        .select("id, staff_user_id")
+        .eq("academy_id", academyId)
+        .eq("parent_id", reservation.parent_id)
+        .maybeSingle();
+
+      if (findError) throw findError;
+
+      if (existingRoom?.id) {
+        // Assign staff if not assigned yet
+        if (!existingRoom.staff_user_id) {
+          await supabase
+            .from("chat_rooms")
+            .update({ staff_user_id: user.id, status: "active" })
+            .eq("id", existingRoom.id);
+        }
+
+        navigate(`/admin/chats/${existingRoom.id}`);
+        return;
+      }
+
+      // Create new room with current staff as 담당자
+      const { data: newRoom, error: createError } = await supabase
+        .from("chat_rooms")
+        .insert({
+          academy_id: academyId,
+          parent_id: reservation.parent_id,
+          staff_user_id: user.id,
+          status: "active",
+        })
+        .select("id")
+        .single();
+
+      if (createError) throw createError;
+      navigate(`/admin/chats/${newRoom.id}`);
+    } catch (error) {
+      console.error("Error opening chat room:", error);
+      toast({
+        title: "오류",
+        description: "채팅방을 열지 못했습니다.",
+        variant: "destructive",
+      });
+    } finally {
+      setOpeningChatFor(null);
     }
   };
 
@@ -188,7 +245,7 @@ const ConsultationManagementPage = () => {
                         <h4 className="font-medium text-foreground">{reservation.student_name}</h4>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <GraduationCap className="w-3 h-3" />
-                          <span>{reservation.student_grade || "학년 미정"}</span>
+                          <span>{formatStudentGrade(reservation.student_grade) || "학년 미정"}</span>
                         </div>
                       </div>
                     </div>
@@ -202,9 +259,11 @@ const ConsultationManagementPage = () => {
                   </div>
 
                   {reservation.message && (
-                    <p className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3 mb-3">
-                      "{reservation.message}"
-                    </p>
+                    <div className="bg-muted/50 rounded-lg p-3 mb-3">
+                      <p className="text-sm text-muted-foreground">
+                        "{reservation.message}"
+                      </p>
+                    </div>
                   )}
 
                   <div className="flex items-center justify-between">
@@ -214,6 +273,15 @@ const ConsultationManagementPage = () => {
                     </div>
 
                     <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleOpenChat(reservation)}
+                        disabled={openingChatFor === reservation.id}
+                        aria-label="채팅하기"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </Button>
                       {reservation.status === "pending" && (
                         <>
                           <Button size="sm" variant="outline" onClick={() => handleUpdateReservation(reservation.id, "cancelled")}>
