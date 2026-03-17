@@ -61,7 +61,7 @@ const AcademySetupPage = () => {
 
       if (existingAcademy) {
         // Redirect to dashboard if academy already exists
-        navigate("/academy/dashboard");
+        navigate("/");
         return;
       }
 
@@ -171,7 +171,7 @@ const AcademySetupPage = () => {
       }
 
       toast({ title: "학원이 성공적으로 등록되었습니다!" });
-      navigate("/academy/dashboard");
+      navigate("/");
     } catch (error: any) {
       console.error("Error creating academy:", error);
       toast({ 

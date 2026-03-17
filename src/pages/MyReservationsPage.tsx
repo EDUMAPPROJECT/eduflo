@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
+import { formatStudentGrade } from "@/lib/formatStudentGrade";
 
 type ConsultationReservation = Database["public"]["Tables"]["consultation_reservations"]["Row"];
 type Academy = Database["public"]["Tables"]["academies"]["Row"];
@@ -476,7 +477,7 @@ const MyReservationsPage = () => {
                               {reservation.academy?.name || "학원"}
                             </h4>
                             <p className="text-xs text-muted-foreground">
-                              {reservation.student_name} · {reservation.student_grade || "학년 미정"}
+                              {reservation.student_name} · {formatStudentGrade(reservation.student_grade) || "학년 미정"}
                             </p>
                           </div>
                         </div>
@@ -586,7 +587,7 @@ const MyReservationsPage = () => {
                                   {reservation.academy?.name || "학원"}
                                 </h4>
                                 <p className="text-xs text-muted-foreground">
-                                  {reservation.student_name} · {reservation.student_grade || "학년 미정"}
+                                  {reservation.student_name} · {formatStudentGrade(reservation.student_grade) || "학년 미정"}
                                 </p>
                               </div>
                             </div>
@@ -677,7 +678,7 @@ const MyReservationsPage = () => {
                               {reservation.academy?.name || "학원"}
                             </h4>
                             <p className="text-xs text-muted-foreground">
-                              {reservation.student_name} · {reservation.student_grade || "학년 미정"}
+                              {reservation.student_name} · {formatStudentGrade(reservation.student_grade) || "학년 미정"}
                             </p>
                           </div>
                         </div>

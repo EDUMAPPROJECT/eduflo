@@ -18,7 +18,16 @@ const AcademyTargetTagsEditor = ({
   onChange, 
   disabled = false 
 }: AcademyTargetTagsEditorProps) => {
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(['subject', 'goal', 'style', 'grade']);
+  // 기본으로 모든 카테고리의 칩을 펼쳐서 보여준다. (수업형태는 제외)
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([
+    'subject',
+    'goal',
+    'style',
+    'grade',
+    'class_size',
+    'mgmt',
+    'shuttle',
+  ]);
 
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => 
@@ -40,8 +49,8 @@ const AcademyTargetTagsEditor = ({
 
   const isSelected = (tagKey: string) => selectedTags.includes(tagKey);
 
-  // Categories to display (excluding budget for academy)
-  const displayCategories = ['subject', 'goal', 'style', 'grade', 'class_size', 'delivery', 'mgmt', 'shuttle'];
+  // Categories to display (excluding budget & 수업형태 for academy)
+  const displayCategories = ['subject', 'goal', 'style', 'grade', 'class_size', 'mgmt', 'shuttle'];
 
   return (
     <Card className="shadow-card">

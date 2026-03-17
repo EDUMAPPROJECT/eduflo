@@ -20,7 +20,7 @@ import ImageViewer from "@/components/ImageViewer";
 import useEmblaCarousel from "embla-carousel-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { fetchPostComments, toggleCommentLike, type PostCommentWithProfile } from "@/lib/postComments";
+import { fetchPostComments, toggleCommentLike, insertReplyComment, type PostCommentWithProfile } from "@/lib/postComments";
 
 interface FeedPost {
   id: string;
@@ -111,6 +111,9 @@ const FeedPostDetailSheet = ({
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const [replyDraft, setReplyDraft] = useState("");
+  const [submittingReply, setSubmittingReply] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const commentsSectionRef = useRef<HTMLDivElement | null>(null);
@@ -145,7 +148,8 @@ const FeedPostDetailSheet = ({
           .maybeSingle(),
       ]);
 
-      setCanComment(roleData?.role === "parent" || roleData?.role === "student");
+      // parent/student은 항상 댓글 작성 가능, 학원 계정은 "해당 학원 글"에 한해 멤버면 가능
+      let nextCanComment = roleData?.role === "parent" || roleData?.role === "student";
       const roleLabel = roleData?.role === "parent" ? "학부모" : roleData?.role === "student" ? "학생" : roleData?.role === "admin" ? "학원" : null;
       setCurrentUserRoleLabel(roleLabel);
       setCurrentUserName(profileData?.user_name?.trim() || "익명");
@@ -154,19 +158,33 @@ const FeedPostDetailSheet = ({
       // Check if user is the author (for super admin posts)
       if (post.author_id === session.user.id) {
         setIsOwner(true);
+        setCanComment(nextCanComment);
         return;
       }
 
-      // Check if user is academy owner
+      // Academy post: allow manage actions (edit/delete) for members with manage_posts
+      // and allow commenting for approved academy members (admin role only).
       if (post.academy_id) {
-        const { data: academy } = await supabase
-          .from("academies")
-          .select("id")
-          .eq("id", post.academy_id)
-          .eq("owner_id", session.user.id)
+        const { data: member } = await supabase
+          .from("academy_members")
+          .select("role, status, permissions")
+          .eq("academy_id", post.academy_id)
+          .eq("user_id", session.user.id)
+          .eq("status", "approved")
           .maybeSingle();
-        setIsOwner(!!academy);
+
+        const perms = (member as any)?.permissions as any;
+        const canManagePosts = !!member && (member.role === "owner" || perms?.manage_posts === true);
+        if (canManagePosts) {
+          setIsOwner(true);
+        }
+
+        if (!nextCanComment && roleData?.role === "admin") {
+          nextCanComment = !!member;
+        }
       }
+
+      setCanComment(nextCanComment);
     };
 
     loadViewerState();
@@ -322,6 +340,7 @@ const FeedPostDetailSheet = ({
         ...data,
         like_count: 0,
         is_liked: false,
+        parent_comment_id: null,
         profile: {
           image_url: currentUserImageUrl,
           user_name: currentUserName,
@@ -342,6 +361,149 @@ const FeedPostDetailSheet = ({
     } finally {
       setSubmittingComment(false);
     }
+  };
+
+  const handleReplySubmit = async (parentCommentId: string) => {
+    if (!post || !currentUserId || !replyDraft.trim() || !canComment) return;
+    setSubmittingReply(true);
+    try {
+      const newReply = await insertReplyComment(
+        post.id,
+        parentCommentId,
+        currentUserId,
+        replyDraft.trim(),
+        {
+          image_url: currentUserImageUrl,
+          user_name: currentUserName,
+          role_label: currentUserRoleLabel,
+        }
+      );
+      setComments((prev) => {
+        const next = [...prev, newReply];
+        onCommentCountChange?.(post.id, next.length);
+        return next;
+      });
+      setReplyDraft("");
+      setReplyingToCommentId(null);
+      toast.success("답글이 등록되었습니다");
+    } catch (error) {
+      console.error("Error creating reply:", error);
+      toast.error("답글 등록에 실패했습니다");
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
+
+  const roots = comments.filter((c) => !c.parent_comment_id);
+  const repliesByParent = comments
+    .filter((c) => c.parent_comment_id)
+    .reduce<Record<string, PostCommentWithProfile[]>>((acc, c) => {
+      const pid = c.parent_comment_id!;
+      if (!acc[pid]) acc[pid] = [];
+      acc[pid].push(c);
+      return acc;
+    }, {});
+
+  const renderCommentBlock = (comment: PostCommentWithProfile, isReply: boolean) => {
+    const commenterName = comment.profile?.user_name?.trim() || "익명";
+    const commenterInitial = commenterName.charAt(0);
+    const commenterImageUrl = comment.profile?.image_url;
+    const roleLabel = comment.profile?.role_label || "회원";
+    const isAcademyRole = roleLabel === "학원";
+    const replies = repliesByParent[comment.id] ?? [];
+    const isReplyingThis = replyingToCommentId === comment.id;
+
+    return (
+      <div key={comment.id} className={cn("py-3", isReply && "pl-8 border-l-2 border-muted/60")}>
+        <div className={cn("flex items-center gap-2 mb-0.5", isReply && "pl-3")}>
+          {commenterImageUrl ? (
+            <img src={commenterImageUrl} alt={commenterName} className="w-8 h-8 rounded-full object-cover shrink-0" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-primary/25 text-primary flex items-center justify-center shrink-0 text-base font-semibold">
+              {commenterInitial}
+            </div>
+          )}
+          <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0 shrink-0", isAcademyRole ? "bg-primary/10 text-primary" : "bg-amber-500/20 text-amber-600")}>
+            {roleLabel}
+          </Badge>
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <p className="text-sm font-semibold text-foreground truncate">{commenterName}</p>
+            <span className="text-xs text-muted-foreground shrink-0">
+              {formatCommentTimestamp(comment.created_at)}
+            </span>
+          </div>
+        </div>
+        <p className={cn("text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed", isReply ? "pl-14" : "pl-11")}>
+          {comment.content}
+        </p>
+        <div className={cn("flex items-center gap-3 pl-11 mt-2.5", isReply && "pl-14")}>
+          <button
+            type="button"
+            onClick={() => handleCommentLikeToggle(comment)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+            aria-label={comment.is_liked ? "좋아요 취소" : "좋아요"}
+          >
+            <Heart
+              className={cn(
+                "w-4 h-4 transition-all",
+                comment.is_liked ? "fill-destructive text-destructive" : ""
+              )}
+            />
+            {comment.like_count > 0 && (
+              <span className={cn(comment.is_liked && "text-destructive")}>
+                {comment.like_count}
+              </span>
+            )}
+          </button>
+          {!isReply && canComment && (
+            <button
+              type="button"
+              onClick={() => setReplyingToCommentId(comment.id)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              답글
+            </button>
+          )}
+        </div>
+        {!isReply && isReplyingThis && (
+          <div className="mt-5 pl-11 flex flex-col gap-2">
+            <Textarea
+              value={replyDraft}
+              onChange={(e) => setReplyDraft(e.target.value)}
+              placeholder="답글을 입력하세요..."
+              rows={2}
+              maxLength={500}
+              className="text-sm resize-none"
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => handleReplySubmit(comment.id)}
+                disabled={submittingReply || !replyDraft.trim()}
+                className="gap-1"
+              >
+                <Send className="w-3.5 h-3.5" />
+                등록
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => { setReplyingToCommentId(null); setReplyDraft(""); }}
+              >
+                취소
+              </Button>
+            </div>
+          </div>
+        )}
+        {replies.length > 0 && (
+          <div className="mt-2 space-y-0">
+            {replies
+              .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+              .map((r) => renderCommentBlock(r, true))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -505,65 +667,14 @@ const FeedPostDetailSheet = ({
                   <p className="text-sm text-muted-foreground">댓글을 불러오는 중...</p>
                 ) : comments.length === 0 ? null : (
                   <div className="space-y-3">
-                    {[...comments]
+                    {[...roots]
                       .sort((a, b) => {
                         if (commentSortOrder === 'latest') {
                           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
                         }
                         return (b.like_count ?? 0) - (a.like_count ?? 0);
                       })
-                      .map((comment) => {
-                      const commenterName = comment.profile?.user_name?.trim() || "익명";
-                      const commenterInitial = commenterName.charAt(0);
-                      const commenterImageUrl = comment.profile?.image_url;
-                      const roleLabel = comment.profile?.role_label || "회원";
-                      const isAcademyRole = roleLabel === "학원";
-                      return (
-                        <div key={comment.id} className="py-3">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            {commenterImageUrl ? (
-                              <img src={commenterImageUrl} alt={commenterName} className="w-8 h-8 rounded-full object-cover shrink-0" />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-primary/25 text-primary flex items-center justify-center shrink-0 text-base font-semibold">
-                                {commenterInitial}
-                              </div>
-                            )}
-                            <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0 shrink-0", isAcademyRole ? "bg-primary/10 text-primary" : "bg-amber-500/20 text-amber-600")}>
-                              {roleLabel}
-                            </Badge>
-                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-foreground truncate">{commenterName}</p>
-                              <span className="text-xs text-muted-foreground shrink-0">
-                                {formatCommentTimestamp(comment.created_at)}
-                              </span>
-                            </div>
-                          </div>
-                          <p className="text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed pl-11">
-                            {comment.content}
-                          </p>
-                          <div className="flex items-center gap-1.5 pl-11 mt-3.5">
-                            <button
-                              type="button"
-                              onClick={() => handleCommentLikeToggle(comment)}
-                              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
-                              aria-label={comment.is_liked ? "좋아요 취소" : "좋아요"}
-                            >
-                              <Heart
-                                className={cn(
-                                  "w-4 h-4 transition-all",
-                                  comment.is_liked ? "fill-destructive text-destructive" : ""
-                                )}
-                              />
-                              {comment.like_count > 0 && (
-                                <span className={cn(comment.is_liked && "text-destructive")}>
-                                  {comment.like_count}
-                                </span>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                      .map((root) => renderCommentBlock(root, false))}
                   </div>
                 )}
               </div>
@@ -598,34 +709,42 @@ const FeedPostDetailSheet = ({
                 <span className="text-foreground">{comments.length}</span>
               </button>
             </div>
-            {/* 댓글 입력창 */}
-            {canComment ? (
-              <div className="flex items-center gap-2 pb-3">
-                <div className="flex-1 flex items-center min-h-11 rounded-full bg-muted border border-input pl-4 pr-2">
-                  <Textarea
-                    ref={commentInputRef}
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    placeholder="댓글을 입력하세요..."
-                    rows={1}
-                    maxLength={500}
-                    className="flex-1 min-h-0 border-0 bg-transparent px-0 py-3 text-sm leading-5 resize-none focus-visible:ring-0 focus-visible:outline-none focus-visible:ring-offset-0"
-                  />
-                  <Button
-                    size="icon"
-                    className="rounded-full w-9 h-9 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground"
-                    onClick={handleCommentSubmit}
-                    disabled={submittingComment || !commentText.trim()}
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
+            {/* 댓글 입력창 (작성 불가 시에도 UI는 노출하되 disabled) */}
+            <div className="flex items-center gap-2 pb-3">
+              <div
+                className={cn(
+                  "flex-1 flex items-center min-h-11 rounded-full border pl-4 pr-2",
+                  canComment ? "bg-muted border-input" : "bg-muted/40 border-border"
+                )}
+              >
+                <Textarea
+                  ref={commentInputRef}
+                  value={commentText}
+                  onChange={(e) => {
+                    if (!canComment) return;
+                    setCommentText(e.target.value);
+                  }}
+                  placeholder={canComment ? "댓글을 입력하세요..." : "댓글 작성은 학부모/학생 계정에서 가능합니다."}
+                  rows={1}
+                  maxLength={500}
+                  disabled={!canComment}
+                  className="flex-1 min-h-0 border-0 bg-transparent px-0 py-3 text-sm leading-5 resize-none focus-visible:ring-0 focus-visible:outline-none focus-visible:ring-offset-0 disabled:opacity-100"
+                />
+                <Button
+                  size="icon"
+                  className={cn(
+                    "rounded-full w-9 h-9 shrink-0",
+                    canComment
+                      ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                  onClick={handleCommentSubmit}
+                  disabled={!canComment || submittingComment || !commentText.trim()}
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
               </div>
-            ) : (
-              <div className="pb-3 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
-                댓글 작성은 학부모/학생 계정에서 가능합니다.
-              </div>
-            )}
+            </div>
           </div>
         </div>
         <ImageViewer

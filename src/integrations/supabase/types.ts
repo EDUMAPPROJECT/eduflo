@@ -432,6 +432,7 @@ export type Database = {
           is_recruiting: boolean | null
           name: string
           schedule: string | null
+          tags: string[]
           target_grade: string | null
           teacher_id: string | null
           updated_at: string
@@ -446,6 +447,7 @@ export type Database = {
           is_recruiting?: boolean | null
           name: string
           schedule?: string | null
+          tags?: string[]
           target_grade?: string | null
           teacher_id?: string | null
           updated_at?: string
@@ -460,6 +462,7 @@ export type Database = {
           is_recruiting?: boolean | null
           name?: string
           schedule?: string | null
+          tags?: string[]
           target_grade?: string | null
           teacher_id?: string | null
           updated_at?: string
@@ -873,6 +876,7 @@ export type Database = {
           created_at: string
           id: string
           like_count: number
+          parent_comment_id: string | null
           post_id: string
           user_id: string
         }
@@ -881,6 +885,7 @@ export type Database = {
           created_at?: string
           id?: string
           like_count?: number
+          parent_comment_id?: string | null
           post_id: string
           user_id: string
         }
@@ -889,6 +894,7 @@ export type Database = {
           created_at?: string
           id?: string
           like_count?: number
+          parent_comment_id?: string | null
           post_id?: string
           user_id?: string
         }
