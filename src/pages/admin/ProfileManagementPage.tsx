@@ -478,11 +478,11 @@ const ProfileManagementPage = () => {
       case "vice_owner":
         return "부원장";
       case "staff":
-        return "스탭";
+        return "상담실장";
       case "teacher":
         return "강사";
       default:
-        return "스탭";
+        return "상담실장";
     }
   };
 

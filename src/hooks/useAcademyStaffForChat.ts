@@ -40,14 +40,17 @@ export function useAcademyStaffForChat(academyId: string | undefined) {
       const roleOrder: Record<string, number> = {
         원장: 0,
         부원장: 1,
-        스탭: 2,
+        상담실장: 2,
         강사: 3,
       };
 
       const items: AcademyStaffItem[] = (data ?? [])
         .map((row: { user_id: string; name: string; role_label: string; description: string }) => {
           const rawLabel = row.role_label ?? "스탭";
-          const normalizedLabel = rawLabel === "관리자" ? "스탭" : rawLabel;
+          const normalizedLabel =
+            rawLabel === "관리자" || rawLabel === "스탭"
+              ? "상담실장"
+              : rawLabel;
           return {
             user_id: row.user_id,
             name: row.name ?? "이름 없음",

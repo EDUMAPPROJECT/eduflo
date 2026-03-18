@@ -4,6 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -116,6 +122,12 @@ const FeedPostDetailSheet = ({
   const [submittingReply, setSubmittingReply] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [editingSubmitting, setEditingSubmitting] = useState(false);
+  const [commentDeleteDialogOpen, setCommentDeleteDialogOpen] = useState(false);
+  const [commentDeleteId, setCommentDeleteId] = useState<string | null>(null);
+  const [commentDeleting, setCommentDeleting] = useState(false);
   const commentsSectionRef = useRef<HTMLDivElement | null>(null);
   const commentInputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -394,6 +406,96 @@ const FeedPostDetailSheet = ({
     }
   };
 
+  const reloadComments = async () => {
+    if (!post) return;
+    try {
+      const nextComments = await fetchPostComments(post.id, currentUserId);
+      setComments(nextComments);
+      onCommentCountChange?.(post.id, nextComments.length);
+    } catch (error) {
+      console.error("Error reloading comments:", error);
+      toast.error("댓글을 불러오지 못했습니다");
+    }
+  };
+
+  const handleStartEditComment = (commentId: string, currentContent: string) => {
+    setEditingCommentId(commentId);
+    setEditDraft(currentContent);
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditDraft("");
+  };
+
+  const handleSaveEditComment = async (commentId: string) => {
+    if (!post || !currentUserId) return;
+
+    const trimmed = editDraft.trim();
+    if (!trimmed) return;
+
+    setEditingSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("post_comments")
+        .update({ content: trimmed })
+        .eq("id", commentId)
+        .eq("user_id", currentUserId);
+
+      if (error) throw error;
+
+      setComments((prev) => prev.map((c) => (c.id === commentId ? { ...c, content: trimmed } : c)));
+      toast.success("댓글이 수정되었습니다");
+      setEditingCommentId(null);
+      setEditDraft("");
+    } catch (error) {
+      console.error("Error editing comment:", error);
+      toast.error("댓글 수정에 실패했습니다");
+    } finally {
+      setEditingSubmitting(false);
+    }
+  };
+
+  const handleRequestDeleteComment = (commentId: string) => {
+    setCommentDeleteId(commentId);
+    setCommentDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDeleteComment = async () => {
+    if (!post || !currentUserId || !commentDeleteId) return;
+
+    const targetId = commentDeleteId;
+
+    setCommentDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("post_comments")
+        .delete()
+        .eq("id", targetId)
+        .eq("user_id", currentUserId);
+
+      if (error) throw error;
+
+      // DB 삭제 정책(예: RLS/캐스케이드)에 따라 실제로 사라진 댓글이 달라질 수 있어
+      // 서버 상태를 다시 불러와 UI를 확정합니다.
+      await reloadComments();
+
+      if (editingCommentId === targetId) {
+        setEditingCommentId(null);
+        setEditDraft("");
+      }
+
+      toast.success("댓글이 삭제되었습니다");
+      setCommentDeleteDialogOpen(false);
+      setCommentDeleteId(null);
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      toast.error("댓글 삭제에 실패했습니다");
+    } finally {
+      setCommentDeleting(false);
+    }
+  };
+
   const roots = comments.filter((c) => !c.parent_comment_id);
   const repliesByParent = comments
     .filter((c) => c.parent_comment_id)
@@ -412,30 +514,117 @@ const FeedPostDetailSheet = ({
     const isAcademyRole = roleLabel === "학원";
     const replies = repliesByParent[comment.id] ?? [];
     const isReplyingThis = replyingToCommentId === comment.id;
+    const isAuthor = comment.user_id === currentUserId;
+    const showActions = canComment;
 
     return (
       <div key={comment.id} className={cn("py-3", isReply && "pl-8 border-l-2 border-muted/60")}>
         <div className={cn("flex items-center gap-2 mb-0.5", isReply && "pl-3")}>
-          {commenterImageUrl ? (
-            <img src={commenterImageUrl} alt={commenterName} className="w-8 h-8 rounded-full object-cover shrink-0" />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-primary/25 text-primary flex items-center justify-center shrink-0 text-base font-semibold">
-              {commenterInitial}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {commenterImageUrl ? (
+              <img src={commenterImageUrl} alt={commenterName} className="w-8 h-8 rounded-full object-cover shrink-0" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-primary/25 text-primary flex items-center justify-center shrink-0 text-base font-semibold">
+                {commenterInitial}
+              </div>
+            )}
+            <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0 shrink-0", isAcademyRole ? "bg-primary/10 text-primary" : "bg-amber-500/20 text-amber-600")}>
+              {roleLabel}
+            </Badge>
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground truncate">{commenterName}</p>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {formatCommentTimestamp(comment.created_at)}
+              </span>
             </div>
-          )}
-          <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0 shrink-0", isAcademyRole ? "bg-primary/10 text-primary" : "bg-amber-500/20 text-amber-600")}>
-            {roleLabel}
-          </Badge>
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            <p className="text-sm font-semibold text-foreground truncate">{commenterName}</p>
-            <span className="text-xs text-muted-foreground shrink-0">
-              {formatCommentTimestamp(comment.created_at)}
-            </span>
           </div>
+          {showActions && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  aria-label="댓글 옵션 열기"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-auto min-w-[3.3rem]">
+                {isAuthor ? (
+                  <>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartEditComment(comment.id, comment.content);
+                      }}
+                    >
+                      수정
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRequestDeleteComment(comment.id);
+                      }}
+                    >
+                      삭제
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      신고
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      차단
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
-        <p className={cn("text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed", isReply ? "pl-14" : "pl-11")}>
-          {comment.content}
-        </p>
+        {editingCommentId === comment.id ? (
+          <div className={cn(isReply ? "pl-14" : "pl-11", "mt-1")}>
+            <Textarea
+              value={editDraft}
+              onChange={(e) => setEditDraft(e.target.value)}
+              rows={2}
+              maxLength={500}
+              className="text-sm resize-none"
+              disabled={editingSubmitting}
+            />
+            <div className="flex gap-2 mt-2">
+              <Button
+                size="sm"
+                onClick={() => handleSaveEditComment(comment.id)}
+                disabled={editingSubmitting || !editDraft.trim()}
+                className="gap-1"
+              >
+                저장
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCancelEditComment}
+                disabled={editingSubmitting}
+              >
+                취소
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className={cn("text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed", isReply ? "pl-14" : "pl-11")}>
+            {comment.content}
+          </p>
+        )}
         <div className={cn("flex items-center gap-3 pl-11 mt-2.5", isReply && "pl-14")}>
           <button
             type="button"
@@ -455,7 +644,7 @@ const FeedPostDetailSheet = ({
               </span>
             )}
           </button>
-          {!isReply && canComment && (
+          {!isReply && canComment && editingCommentId !== comment.id && (
             <button
               type="button"
               onClick={() => setReplyingToCommentId(comment.id)}
@@ -769,6 +958,27 @@ const FeedPostDetailSheet = ({
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {deleting ? "삭제 중..." : "삭제"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={commentDeleteDialogOpen} onOpenChange={setCommentDeleteDialogOpen}>
+          <AlertDialogContent className="max-w-sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>댓글 삭제</AlertDialogTitle>
+              <AlertDialogDescription>
+                이 댓글을 삭제하시겠습니까?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={commentDeleting}>취소</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDeleteComment}
+                disabled={commentDeleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {commentDeleting ? "삭제 중..." : "삭제"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

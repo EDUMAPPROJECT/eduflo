@@ -170,13 +170,13 @@ export const useChatRooms = (isAdmin: boolean = false, ownOnly: boolean = false)
                         staffRoleLabel = '부원장';
                         break;
                       case 'staff':
-                        staffRoleLabel = '스탭';
+                        staffRoleLabel = '상담실장';
                         break;
                       case 'teacher':
                         staffRoleLabel = '강사';
                         break;
                       default:
-                        staffRoleLabel = '스탭';
+                        staffRoleLabel = '상담실장';
                         break;
                     }
                   }

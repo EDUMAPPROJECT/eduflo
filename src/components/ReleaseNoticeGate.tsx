@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import FormalReleaseBanner from "./FormalReleaseBanner";
 
-/** 학원 관리자/학부모 커뮤니티·게시물 상세는 허용하고, 그 외 커뮤니티 경로에서만 배너 표시 */
+/** 커뮤니티 일부 경로는 허용하고, 그 외 경로(및 일부 비공개 기능)에서 배너 표시 */
 function shouldBlockCommunityPath(pathname: string): boolean {
   if (pathname === "/admin/community" || pathname === "/p/community") {
     return false;
@@ -19,12 +19,17 @@ function shouldBlockCommunityPath(pathname: string): boolean {
   return pathname.includes("/community");
 }
 
+function shouldBlockPreferenceTestPath(pathname: string): boolean {
+  // 정식 출시 가림막으로 접근을 차단할 경로
+  return pathname === "/p/preference-test" || pathname === "/s/preference-test";
+}
+
 interface ReleaseNoticeGateProps {
   children: ReactNode;
 }
 
 /**
- * 로그인 후 설명회를 제외한 모든 경로에서 정식 출시 안내 가림 배너를 표시합니다.
+ * 로그인 후 정식 출시 안내 가림 배너를 표시합니다.
  */
 const ReleaseNoticeGate = ({ children }: ReleaseNoticeGateProps) => {
   const { pathname } = useLocation();
@@ -59,7 +64,7 @@ const ReleaseNoticeGate = ({ children }: ReleaseNoticeGateProps) => {
   const showBanner =
     hasSession === true &&
     !isSuperAdmin &&
-    shouldBlockCommunityPath(pathname);
+    (shouldBlockCommunityPath(pathname) || shouldBlockPreferenceTestPath(pathname));
 
   return (
     <>

@@ -40,7 +40,7 @@ interface MemberWithProfile {
 const GRADE_OPTIONS = [
   { value: 'admin', label: '원장', icon: Crown },
   { value: 'vice_owner', label: '부원장', icon: Shield },
-  { value: 'staff', label: '스탭', icon: UserCog },
+  { value: 'staff', label: '상담실장', icon: UserCog },
   { value: 'teacher', label: '강사', icon: GraduationCap },
 ];
 
@@ -278,11 +278,11 @@ const AcademyMemberManagement = ({ academyId }: AcademyMemberManagementProps) =>
       case 'vice_owner':
         return '부원장';
       case 'staff':
-        return '스탭';
+        return '상담실장';
       case 'teacher':
         return '강사';
       default:
-        return '스탭';
+        return '상담실장';
     }
   };
 
