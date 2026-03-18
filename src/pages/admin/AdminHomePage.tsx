@@ -33,7 +33,7 @@ const AdminHomePage = () => {
   const roleLabels: Record<string, string> = {
     owner: "원장",
     vice_owner: "부원장",
-    admin: "스탭",
+    admin: "상담실장",
     teacher: "강사"
   };
 
@@ -223,11 +223,11 @@ const AdminHomePage = () => {
       case "vice_owner":
         return "부원장";
       case "staff":
-        return "스탭";
+        return "상담실장";
       case "teacher":
         return "강사";
       default:
-        return "스탭";
+        return "상담실장";
     }
   };
 
@@ -248,7 +248,7 @@ const AdminHomePage = () => {
         {/* Welcome Banner */}
         <div className="gradient-primary rounded-2xl p-5 mb-6 shadow-soft">
           <h2 className="text-primary-foreground font-semibold text-lg mb-1">
-            안녕하세요, {userName || "관리자"} {getUserRoleLabel(userRole, userGrade)} 👋
+            안녕하세요, {userName || "관리자"} {getUserRoleLabel(userRole, userGrade)}님 👋
           </h2>
           <p className="text-primary-foreground/80 text-sm">
             오늘도 에듀플로와 함께 학원을 운영해보세요
