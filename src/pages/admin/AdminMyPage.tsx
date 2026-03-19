@@ -6,7 +6,7 @@ import Logo from "@/components/Logo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, LogOut, Pencil, Building2, Users, FileCheck, Loader2, Lock, Clock, Settings, Headphones } from "lucide-react";
+import { User, LogOut, Pencil, Building2, Users, FileCheck, Loader2, Lock, Clock, Settings, Headphones, UserX } from "lucide-react";
 import { toast } from "sonner";
 import NicknameSettingsDialog from "@/components/NicknameSettingsDialog";
 import { useAcademyMembership } from "@/hooks/useAcademyMembership";
@@ -270,6 +270,24 @@ const AdminMyPage = () => {
                 <h4 className="font-medium text-foreground">내 정보</h4>
                 <p className="text-sm text-muted-foreground">
                   개인정보를 관리합니다
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Settings */}
+          <Card
+            className="shadow-card border-border cursor-pointer hover:shadow-soft transition-all duration-200"
+            onClick={() => navigate("/admin/my/blocked-users")}
+          >
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                <UserX className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-foreground">차단 목록 관리</h4>
+                <p className="text-sm text-muted-foreground">
+                  차단한 사용자 목록을 관리합니다
                 </p>
               </div>
             </CardContent>

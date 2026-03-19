@@ -82,6 +82,7 @@ import SuperAdminMyPage from "./pages/super/SuperAdminMyPage";
 // Shared Pages
 import AnnouncementsPage from "./pages/AnnouncementsPage";
 import MyProfilePage from "./pages/MyProfilePage";
+import BlockedUsersPage from "./pages/BlockedUsersPage";
 
 const queryClient = new QueryClient();
 
@@ -120,6 +121,7 @@ const App = () => {
               <Route path="/p/community/post/:postId" element={<PostDetailPage />} />
               <Route path="/p/my" element={<MyPage />} />
               <Route path="/p/my/profile" element={<MyProfilePage />} />
+              <Route path="/p/my/blocked-users" element={<BlockedUsersPage />} />
               <Route path="/p/my/classes" element={<MyClassesPage />} />
               <Route path="/p/my/bookmarks" element={<MyBookmarksPage />} />
               <Route path="/p/my/reservations" element={<MyReservationsPage />} />
@@ -148,6 +150,7 @@ const App = () => {
               <Route path="/s/community/post/:postId" element={<PostDetailPage />} />
               <Route path="/s/my" element={<StudentMyPage />} />
               <Route path="/s/my/profile" element={<MyProfilePage />} />
+              <Route path="/s/my/blocked-users" element={<BlockedUsersPage />} />
               <Route path="/s/my/classes" element={<MyClassesPage />} />
               <Route path="/s/my/bookmarks" element={<MyBookmarksPage />} />
               <Route path="/s/my/reservations" element={<MyReservationsPage />} />
@@ -203,6 +206,7 @@ const App = () => {
               <Route path="/admin/super/seminars/:seminarId/applicants" element={<ProtectedAdminRoute><SeminarApplicantsPage /></ProtectedAdminRoute>} />
               <Route path="/admin/my" element={<ProtectedAdminRoute><AdminMyPage /></ProtectedAdminRoute>} />
               <Route path="/admin/my/profile" element={<ProtectedAdminRoute><MyProfilePage /></ProtectedAdminRoute>} />
+              <Route path="/admin/my/blocked-users" element={<ProtectedAdminRoute><BlockedUsersPage /></ProtectedAdminRoute>} />
               <Route path="/admin/settings" element={<ProtectedAdminRoute><SettingsPage /></ProtectedAdminRoute>} />
               <Route path="/admin/customer-service" element={<ProtectedAdminRoute><CustomerServicePage /></ProtectedAdminRoute>} />
               <Route path="/admin/members" element={<ProtectedAdminRoute><MemberManagementPage /></ProtectedAdminRoute>} />
