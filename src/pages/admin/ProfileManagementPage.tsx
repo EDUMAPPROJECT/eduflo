@@ -1001,7 +1001,7 @@ const ProfileManagementPage = () => {
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <Image className="w-4 h-4 text-primary" />
-                  대표 사진 (정사각형)
+                  로고 이미지 (정사각형)
                 </CardTitle>
                 <CardDescription className="text-xs">
                   프로필 목록, 검색 결과에 표시됩니다

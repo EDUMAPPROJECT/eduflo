@@ -16,6 +16,7 @@ const AdminMyPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [userImage, setUserImage] = useState<string | null>(null);
   const [isNicknameDialogOpen, setIsNicknameDialogOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joining, setJoining] = useState(false);
@@ -35,11 +36,12 @@ const AdminMyPage = () => {
         
         const { data: profile } = await supabase
           .from("profiles")
-          .select("user_name")
+          .select("user_name, image_url")
           .eq("id", session.user.id)
           .maybeSingle();
         
         setUserName(profile?.user_name || null);
+        setUserImage((profile as any)?.image_url || null);
       }
     };
     fetchUserData();
@@ -117,8 +119,16 @@ const AdminMyPage = () => {
         <Card className="shadow-card border-border">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center">
-                <User className="w-8 h-8 text-primary" />
+              <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
+                {userImage ? (
+                  <img
+                    src={userImage}
+                    alt="프로필 사진"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-8 h-8 text-primary" />
+                )}
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
