@@ -16,7 +16,8 @@ import {
   Users,
   FileText,
   Sparkles,
-  User
+  User,
+  UserX
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -249,6 +250,7 @@ const MyPage = () => {
 
         {/* Menu List */}
         <div className="bg-card rounded-2xl shadow-card overflow-hidden">
+          <MenuItemButton icon={UserX} label="차단 목록 관리" onClick={() => navigate("/p/my/blocked-users")} />
           <MenuItemButton icon={Settings} label="설정" onClick={() => navigate("/p/settings")} />
           <MenuItemButton icon={HelpCircle} label="고객센터" onClick={() => navigate("/p/customer-service")} />
           {user && (

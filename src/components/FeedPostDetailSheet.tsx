@@ -4,6 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -74,6 +81,14 @@ const typeConfig = {
   'free-talk': { label: '자유수다', icon: MessageCircle, color: 'bg-slate-600 text-white' },
 };
 
+const commentReportReasons = [
+  "욕설 및 비하 표현",
+  "광고 및 스팸",
+  "허위 정보 유포",
+  "개인정보 노출",
+  "기타",
+] as const;
+
 const formatCommentTimestamp = (createdAt: string) => {
   const createdAtDate = new Date(createdAt);
   const diffMs = Date.now() - createdAtDate.getTime();
@@ -128,6 +143,15 @@ const FeedPostDetailSheet = ({
   const [commentDeleteDialogOpen, setCommentDeleteDialogOpen] = useState(false);
   const [commentDeleteId, setCommentDeleteId] = useState<string | null>(null);
   const [commentDeleting, setCommentDeleting] = useState(false);
+  const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(new Set());
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [reportTargetComment, setReportTargetComment] = useState<PostCommentWithProfile | null>(null);
+  const [selectedReportReason, setSelectedReportReason] = useState<(typeof commentReportReasons)[number]>("욕설 및 비하 표현");
+  const [customReportReason, setCustomReportReason] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [blockConfirmOpen, setBlockConfirmOpen] = useState(false);
+  const [blockTargetComment, setBlockTargetComment] = useState<PostCommentWithProfile | null>(null);
+  const [blockSubmitting, setBlockSubmitting] = useState(false);
   const commentsSectionRef = useRef<HTMLDivElement | null>(null);
   const commentInputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -203,14 +227,38 @@ const FeedPostDetailSheet = ({
   }, [post?.id, post?.author_id, post?.academy_id]);
 
   useEffect(() => {
+    const loadBlockedUsers = async () => {
+      if (!currentUserId) {
+        setBlockedUserIds(new Set());
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("user_blocks")
+        .select("blocked_user_id")
+        .eq("blocker_id", currentUserId);
+
+      if (error) {
+        console.error("Error fetching blocked users:", error);
+        return;
+      }
+
+      setBlockedUserIds(new Set((data || []).map((row) => row.blocked_user_id)));
+    };
+
+    loadBlockedUsers();
+  }, [currentUserId]);
+
+  useEffect(() => {
     const loadComments = async () => {
       if (!post) return;
 
       setCommentsLoading(true);
       try {
         const nextComments = await fetchPostComments(post.id, currentUserId);
-        setComments(nextComments);
-        onCommentCountChange?.(post.id, nextComments.length);
+        const visibleComments = nextComments.filter((comment) => !blockedUserIds.has(comment.user_id));
+        setComments(visibleComments);
+        onCommentCountChange?.(post.id, visibleComments.length);
       } catch (error) {
         console.error("Error fetching comments:", error);
         toast.error("댓글을 불러오지 못했습니다");
@@ -220,7 +268,7 @@ const FeedPostDetailSheet = ({
     };
 
     loadComments();
-  }, [post?.id, currentUserId]);
+  }, [post?.id, currentUserId, blockedUserIds]);
 
   if (!post) return null;
 
@@ -410,8 +458,9 @@ const FeedPostDetailSheet = ({
     if (!post) return;
     try {
       const nextComments = await fetchPostComments(post.id, currentUserId);
-      setComments(nextComments);
-      onCommentCountChange?.(post.id, nextComments.length);
+      const visibleComments = nextComments.filter((comment) => !blockedUserIds.has(comment.user_id));
+      setComments(visibleComments);
+      onCommentCountChange?.(post.id, visibleComments.length);
     } catch (error) {
       console.error("Error reloading comments:", error);
       toast.error("댓글을 불러오지 못했습니다");
@@ -496,6 +545,86 @@ const FeedPostDetailSheet = ({
     }
   };
 
+  const handleOpenReportDialog = (comment: PostCommentWithProfile) => {
+    setReportTargetComment(comment);
+    setSelectedReportReason("욕설 및 비하 표현");
+    setCustomReportReason("");
+    setReportDialogOpen(true);
+  };
+
+  const handleSubmitReport = async () => {
+    if (!currentUserId || !reportTargetComment) return;
+
+    const isEtc = selectedReportReason === "기타";
+    const detail = isEtc ? customReportReason.trim() : "";
+    if (isEtc && !detail) {
+      toast.error("기타 사유를 입력해주세요");
+      return;
+    }
+
+    setReportSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("comment_reports")
+        .insert({
+          reporter_id: currentUserId,
+          comment_id: reportTargetComment.id,
+          reason_type: selectedReportReason,
+          reason_detail: detail || null,
+        });
+
+      if (error) throw error;
+
+      toast.success("신고가 접수되었습니다");
+      setReportDialogOpen(false);
+      setReportTargetComment(null);
+      setCustomReportReason("");
+    } catch (error) {
+      console.error("Error reporting comment:", error);
+      toast.error("신고 접수에 실패했습니다");
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
+  const handleOpenBlockConfirm = (comment: PostCommentWithProfile) => {
+    setBlockTargetComment(comment);
+    setBlockConfirmOpen(true);
+  };
+
+  const handleConfirmBlockUser = async () => {
+    if (!currentUserId || !blockTargetComment) return;
+
+    setBlockSubmitting(true);
+    try {
+      const targetUserId = blockTargetComment.user_id;
+      const { error } = await supabase
+        .from("user_blocks")
+        .upsert(
+          { blocker_id: currentUserId, blocked_user_id: targetUserId },
+          { onConflict: "blocker_id,blocked_user_id", ignoreDuplicates: true }
+        );
+
+      if (error) throw error;
+
+      setBlockedUserIds((prev) => {
+        const next = new Set(prev);
+        next.add(targetUserId);
+        return next;
+      });
+      await reloadComments();
+
+      toast.success("해당 사용자를 차단했습니다");
+      setBlockConfirmOpen(false);
+      setBlockTargetComment(null);
+    } catch (error) {
+      console.error("Error blocking user:", error);
+      toast.error("사용자 차단에 실패했습니다");
+    } finally {
+      setBlockSubmitting(false);
+    }
+  };
+
   const roots = comments.filter((c) => !c.parent_comment_id);
   const repliesByParent = comments
     .filter((c) => c.parent_comment_id)
@@ -574,6 +703,7 @@ const FeedPostDetailSheet = ({
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
+                        handleOpenReportDialog(comment);
                       }}
                     >
                       신고
@@ -581,6 +711,7 @@ const FeedPostDetailSheet = ({
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
+                        handleOpenBlockConfirm(comment);
                       }}
                     >
                       차단
@@ -979,6 +1110,87 @@ const FeedPostDetailSheet = ({
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {commentDeleting ? "삭제 중..." : "삭제"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+          <DialogContent className="max-w-md w-[calc(100%-1rem)] p-0 gap-0 top-auto bottom-0 translate-y-0 sm:translate-y-0 rounded-t-2xl rounded-b-none sm:rounded-t-2xl sm:rounded-b-none border-0 [&>button]:hidden">
+            <div className="h-1.5 w-12 rounded-full bg-muted mx-auto mt-3" />
+            <div className="px-6 pb-6 pt-4">
+              <DialogHeader className="text-left">
+                <DialogTitle className="text-lg font-bold">댓글 신고</DialogTitle>
+                <DialogDescription>신고 사유를 선택해주세요</DialogDescription>
+              </DialogHeader>
+
+              <div className="mt-6 border-t border-border">
+                {commentReportReasons.map((reason) => (
+                  <label
+                    key={reason}
+                    className="flex items-center gap-3 py-4 border-b border-border cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      className="sr-only peer"
+                      name="comment-report-reason"
+                      value={reason}
+                      checked={selectedReportReason === reason}
+                      onChange={() => setSelectedReportReason(reason)}
+                    />
+                    <span className="h-5 w-5 rounded-full border border-muted-foreground/30 flex items-center justify-center transition-colors peer-checked:bg-primary peer-checked:border-white peer-checked:[&>span]:opacity-100">
+                      <span className="h-2 w-2 rounded-full bg-white opacity-0 transition-opacity" />
+                    </span>
+                    <span className="text-sm text-foreground">{reason}</span>
+                  </label>
+                ))}
+              </div>
+
+              {selectedReportReason === "기타" && (
+                <Textarea
+                  className="mt-4 min-h-28 text-sm resize-none"
+                  placeholder="신고 사유를 입력해주세요"
+                  maxLength={300}
+                  value={customReportReason}
+                  onChange={(e) => setCustomReportReason(e.target.value)}
+                />
+              )}
+
+              <div className="mt-6 flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 h-12 rounded-full"
+                  onClick={() => setReportDialogOpen(false)}
+                  disabled={reportSubmitting}
+                >
+                  취소
+                </Button>
+                <Button
+                  type="button"
+                  className="flex-1 h-12 rounded-full"
+                  onClick={handleSubmitReport}
+                  disabled={reportSubmitting}
+                >
+                  {reportSubmitting ? "신고 중..." : "신고하기"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={blockConfirmOpen} onOpenChange={setBlockConfirmOpen}>
+          <AlertDialogContent className="max-w-sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>사용자 차단</AlertDialogTitle>
+              <AlertDialogDescription>
+                {(blockTargetComment?.profile?.user_name?.trim() || "해당 사용자")}님을 차단하시겠습니까?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={blockSubmitting}>취소</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmBlockUser} disabled={blockSubmitting}>
+                {blockSubmitting ? "차단 중..." : "차단"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
