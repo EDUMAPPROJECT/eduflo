@@ -126,10 +126,18 @@ const MyPage = () => {
       <div className="gradient-primary pt-6 pb-8 px-4">
         <div className="max-w-lg mx-auto">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-card flex items-center justify-center shadow-soft">
-              <span className="text-2xl font-bold text-primary">
-                {profile?.user_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || "U"}
-              </span>
+            <div className="w-16 h-16 rounded-full bg-card flex items-center justify-center shadow-soft overflow-hidden">
+              {profile?.image_url ? (
+                <img
+                  src={profile.image_url}
+                  alt="프로필 사진"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-2xl font-bold text-primary">
+                  {profile?.user_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || "U"}
+                </span>
+              )}
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">

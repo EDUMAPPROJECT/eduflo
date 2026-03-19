@@ -5,16 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, User } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import BottomNavigation from "@/components/BottomNavigation";
 import AdminBottomNavigation from "@/components/AdminBottomNavigation";
 import StudentBottomNavigation from "@/components/StudentBottomNavigation";
+import ImageUpload from "@/components/ImageUpload";
 
 const MyProfilePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<any>(null);
+  const [authEmail, setAuthEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -26,6 +28,7 @@ const MyProfilePage = () => {
     user_name: "",
     phone: "",
     email: "",
+    image_url: "",
   });
 
   useEffect(() => {
@@ -38,6 +41,7 @@ const MyProfilePage = () => {
       }
       
       setUser(session.user);
+      setAuthEmail(session.user.email || "");
       
       const { data: profile } = await supabase
         .from("profiles")
@@ -50,6 +54,7 @@ const MyProfilePage = () => {
           user_name: profile.user_name || "",
           phone: profile.phone || "",
           email: profile.email || session.user.email || "",
+          image_url: profile.image_url || "",
         });
       } else {
         setFormData(prev => ({
@@ -72,24 +77,38 @@ const MyProfilePage = () => {
       toast.error("닉네임은 50자 이내로 입력해주세요");
       return;
     }
-    if (formData.phone && !/^[0-9-]{0,20}$/.test(formData.phone)) {
-      toast.error("올바른 전화번호 형식을 입력해주세요");
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      toast.error("올바른 이메일 형식을 입력해주세요");
       return;
     }
 
     setSaving(true);
     try {
+      const nextEmail = formData.email.trim();
+      const shouldUpdateAuthEmail = !!nextEmail && nextEmail !== authEmail;
+
+      if (shouldUpdateAuthEmail) {
+        const { error: authError } = await supabase.auth.updateUser({ email: nextEmail });
+        if (authError) throw authError;
+      }
+
       const { error } = await supabase
         .from("profiles")
         .upsert({
           id: user.id,
           user_name: formData.user_name || null,
           phone: formData.phone || null,
-          email: formData.email || null,
+          email: nextEmail || null,
+          image_url: formData.image_url || null,
         });
 
       if (error) throw error;
-      toast.success("프로필이 저장되었습니다");
+      if (shouldUpdateAuthEmail) {
+        toast.success("프로필이 저장되었습니다. 변경한 이메일로 인증 메일을 확인해주세요.");
+        setAuthEmail(nextEmail);
+      } else {
+        toast.success("프로필이 저장되었습니다");
+      }
     } catch (error) {
       console.error("Save error:", error);
       toast.error("저장에 실패했습니다");
@@ -123,14 +142,31 @@ const MyProfilePage = () => {
         <Card>
           <CardContent className="p-6">
             <div className="flex flex-col items-center">
-              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center border-4 border-background shadow-lg">
-                <span className="text-3xl font-bold text-primary">
-                  {formData.user_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || "U"}
-                </span>
+              <div className="w-24 h-24 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center border-4 border-background shadow-lg">
+                {formData.image_url ? (
+                  <img
+                    src={formData.image_url}
+                    alt="프로필 사진"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-3xl font-bold text-primary">
+                    {formData.user_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || "U"}
+                  </span>
+                )}
               </div>
               <p className="mt-3 text-sm text-muted-foreground">
                 {formData.user_name || "닉네임을 설정해주세요"}
               </p>
+              <div className="w-full mt-4">
+                <Label className="text-sm">프로필 사진 변경</Label>
+                <ImageUpload
+                  value={formData.image_url}
+                  onChange={(url) => setFormData(prev => ({ ...prev, image_url: url }))}
+                  folder="profiles"
+                  className="mt-2"
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -155,7 +191,8 @@ const MyProfilePage = () => {
                 id="phone"
                 placeholder="010-0000-0000"
                 value={formData.phone}
-                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                disabled
+                className="bg-muted"
                 maxLength={20}
               />
             </div>
@@ -167,10 +204,8 @@ const MyProfilePage = () => {
                 type="email"
                 placeholder="이메일 주소"
                 value={formData.email}
-                disabled
-                className="bg-muted"
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               />
-              <p className="text-xs text-muted-foreground">이메일은 수정할 수 없습니다</p>
             </div>
           </CardContent>
         </Card>

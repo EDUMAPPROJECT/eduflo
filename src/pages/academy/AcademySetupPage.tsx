@@ -39,6 +39,7 @@ const AcademySetupPage = () => {
   const [subject, setSubject] = useState("");
   const [targetGrades, setTargetGrades] = useState<string[]>([]);
   const [profileImage, setProfileImage] = useState("");
+  const [bannerImage, setBannerImage] = useState("");
   const [description, setDescription] = useState("");
 
   useEffect(() => {
@@ -134,6 +135,7 @@ const AcademySetupPage = () => {
           subject,
           target_grade: targetGradeStr,
           profile_image: profileImage || null,
+          banner_image: bannerImage || null,
           description: description.trim() || null,
           owner_id: user.id,
           tags: [],
@@ -279,10 +281,20 @@ const AcademySetupPage = () => {
               </div>
 
               <div className="space-y-1">
-                <Label>학원 로고/대표 이미지</Label>
+                <Label>학원 로고 이미지 (정사각형)</Label>
                 <ImageUpload
                   value={profileImage}
                   onChange={setProfileImage}
+                  folder="academy-profiles"
+                  className="mt-2"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label>학원 배너 이미지 (직사각형)</Label>
+                <ImageUpload
+                  value={bannerImage}
+                  onChange={setBannerImage}
                   folder="academy-profiles"
                   className="mt-2"
                 />
