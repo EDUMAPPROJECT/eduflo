@@ -1,4 +1,4 @@
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { lazyWithRetry } from "@/utils/lazyWithRetry";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 import {
   Dialog,
@@ -50,6 +58,13 @@ import {
 import { toast } from "sonner";
 import { logError } from "@/lib/errorLogger";
 import { MapErrorFallback } from "@/components/MapErrorFallback";
+import {
+  CLASS_SUBJECT_OPTIONS,
+  CLASS_SUBJECT_FILTER_ALL,
+  CLASS_SUBJECT_FILTER_NONE,
+  CLASS_SUBJECT_FILTER_TRIGGER_CLASS,
+  filterClassesBySubject,
+} from "@/lib/classSubjects";
 
 const LocationMap = lazyWithRetry(() => import("@/components/LocationMap"));
 const AcademyDetailMap = lazyWithRetry(() => import("@/components/AcademyDetailMap"));
@@ -84,6 +99,7 @@ interface CurriculumStep {
 interface ClassInfo {
   id: string;
   name: string;
+  subject: string | null;
   target_grade: string | null;
   schedule: string | null;
   fee: number | null;
@@ -105,7 +121,13 @@ const AcademyDetailPage = () => {
   const [academy, setAcademy] = useState<Academy | null>(null);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const [classSubjectFilter, setClassSubjectFilter] = useState(CLASS_SUBJECT_FILTER_ALL);
   const [loading, setLoading] = useState(true);
+
+  const filteredClasses = useMemo(
+    () => filterClassesBySubject(classes, classSubjectFilter),
+    [classes, classSubjectFilter]
+  );
   const [user, setUser] = useState<any>(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -244,7 +266,8 @@ const AcademyDetailPage = () => {
       .from("teachers")
       .select("*")
       .eq("academy_id", id)
-      .order("created_at");
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
     setTeachers((data as Teacher[]) || []);
   };
 
@@ -256,11 +279,13 @@ const AcademyDetailPage = () => {
         teacher:teachers (name)
       `)
       .eq("academy_id", id)
-      .order("created_at");
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
     
     // Parse curriculum JSON for each class
     const classesWithCurriculum = (data || []).map((cls: any) => ({
       ...cls,
+      subject: cls.subject ?? null,
       curriculum: cls.curriculum || []
     }));
     setClasses(classesWithCurriculum);
@@ -503,7 +528,7 @@ const AcademyDetailPage = () => {
                             </Badge>
                           </div>
                           {teacher.bio && (
-                            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">
                               {teacher.bio}
                             </p>
                           )}
@@ -525,8 +550,33 @@ const AcademyDetailPage = () => {
                 </CardContent>
               </Card>
             ) : (
+              <>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">과목별 보기</Label>
+                  <Select value={classSubjectFilter} onValueChange={setClassSubjectFilter}>
+                    <SelectTrigger className={CLASS_SUBJECT_FILTER_TRIGGER_CLASS}>
+                      <SelectValue placeholder="전체" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={CLASS_SUBJECT_FILTER_ALL}>전체</SelectItem>
+                      <SelectItem value={CLASS_SUBJECT_FILTER_NONE}>과목 미지정</SelectItem>
+                      {CLASS_SUBJECT_OPTIONS.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {filteredClasses.length === 0 ? (
+                  <Card className="shadow-card">
+                    <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                      선택한 조건에 맞는 강좌가 없습니다
+                    </CardContent>
+                  </Card>
+                ) : (
               <div className="space-y-3">
-                {classes.map((cls) => {
+                {filteredClasses.map((cls) => {
                   const isEnrolled = enrolledClasses.has(cls.id);
                   return (
                     <Card 
@@ -539,6 +589,11 @@ const AcademyDetailPage = () => {
                           {/* Title and badges */}
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <h4 className="font-semibold text-foreground text-sm">{cls.name}</h4>
+                            {cls.subject && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+                                {cls.subject}
+                              </Badge>
+                            )}
                             {cls.is_recruiting ? (
                               <Badge className="bg-green-500 text-white text-[10px] px-1.5 py-0 shrink-0">모집중</Badge>
                             ) : (
@@ -622,6 +677,8 @@ const AcademyDetailPage = () => {
                   );
                 })}
               </div>
+                )}
+              </>
             )}
           </TabsContent>
         </Tabs>
@@ -645,10 +702,14 @@ const AcademyDetailPage = () => {
                 {/* Basic Info */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-secondary/50 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-1">과목</p>
+                    <p className="font-medium text-sm">{selectedClass.subject || "미지정"}</p>
+                  </div>
+                  <div className="bg-secondary/50 rounded-lg p-3">
                     <p className="text-xs text-muted-foreground mb-1">대상 학년</p>
                     <p className="font-medium text-sm">{selectedClass.target_grade || "미지정"}</p>
                   </div>
-                  <div className="bg-secondary/50 rounded-lg p-3">
+                  <div className="bg-secondary/50 rounded-lg p-3 col-span-2">
                     <p className="text-xs text-muted-foreground mb-1">수강료</p>
                     <p className="font-bold text-primary">
                       {selectedClass.fee ? `${selectedClass.fee.toLocaleString()}원/월` : "문의"}

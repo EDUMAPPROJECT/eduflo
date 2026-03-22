@@ -59,6 +59,7 @@ export type TeacherInput = z.infer<typeof teacherSchema>;
 // Class validation
 export const classSchema = z.object({
   name: requiredStringField(200),
+  subject: stringField(50).optional().nullable(),
   target_grade: stringField(50).optional().nullable(),
   schedule: stringField(200).optional().nullable(),
   fee: z.number()

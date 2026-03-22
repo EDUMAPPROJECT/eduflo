@@ -109,30 +109,52 @@ const ConsultationManagementPage = () => {
 
     setOpeningChatFor(reservation.id);
     try {
-      // Find existing room for academy + parent (unique in DB)
-      const { data: existingRoom, error: findError } = await supabase
+      // 1) Prefer my assigned room first
+      const { data: myRoom, error: myRoomError } = await supabase
         .from("chat_rooms")
         .select("id, staff_user_id")
         .eq("academy_id", academyId)
         .eq("parent_id", reservation.parent_id)
+        .eq("staff_user_id", user.id)
+        .limit(1)
         .maybeSingle();
 
-      if (findError) throw findError;
+      if (myRoomError) throw myRoomError;
 
-      if (existingRoom?.id) {
-        // Assign staff if not assigned yet
-        if (!existingRoom.staff_user_id) {
-          await supabase
-            .from("chat_rooms")
-            .update({ staff_user_id: user.id, status: "active" })
-            .eq("id", existingRoom.id);
-        }
-
-        navigate(`/admin/chats/${existingRoom.id}`);
+      if (myRoom?.id) {
+        navigate(`/admin/chats/${myRoom.id}`);
         return;
       }
 
-      // Create new room with current staff as 담당자
+      // 2) Fallback to any existing room for this parent
+      const { data: rooms, error: roomsError } = await supabase
+        .from("chat_rooms")
+        .select("id, staff_user_id")
+        .eq("academy_id", academyId)
+        .eq("parent_id", reservation.parent_id)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+
+      if (roomsError) throw roomsError;
+
+      const fallbackRoom = rooms?.[0];
+      if (fallbackRoom?.id) {
+        // If unassigned room exists, claim it as current staff.
+        if (!fallbackRoom.staff_user_id) {
+          const { error: assignError } = await supabase
+            .from("chat_rooms")
+            .update({ staff_user_id: user.id, status: "active" })
+            .eq("id", fallbackRoom.id);
+          if (assignError) {
+            console.error("Error assigning staff to chat room:", assignError);
+          }
+        }
+
+        navigate(`/admin/chats/${fallbackRoom.id}`);
+        return;
+      }
+
+      // 3) Create new room with current staff as 담당자
       const { data: newRoom, error: createError } = await supabase
         .from("chat_rooms")
         .insert({
@@ -150,7 +172,7 @@ const ConsultationManagementPage = () => {
       console.error("Error opening chat room:", error);
       toast({
         title: "오류",
-        description: "채팅방을 열지 못했습니다.",
+        description: "채팅방을 열지 못했습니다. 잠시 후 다시 시도해주세요.",
         variant: "destructive",
       });
     } finally {
@@ -260,7 +282,7 @@ const ConsultationManagementPage = () => {
 
                   {reservation.message && (
                     <div className="bg-muted/50 rounded-lg p-3 mb-3">
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground truncate" title={reservation.message}>
                         "{reservation.message}"
                       </p>
                     </div>

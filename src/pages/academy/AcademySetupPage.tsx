@@ -61,8 +61,8 @@ const AcademySetupPage = () => {
         .maybeSingle();
 
       if (existingAcademy) {
-        // Redirect to dashboard if academy already exists
-        navigate("/");
+        // "/" 는 AuthPage(로그인)라 학원 계정이 로그아웃된 것처럼 보임 → 관리자 메인 홈으로 이동
+        navigate("/admin/home", { replace: true });
         return;
       }
 
@@ -173,7 +173,7 @@ const AcademySetupPage = () => {
       }
 
       toast({ title: "학원이 성공적으로 등록되었습니다!" });
-      navigate("/");
+      navigate("/admin/home", { replace: true });
     } catch (error: any) {
       console.error("Error creating academy:", error);
       toast({ 
