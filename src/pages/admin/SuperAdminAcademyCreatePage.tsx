@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
@@ -51,6 +51,13 @@ import {
 import CurriculumEditor from "@/components/CurriculumEditor";
 import ClassScheduleInput from "@/components/ClassScheduleInput";
 import { loadNaverMapScript, geocodeAddress } from "@/utils/naverMap";
+import {
+  CLASS_SUBJECT_OPTIONS,
+  CLASS_SUBJECT_FILTER_ALL,
+  CLASS_SUBJECT_FILTER_NONE,
+  CLASS_SUBJECT_FILTER_TRIGGER_CLASS,
+  filterClassesBySubject,
+} from "@/lib/classSubjects";
 
 interface Teacher {
   id: string;
@@ -68,6 +75,7 @@ interface CurriculumStep {
 interface Class {
   id: string;
   name: string;
+  subject: string | null;
   target_grade: string | null;
   schedule: string | null;
   fee: number | null;
@@ -98,6 +106,12 @@ const SuperAdminAcademyCreatePage = () => {
   // Teachers & Classes state
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
+  const [classListSubjectFilter, setClassListSubjectFilter] = useState(CLASS_SUBJECT_FILTER_ALL);
+
+  const filteredClasses = useMemo(
+    () => filterClassesBySubject(classes, classListSubjectFilter),
+    [classes, classListSubjectFilter]
+  );
 
   // Dialog state
   const [isTeacherDialogOpen, setIsTeacherDialogOpen] = useState(false);
@@ -113,6 +127,7 @@ const SuperAdminAcademyCreatePage = () => {
 
   // Class form
   const [className, setClassName] = useState("");
+  const [classCourseSubject, setClassCourseSubject] = useState("");
   const [classGrade, setClassGrade] = useState("");
   const [classSchedule, setClassSchedule] = useState("");
   const [classFee, setClassFee] = useState("");
@@ -209,6 +224,7 @@ const SuperAdminAcademyCreatePage = () => {
           const classesWithAcademy = classes.map(c => ({
             academy_id: data.id,
             name: c.name,
+            subject: c.subject,
             target_grade: c.target_grade,
             schedule: c.schedule,
             fee: c.fee,
@@ -229,6 +245,7 @@ const SuperAdminAcademyCreatePage = () => {
         const classesWithAcademy = classes.map(c => ({
           academy_id: data.id,
           name: c.name,
+          subject: c.subject,
           target_grade: c.target_grade,
           schedule: c.schedule,
           fee: c.fee,
@@ -315,6 +332,7 @@ const SuperAdminAcademyCreatePage = () => {
   // Class CRUD (local state only)
   const resetClassForm = () => {
     setClassName("");
+    setClassCourseSubject("");
     setClassGrade("");
     setClassSchedule("");
     setClassFee("");
@@ -328,6 +346,7 @@ const SuperAdminAcademyCreatePage = () => {
     if (cls) {
       setEditingClass(cls);
       setClassName(cls.name);
+      setClassCourseSubject(cls.subject || "");
       setClassGrade(cls.target_grade || "");
       setClassSchedule(cls.schedule || "");
       setClassFee(cls.fee?.toString() || "");
@@ -352,6 +371,7 @@ const SuperAdminAcademyCreatePage = () => {
           ? {
               ...c,
               name: className,
+              subject: classCourseSubject.trim() || null,
               target_grade: classGrade || null,
               schedule: classSchedule || null,
               fee: classFee ? parseInt(classFee) : null,
@@ -365,6 +385,7 @@ const SuperAdminAcademyCreatePage = () => {
       const newClass: Class = {
         id: `temp-${Date.now()}`,
         name: className,
+        subject: classCourseSubject.trim() || null,
         target_grade: classGrade || null,
         schedule: classSchedule || null,
         fee: classFee ? parseInt(classFee) : null,
@@ -668,6 +689,25 @@ const SuperAdminAcademyCreatePage = () => {
                     <Input value={className} onChange={(e) => setClassName(e.target.value)} />
                   </div>
                   <div className="space-y-2">
+                    <Label>과목</Label>
+                    <Select
+                      value={classCourseSubject || "__none__"}
+                      onValueChange={(v) => setClassCourseSubject(v === "__none__" ? "" : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="과목을 선택하세요" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">선택 안 함</SelectItem>
+                        {CLASS_SUBJECT_OPTIONS.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <Label>대상 학년</Label>
                     <Select value={classGrade} onValueChange={setClassGrade}>
                       <SelectTrigger>
@@ -732,8 +772,35 @@ const SuperAdminAcademyCreatePage = () => {
                 </CardContent>
               </Card>
             ) : (
+              <>
+                <div className="space-y-2">
+                  <Label className="text-sm">과목별 보기</Label>
+                  <Select value={classListSubjectFilter} onValueChange={setClassListSubjectFilter}>
+                    <SelectTrigger className={CLASS_SUBJECT_FILTER_TRIGGER_CLASS}>
+                      <SelectValue placeholder="전체" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={CLASS_SUBJECT_FILTER_ALL}>전체</SelectItem>
+                      <SelectItem value={CLASS_SUBJECT_FILTER_NONE}>과목 미지정</SelectItem>
+                      {CLASS_SUBJECT_OPTIONS.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {filteredClasses.length === 0 ? (
+                  <Card className="shadow-card">
+                    <CardContent className="p-6 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        선택한 조건에 맞는 강좌가 없습니다
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
               <div className="space-y-3">
-                {classes.map((cls) => (
+                {filteredClasses.map((cls) => (
                   <Card key={cls.id} className="shadow-card">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
@@ -745,7 +812,8 @@ const SuperAdminAcademyCreatePage = () => {
                             </Badge>
                           </div>
                           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                            {cls.target_grade && <span>{cls.target_grade}</span>}
+                            {cls.subject && <span>과목: {cls.subject}</span>}
+                            {cls.target_grade && <span>{cls.subject ? "• " : ""}{cls.target_grade}</span>}
                             {cls.schedule && <span>• {cls.schedule}</span>}
                             {cls.fee && <span>• {cls.fee.toLocaleString()}원</span>}
                           </div>
@@ -763,6 +831,8 @@ const SuperAdminAcademyCreatePage = () => {
                   </Card>
                 ))}
               </div>
+                )}
+              </>
             )}
           </TabsContent>
         </Tabs>

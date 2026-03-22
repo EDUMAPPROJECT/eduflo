@@ -1,4 +1,19 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusinessVerification } from "@/hooks/useBusinessVerification";
@@ -65,6 +80,14 @@ import {
 import type { Database } from "@/integrations/supabase/types";
 import { logError } from "@/lib/errorLogger";
 import { academyProfileSchema, teacherSchema, classSchema, validateInput } from "@/lib/validation";
+import { SortableProfileRow } from "@/components/SortableProfileRow";
+import {
+  CLASS_SUBJECT_OPTIONS,
+  CLASS_SUBJECT_FILTER_ALL,
+  CLASS_SUBJECT_FILTER_NONE,
+  CLASS_SUBJECT_FILTER_TRIGGER_CLASS,
+  filterClassesBySubject,
+} from "@/lib/classSubjects";
 
 type Academy = Database["public"]["Tables"]["academies"]["Row"];
 
@@ -75,6 +98,7 @@ interface Teacher {
   bio: string | null;
   image_url: string | null;
   member_id: string | null;
+  sort_order: number;
 }
 
 interface AcademyMemberWithProfile {
@@ -96,14 +120,28 @@ interface CurriculumStep {
 interface Class {
   id: string;
   name: string;
+  subject: string | null;
   target_grade: string | null;
   schedule: string | null;
   fee: number | null;
   description: string | null;
   teacher_id: string | null;
   is_recruiting: boolean | null;
+  sort_order: number;
   curriculum?: CurriculumStep[];
   tags?: string[] | null;
+}
+
+async function persistTableSortOrder(
+  table: "teachers" | "classes",
+  orderedIds: string[]
+): Promise<boolean> {
+  const results = await Promise.all(
+    orderedIds.map((id, index) =>
+      supabase.from(table).update({ sort_order: index }).eq("id", id)
+    )
+  );
+  return !results.some((r) => r.error);
 }
 
 const ProfileManagementPage = () => {
@@ -135,6 +173,12 @@ const ProfileManagementPage = () => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [academyMembers, setAcademyMembers] = useState<AcademyMemberWithProfile[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
+  const [classListSubjectFilter, setClassListSubjectFilter] = useState(CLASS_SUBJECT_FILTER_ALL);
+
+  const filteredClasses = useMemo(
+    () => filterClassesBySubject(classes, classListSubjectFilter),
+    [classes, classListSubjectFilter]
+  );
 
   // Dialog state
   const [isTeacherDialogOpen, setIsTeacherDialogOpen] = useState(false);
@@ -153,6 +197,7 @@ const ProfileManagementPage = () => {
 
   // Class form
   const [className, setClassName] = useState("");
+  const [classSubject, setClassSubject] = useState("");
   const [classYears, setClassYears] = useState<string[]>([]);
   const [classSchedule, setClassSchedule] = useState("");
   const [classFee, setClassFee] = useState("");
@@ -298,8 +343,15 @@ const ProfileManagementPage = () => {
       .from("teachers")
       .select("*")
       .eq("academy_id", academyId)
-      .order("created_at");
-    setTeachers((data as Teacher[]) || []);
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    const rows = (data || []) as (Teacher & { sort_order?: number })[];
+    setTeachers(
+      rows.map((t) => ({
+        ...t,
+        sort_order: typeof t.sort_order === "number" ? t.sort_order : 0,
+      }))
+    );
   };
 
   const fetchAcademyMembers = async (academyId: string) => {
@@ -344,16 +396,78 @@ const ProfileManagementPage = () => {
       .from("classes")
       .select("*")
       .eq("academy_id", academyId)
-      .order("created_at");
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
     
     // Parse curriculum JSON for each class and ensure tags array
     const classesWithCurriculum = (data || []).map((cls: any) => ({
       ...cls,
+      subject: cls.subject ?? null,
+      sort_order: typeof cls.sort_order === "number" ? cls.sort_order : 0,
       curriculum: Array.isArray(cls.curriculum) ? cls.curriculum : [],
       tags: Array.isArray(cls.tags) ? cls.tags : []
     })) as Class[];
     setClasses(classesWithCurriculum);
   };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleTeacherDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      if (!academy) return;
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      setTeachers((prev) => {
+        const oldIndex = prev.findIndex((t) => t.id === active.id);
+        const newIndex = prev.findIndex((t) => t.id === over.id);
+        if (oldIndex < 0 || newIndex < 0) return prev;
+        const reordered = arrayMove(prev, oldIndex, newIndex);
+        void (async () => {
+          const ok = await persistTableSortOrder(
+            "teachers",
+            reordered.map((t) => t.id)
+          );
+          if (!ok) {
+            toast({ title: "순서 저장에 실패했습니다", variant: "destructive" });
+            fetchTeachers(academy.id);
+          }
+        })();
+        return reordered;
+      });
+    },
+    [academy, toast, fetchTeachers]
+  );
+
+  const handleClassDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      if (!academy) return;
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      setClasses((prev) => {
+        const oldIndex = prev.findIndex((c) => c.id === active.id);
+        const newIndex = prev.findIndex((c) => c.id === over.id);
+        if (oldIndex < 0 || newIndex < 0) return prev;
+        const reordered = arrayMove(prev, oldIndex, newIndex);
+        void (async () => {
+          const ok = await persistTableSortOrder(
+            "classes",
+            reordered.map((c) => c.id)
+          );
+          if (!ok) {
+            toast({ title: "순서 저장에 실패했습니다", variant: "destructive" });
+            fetchClasses(academy.id);
+          }
+        })();
+        return reordered;
+      });
+    },
+    [academy, toast, fetchClasses]
+  );
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -540,6 +654,10 @@ const ProfileManagementPage = () => {
           .eq("id", editingTeacher.id);
         if (error) throw error;
       } else {
+        const nextOrder =
+          teachers.length === 0
+            ? 0
+            : Math.max(...teachers.map((t) => t.sort_order ?? 0)) + 1;
         const { error } = await supabase.from("teachers").insert({
           academy_id: academy.id,
           name: validatedData.name,
@@ -547,6 +665,7 @@ const ProfileManagementPage = () => {
           bio: validatedData.bio,
           image_url: validatedData.image_url,
           member_id: teacherMemberId || null,
+          sort_order: nextOrder,
         });
         if (error) throw error;
       }
@@ -629,6 +748,7 @@ const ProfileManagementPage = () => {
 
   const resetClassForm = () => {
     setClassName("");
+    setClassSubject("");
     setClassYears([]);
     setClassSchedule("");
     setClassFee("");
@@ -644,6 +764,7 @@ const ProfileManagementPage = () => {
     if (cls) {
       setEditingClass(cls);
       setClassName(cls.name);
+      setClassSubject(cls.subject || "");
       const { years } = parseTargetGrade(cls.target_grade || "");
       setClassYears(years || []);
       setClassSchedule(cls.schedule || "");
@@ -678,6 +799,7 @@ const ProfileManagementPage = () => {
 
       const classData = {
         name: className,
+        subject: classSubject.trim() || null,
         target_grade: composedTargetGrade,
         schedule: classSchedule || null,
         fee: classFee ? parseInt(classFee) : null,
@@ -691,7 +813,13 @@ const ProfileManagementPage = () => {
         const { error } = await supabase.from("classes").update(classData).eq("id", editingClass.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("classes").insert([{ ...classData, academy_id: academy.id }]);
+        const nextClassOrder =
+          classes.length === 0
+            ? 0
+            : Math.max(...classes.map((c) => c.sort_order ?? 0)) + 1;
+        const { error } = await supabase.from("classes").insert([
+          { ...classData, academy_id: academy.id, sort_order: nextClassOrder },
+        ]);
         if (error) throw error;
       }
 
@@ -1258,54 +1386,74 @@ const ProfileManagementPage = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-3">
-                {teachers.map((teacher) => {
-                  const displayInfo = getTeacherDisplayInfo(teacher);
-                  return (
-                    <Card key={teacher.id} className="shadow-card">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0">
-                            {teacher.image_url ? (
-                              <img src={teacher.image_url} alt={displayInfo.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <GraduationCap className="w-6 h-6 text-primary" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-medium text-foreground">{displayInfo.name}</h4>
-                              {displayInfo.grade && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {displayInfo.grade}
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground">{teacher.subject || "과목 미지정"}</p>
-                          </div>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openTeacherDialog(teacher)}>
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteTeacher(teacher.id)}>
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                        {teacher.bio && (
-                          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{teacher.bio}</p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleTeacherDragEnd}
+              >
+                <SortableContext
+                  items={teachers.map((t) => t.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-3">
+                    {teachers.map((teacher) => {
+                      const displayInfo = getTeacherDisplayInfo(teacher);
+                      return (
+                        <SortableProfileRow key={teacher.id} id={teacher.id}>
+                          {(dragHandle) => (
+                            <Card className="shadow-card">
+                              <CardContent className="p-4">
+                                <div className="flex items-center gap-2">
+                                  {dragHandle}
+                                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary">
+                                      {teacher.image_url ? (
+                                        <img src={teacher.image_url} alt={displayInfo.name} className="h-full w-full object-cover" />
+                                      ) : (
+                                        <GraduationCap className="h-6 w-6 text-primary" />
+                                      )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <h4 className="font-medium text-foreground">{displayInfo.name}</h4>
+                                        {displayInfo.grade && (
+                                          <Badge variant="secondary" className="text-xs">
+                                            {displayInfo.grade}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-muted-foreground">{teacher.subject || "과목 미지정"}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex shrink-0 gap-1">
+                                    <Button variant="ghost" size="icon" onClick={() => openTeacherDialog(teacher)}>
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteTeacher(teacher.id)}>
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                {teacher.bio && (
+                                  <p className="mt-2 line-clamp-2 whitespace-pre-wrap break-words text-xs text-muted-foreground">
+                                    {teacher.bio}
+                                  </p>
+                                )}
+                              </CardContent>
+                            </Card>
+                          )}
+                        </SortableProfileRow>
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
             )}
           </TabsContent>
 
           <TabsContent
             value="classes"
-            className="bg-card border-0 focus-visible:ring-0 focus-visible:outline-none p-0"
+            className="bg-transparent border-0 focus-visible:ring-0 focus-visible:outline-none p-0"
           >
             <div className="space-y-4">
               <Dialog open={isClassDialogOpen} onOpenChange={setIsClassDialogOpen}>
@@ -1323,6 +1471,25 @@ const ProfileManagementPage = () => {
                     <div className="space-y-2">
                       <Label>강좌명 *</Label>
                       <Input value={className} onChange={(e) => setClassName(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>과목</Label>
+                      <Select
+                        value={classSubject || "__none__"}
+                        onValueChange={(v) => setClassSubject(v === "__none__" ? "" : v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="과목을 선택하세요" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">선택 안 함</SelectItem>
+                          {CLASS_SUBJECT_OPTIONS.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
                       <Label>대상 학년</Label>
@@ -1422,54 +1589,167 @@ const ProfileManagementPage = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-3">
-                  {classes.map((cls) => (
-                    <Card key={cls.id} className="shadow-card">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h4 className="font-medium text-foreground">{cls.name}</h4>
-                            <p className="text-xs text-muted-foreground">{cls.target_grade || "대상 학년 미정"}</p>
-                          </div>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openClassDialog(cls)}>
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteClass(cls.id)}>
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="text-xs text-muted-foreground space-y-1">
-                          {cls.schedule && <p>📅 {cls.schedule}</p>}
-                          {cls.fee && <p>💰 {cls.fee.toLocaleString()}원</p>}
-                        </div>
-                      {Array.isArray(cls.tags) && cls.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {cls.tags.map((tag) => (
-                            <Badge key={tag} variant="secondary" className="text-[10px] px-2 py-0.5">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                        {/* Recruiting Status Toggle */}
-                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                          <span className="text-xs text-muted-foreground">모집 상태</span>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-medium ${cls.is_recruiting ? 'text-primary' : 'text-muted-foreground'}`}>
-                              {cls.is_recruiting ? '모집중' : '마감'}
-                            </span>
-                            <Switch
-                              checked={cls.is_recruiting ?? true}
-                              onCheckedChange={(checked) => handleToggleRecruiting(cls.id, checked)}
-                            />
-                          </div>
-                        </div>
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-sm">과목별 보기</Label>
+                    <Select value={classListSubjectFilter} onValueChange={setClassListSubjectFilter}>
+                      <SelectTrigger className={CLASS_SUBJECT_FILTER_TRIGGER_CLASS}>
+                        <SelectValue placeholder="전체" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={CLASS_SUBJECT_FILTER_ALL}>전체</SelectItem>
+                        <SelectItem value={CLASS_SUBJECT_FILTER_NONE}>과목 미지정</SelectItem>
+                        {CLASS_SUBJECT_OPTIONS.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {classListSubjectFilter !== CLASS_SUBJECT_FILTER_ALL && (
+                      <p className="text-xs text-muted-foreground">
+                        과목 필터 사용 중에는 순서 변경(드래그)이 비활성화됩니다. 전체 선택 시 순서를 바꿀 수 있습니다.
+                      </p>
+                    )}
+                  </div>
+                  {filteredClasses.length === 0 ? (
+                    <Card className="shadow-card">
+                      <CardContent className="p-6 text-center">
+                        <p className="text-sm text-muted-foreground">
+                          선택한 조건에 맞는 강좌가 없습니다
+                        </p>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
+                  ) : classListSubjectFilter === CLASS_SUBJECT_FILTER_ALL ? (
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleClassDragEnd}
+                    >
+                      <SortableContext
+                        items={classes.map((c) => c.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="space-y-3">
+                          {classes.map((cls) => (
+                            <SortableProfileRow key={cls.id} id={cls.id}>
+                              {(dragHandle) => (
+                                <Card className="shadow-card">
+                                  <CardContent className="p-4">
+                                    <div className="mb-2 flex items-start justify-between gap-2">
+                                      <div className="flex min-w-0 flex-1 items-start gap-2">
+                                        {dragHandle}
+                                        <div className="min-w-0">
+                                          <h4 className="font-medium text-foreground">{cls.name}</h4>
+                                          <p className="text-xs text-muted-foreground">
+                                            {cls.subject ? `과목: ${cls.subject}` : "과목 미지정"}
+                                          </p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {cls.target_grade || "대상 학년 미정"}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex shrink-0 gap-1">
+                                        <Button variant="ghost" size="icon" onClick={() => openClassDialog(cls)}>
+                                          <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteClass(cls.id)}>
+                                          <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-1 text-xs text-muted-foreground">
+                                      {cls.schedule && <p>📅 {cls.schedule}</p>}
+                                      {cls.fee && <p>💰 {cls.fee.toLocaleString()}원</p>}
+                                    </div>
+                                    {Array.isArray(cls.tags) && cls.tags.length > 0 && (
+                                      <div className="mt-2 flex flex-wrap gap-1">
+                                        {cls.tags.map((tag) => (
+                                          <Badge key={tag} variant="secondary" className="px-2 py-0.5 text-[10px]">
+                                            {tag}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    )}
+                                    <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+                                      <span className="text-xs text-muted-foreground">모집 상태</span>
+                                      <div className="flex items-center gap-2">
+                                        <span
+                                          className={`text-xs font-medium ${cls.is_recruiting ? "text-primary" : "text-muted-foreground"}`}
+                                        >
+                                          {cls.is_recruiting ? "모집중" : "마감"}
+                                        </span>
+                                        <Switch
+                                          checked={cls.is_recruiting ?? true}
+                                          onCheckedChange={(checked) => handleToggleRecruiting(cls.id, checked)}
+                                        />
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              )}
+                            </SortableProfileRow>
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredClasses.map((cls) => (
+                        <Card key={cls.id} className="shadow-card">
+                          <CardContent className="p-4">
+                            <div className="mb-2 flex items-start justify-between">
+                              <div>
+                                <h4 className="font-medium text-foreground">{cls.name}</h4>
+                                <p className="text-xs text-muted-foreground">
+                                  {cls.subject ? `과목: ${cls.subject}` : "과목 미지정"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {cls.target_grade || "대상 학년 미정"}
+                                </p>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => openClassDialog(cls)}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleDeleteClass(cls.id)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="space-y-1 text-xs text-muted-foreground">
+                              {cls.schedule && <p>📅 {cls.schedule}</p>}
+                              {cls.fee && <p>💰 {cls.fee.toLocaleString()}원</p>}
+                            </div>
+                            {Array.isArray(cls.tags) && cls.tags.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {cls.tags.map((tag) => (
+                                  <Badge key={tag} variant="secondary" className="px-2 py-0.5 text-[10px]">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                            <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+                              <span className="text-xs text-muted-foreground">모집 상태</span>
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`text-xs font-medium ${cls.is_recruiting ? "text-primary" : "text-muted-foreground"}`}
+                                >
+                                  {cls.is_recruiting ? "모집중" : "마감"}
+                                </span>
+                                <Switch
+                                  checked={cls.is_recruiting ?? true}
+                                  onCheckedChange={(checked) => handleToggleRecruiting(cls.id, checked)}
+                                />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </TabsContent>

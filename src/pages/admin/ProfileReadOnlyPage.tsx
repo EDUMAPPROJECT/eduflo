@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAcademyMembership } from "@/hooks/useAcademyMembership";
@@ -8,6 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Building2,
@@ -25,6 +33,13 @@ import {
   Image,
 } from "lucide-react";
 import { getTagLabel } from "@/lib/tagDictionary";
+import {
+  CLASS_SUBJECT_OPTIONS,
+  CLASS_SUBJECT_FILTER_ALL,
+  CLASS_SUBJECT_FILTER_NONE,
+  CLASS_SUBJECT_FILTER_TRIGGER_CLASS,
+  filterClassesBySubject,
+} from "@/lib/classSubjects";
 import type { Database } from "@/integrations/supabase/types";
 
 type Academy = Database["public"]["Tables"]["academies"]["Row"];
@@ -45,6 +60,7 @@ interface CurriculumStep {
 interface Class {
   id: string;
   name: string;
+  subject: string | null;
   target_grade: string | null;
   schedule: string | null;
   fee: number | null;
@@ -63,6 +79,12 @@ const ProfileReadOnlyPage = () => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [hasEditPermission, setHasEditPermission] = useState(false);
+  const [classListSubjectFilter, setClassListSubjectFilter] = useState(CLASS_SUBJECT_FILTER_ALL);
+
+  const filteredClasses = useMemo(
+    () => filterClassesBySubject(classes, classListSubjectFilter),
+    [classes, classListSubjectFilter]
+  );
 
   useEffect(() => {
     const getUser = async () => {
@@ -145,7 +167,8 @@ const ProfileReadOnlyPage = () => {
       .from("teachers")
       .select("*")
       .eq("academy_id", academyId)
-      .order("created_at");
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
     setTeachers((data as Teacher[]) || []);
   };
 
@@ -154,10 +177,12 @@ const ProfileReadOnlyPage = () => {
       .from("classes")
       .select("*")
       .eq("academy_id", academyId)
-      .order("created_at");
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
     
     const classesWithCurriculum = (data || []).map((cls: any) => ({
       ...cls,
+      subject: cls.subject ?? null,
       curriculum: Array.isArray(cls.curriculum) ? cls.curriculum : []
     })) as Class[];
     setClasses(classesWithCurriculum);
@@ -381,7 +406,7 @@ const ProfileReadOnlyPage = () => {
                             <p className="text-sm text-muted-foreground">{teacher.subject}</p>
                           )}
                           {teacher.bio && (
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                            <p className="mt-1 line-clamp-2 whitespace-pre-wrap break-words text-sm text-muted-foreground">
                               {teacher.bio}
                             </p>
                           )}
@@ -404,6 +429,26 @@ const ProfileReadOnlyPage = () => {
               </Button>
             )}
 
+            {classes.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm">과목별 보기</Label>
+                <Select value={classListSubjectFilter} onValueChange={setClassListSubjectFilter}>
+                  <SelectTrigger className={CLASS_SUBJECT_FILTER_TRIGGER_CLASS}>
+                    <SelectValue placeholder="전체" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={CLASS_SUBJECT_FILTER_ALL}>전체</SelectItem>
+                    <SelectItem value={CLASS_SUBJECT_FILTER_NONE}>과목 미지정</SelectItem>
+                    {CLASS_SUBJECT_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <Card className="shadow-card border-border">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -416,9 +461,13 @@ const ProfileReadOnlyPage = () => {
                   <p className="text-muted-foreground text-center py-6">
                     등록된 강좌가 없습니다
                   </p>
+                ) : filteredClasses.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-6 text-sm">
+                    선택한 조건에 맞는 강좌가 없습니다
+                  </p>
                 ) : (
                   <div className="space-y-4">
-                    {classes.map((cls) => {
+                    {filteredClasses.map((cls) => {
                       const teacher = teachers.find(t => t.id === cls.teacher_id);
                       return (
                         <div key={cls.id} className="p-4 bg-secondary/30 rounded-xl space-y-3">
@@ -432,6 +481,12 @@ const ProfileReadOnlyPage = () => {
                           </div>
 
                           <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                            {cls.subject && (
+                              <span className="flex items-center gap-1">
+                                <BookOpen className="w-3 h-3" />
+                                과목: {cls.subject}
+                              </span>
+                            )}
                             {cls.target_grade && (
                               <span className="flex items-center gap-1">
                                 <GraduationCap className="w-3 h-3" />

@@ -111,10 +111,10 @@ const ReservationDetailSheet = ({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="rounded-t-2xl max-h-[80vh] flex flex-col p-0 overflow-hidden"
+        className="rounded-t-2xl max-h-[80vh] flex flex-col p-0 overflow-hidden sm:max-w-md sm:mx-auto"
       >
         <SheetHeader className="flex-shrink-0 px-6 pt-6 pb-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <SheetTitle className="text-lg">
               {type === "reservation" ? "방문 상담 상세" : "설명회 신청 상세"}
             </SheetTitle>
