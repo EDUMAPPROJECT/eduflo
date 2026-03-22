@@ -101,7 +101,7 @@ const PostDetailPage = () => {
         const postWithMeta: FeedPostForDetail = {
           id: row.id,
           academy_id: row.academy_id,
-          type: row.type,
+          type: row.type as FeedPostForDetail["type"],
           title: row.title,
           body: row.body,
           image_url: row.image_url,

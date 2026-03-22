@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -85,10 +86,28 @@ interface Academy {
 
 interface Teacher {
   id: string;
+  academy_id?: string;
+  member_id?: string | null;
   name: string;
   subject: string | null;
   bio: string | null;
   image_url: string | null;
+  sort_order?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+function formatKoreanDate(iso: string | undefined) {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  } catch {
+    return null;
+  }
 }
 
 interface CurriculumStep {
@@ -132,6 +151,7 @@ const AcademyDetailPage = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [enrolledClasses, setEnrolledClasses] = useState<Set<string>>(new Set());
   const [enrollConfirmDialog, setEnrollConfirmDialog] = useState<{
     isOpen: boolean;
@@ -506,7 +526,19 @@ const AcademyDetailPage = () => {
             ) : (
               <div className="space-y-3">
                 {teachers.map((teacher) => (
-                  <Card key={teacher.id} className="shadow-card overflow-hidden">
+                  <Card
+                    key={teacher.id}
+                    role="button"
+                    tabIndex={0}
+                    className="shadow-card cursor-pointer overflow-hidden transition-shadow hover:shadow-md"
+                    onClick={() => setSelectedTeacher(teacher)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedTeacher(teacher);
+                      }
+                    }}
+                  >
                     <CardContent className="p-4">
                       <div className="flex gap-4">
                         <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center overflow-hidden shrink-0">
@@ -528,7 +560,7 @@ const AcademyDetailPage = () => {
                             </Badge>
                           </div>
                           {teacher.bio && (
-                            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">
+                            <p className="mt-1 line-clamp-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">
                               {teacher.bio}
                             </p>
                           )}
@@ -849,6 +881,91 @@ const AcademyDetailPage = () => {
                     상담 신청하기
                   </Button>
                 </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Teacher Detail Dialog */}
+        <Dialog
+          open={!!selectedTeacher}
+          onOpenChange={(open) => {
+            if (!open) setSelectedTeacher(null);
+          }}
+        >
+          <DialogContent className="max-w-sm max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-lg">강사 상세</DialogTitle>
+              <DialogDescription className="sr-only">
+                {selectedTeacher
+                  ? `${selectedTeacher.name} 강사의 프로필 정보입니다.`
+                  : "강사 정보"}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedTeacher && (
+              <div className="space-y-5 py-2">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20">
+                    {selectedTeacher.image_url ? (
+                      <img
+                        src={selectedTeacher.image_url}
+                        alt={selectedTeacher.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <GraduationCap className="h-14 w-14 text-primary" />
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <h3 className="text-xl font-semibold text-foreground">
+                      {selectedTeacher.name}
+                    </h3>
+                    <Badge variant="secondary" className="mt-2 text-xs">
+                      {selectedTeacher.subject || "과목 미지정"}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="rounded-lg bg-secondary/50 p-3">
+                  <p className="mb-1 text-xs text-muted-foreground">담당 과목</p>
+                  <p className="text-sm font-medium">
+                    {selectedTeacher.subject || "미지정"}
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="mb-2 text-sm font-semibold text-foreground">
+                    약력
+                  </h4>
+                  {selectedTeacher.bio ? (
+                    <p className="rounded-lg bg-secondary/30 p-3 text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap break-words">
+                      {selectedTeacher.bio}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      등록된 약력이 없습니다.
+                    </p>
+                  )}
+                </div>
+
+                {(formatKoreanDate(selectedTeacher.created_at) ||
+                  formatKoreanDate(selectedTeacher.updated_at)) && (
+                  <div className="space-y-1 border-t pt-4 text-xs text-muted-foreground">
+                    {formatKoreanDate(selectedTeacher.created_at) && (
+                      <p>
+                        프로필 등록일:{" "}
+                        {formatKoreanDate(selectedTeacher.created_at)}
+                      </p>
+                    )}
+                    {formatKoreanDate(selectedTeacher.updated_at) &&
+                      selectedTeacher.updated_at !== selectedTeacher.created_at && (
+                        <p>
+                          최종 수정일:{" "}
+                          {formatKoreanDate(selectedTeacher.updated_at)}
+                        </p>
+                      )}
+                  </div>
+                )}
               </div>
             )}
           </DialogContent>
