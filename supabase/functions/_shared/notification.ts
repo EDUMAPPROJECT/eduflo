@@ -316,18 +316,6 @@ export async function callSsodaaApi(
     buttons: NotificationButton[];
   }
 ): Promise<SsodaaResponse> {
-  const dryRun = Deno.env.get("SSODAA_DRY_RUN") === "true";
-
-  if (dryRun) {
-    console.log("[DRY_RUN] Ssodaa API call skipped:", {
-      templateCode: params.templateCode,
-      phone: params.phone,
-      messagePreview: params.message.slice(0, 80) + "...",
-      buttons: params.buttons,
-    });
-    return { success: true, resultCode: "DRY_RUN" };
-  }
-
   // 버튼 배열 → Ssodaa 형식으로 변환
   const buttonArray = params.buttons.map((b) => ({
     name: b.name,

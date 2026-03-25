@@ -40,6 +40,13 @@ BEGIN
 END;
 $$;
 
+-- process_alimtalk_responses를 30초마다 실행하는 pg_cron 등록
+SELECT cron.schedule(
+  'process-alimtalk-responses',
+  '30 seconds',
+  'SELECT public.process_alimtalk_responses()'
+);
+
 -- pg_net 응답을 확인하고 notification_logs 상태를 업데이트하는 함수
 -- pg_cron으로 30초마다 실행
 CREATE OR REPLACE FUNCTION public.process_alimtalk_responses()
