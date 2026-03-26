@@ -24,6 +24,7 @@ const AdminChatRoomPage = () => {
   const [sending, setSending] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
 
   const isPending = roomInfo?.status === 'pending';
   const showAcceptButton = isPending && isStaffForThisRoom;
@@ -39,6 +40,9 @@ const AdminChatRoomPage = () => {
     const result = await sendMessage(newMessage);
     if (result.success) {
       setNewMessage("");
+      requestAnimationFrame(() => {
+        messageInputRef.current?.focus();
+      });
     } else if (result.error) {
       toast.error(result.error);
     }
@@ -81,7 +85,6 @@ const AdminChatRoomPage = () => {
   }
 
   const parentName = roomInfo.parent_profile?.user_name || '학부모';
-  const parentPhone = roomInfo.parent_profile?.phone;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -96,9 +99,6 @@ const AdminChatRoomPage = () => {
           </div>
           <div className="flex-1 min-w-0">
             <h1 className="font-semibold text-foreground truncate">{parentName}</h1>
-            {parentPhone && (
-              <p className="text-xs text-muted-foreground truncate">{parentPhone}</p>
-            )}
           </div>
           <Badge variant="secondary" className="text-xs shrink-0">관리자</Badge>
         </div>
@@ -187,6 +187,7 @@ const AdminChatRoomPage = () => {
       <div className="sticky bottom-0 bg-card border-t border-border p-4">
         <div className="max-w-lg mx-auto flex gap-2">
           <Input
+            ref={messageInputRef}
             placeholder={showAcceptButton ? "위에서 수락한 후 메시지를 보낼 수 있습니다" : "메시지를 입력하세요..."}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
@@ -196,6 +197,7 @@ const AdminChatRoomPage = () => {
           />
           <Button
             size="icon"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={handleSendMessage}
             disabled={!newMessage.trim() || sending || showAcceptButton}
             className="rounded-full shrink-0"

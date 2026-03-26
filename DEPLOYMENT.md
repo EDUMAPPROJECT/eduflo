@@ -9,36 +9,9 @@
 - `VITE_SUPABASE_URL`: Supabase 프로젝트 URL
 - `VITE_SUPABASE_PUBLISHABLE_KEY`: Supabase 공개 키 (anon/public key)
 
-## Supabase Edge Functions 배포 (Lovable 사용 시)
+## Supabase Edge Functions 배포
 
-Lovable에서 백엔드를 쓰는 방식은 두 가지입니다.
-
-### Lovable Cloud를 쓰는 경우 (Supabase 계정 없음)
-
-**Lovable Cloud**는 Lovable이 Supabase 인스턴스를 대신 만들어서 관리하는 방식입니다.  
-이 경우 **Supabase 계정이 없고**, Supabase 대시보드 접속·CLI 배포·Secret 직접 설정이 **불가능**합니다.
-
-이 레포의 `firebase-signup`, `firebase-login`을 쓰려면 다음 중 하나를 선택해야 합니다.
-
-#### 선택 1: Lovable 채팅으로 Edge Function 추가·배포 요청
-
-1. Lovable 프로젝트 에디터에서 **채팅**으로 요청합니다.
-   - 예: *"Firebase 휴대폰 인증 후 Supabase 사용자를 만드는 Edge Function 두 개를 추가해줘. 회원가입용 firebase-signup, 로그인용 firebase-login. 레포에 이미 있는 `supabase/functions/firebase-signup`, `supabase/functions/firebase-login` 코드를 참고해서 배포해줘."*
-2. Lovable이 Edge Function을 만들고 배포하면, **시크릿**(Firebase API 키 등)은 Lovable이 안내하는 **API 키/시크릿 입력 UI**(예: Integrations, Add API Key)에 입력합니다.
-3. 앱에서는 `VITE_SUPABASE_URL`(Lovable이 넣어주는 값)로 `/functions/v1/firebase-signup`, `firebase-login`이 호출되도록 이미 구현되어 있습니다.
-
-#### 선택 2: 본인 Supabase 프로젝트로 전환 후 CLI로 배포
-
-Supabase 계정을 만들고 **본인 소유의 Supabase 프로젝트**를 만든 뒤, Lovable 프로젝트 설정에서 **그 Supabase 프로젝트로 연결**하면, 그때부터는 Supabase 대시보드·CLI를 쓸 수 있습니다.  
-(이전에 Lovable Cloud만 쓰던 경우, DB/데이터는 수동 마이그레이션이 필요할 수 있습니다. [Lovable Self-hosting](https://docs.lovable.dev/tips-tricks/self-hosting) 참고.)
-
-연결 후에는 아래 **「본인 Supabase 프로젝트를 Lovable에 연결한 경우」** 절차대로 배포하면 됩니다.
-
----
-
-### 본인 Supabase 프로젝트를 Lovable에 연결한 경우
-
-Supabase 계정이 있고, Lovable에서 **내 Supabase 프로젝트**를 선택해 연결한 상태라면, 로컬에서 Supabase CLI로 배포할 수 있습니다.
+Supabase 계정이 있고 **본인 소유의 Supabase 프로젝트**를 사용한다면, 로컬에서 Supabase CLI로 배포할 수 있습니다.
 
 #### 1. Supabase CLI 설치
 

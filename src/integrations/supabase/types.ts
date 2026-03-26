@@ -1287,18 +1287,21 @@ export type Database = {
         Row: {
           id: string
           is_super_admin: boolean | null
+          require_password_change: boolean
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
           id?: string
           is_super_admin?: boolean | null
+          require_password_change?: boolean
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
           id?: string
           is_super_admin?: boolean | null
+          require_password_change?: boolean
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
@@ -1309,6 +1312,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auth_user_exists: { Args: { p_user_id: string }; Returns: boolean }
       generate_academy_join_code: { Args: never; Returns: string }
       generate_connection_code: { Args: never; Returns: string }
       generate_random_nickname: { Args: never; Returns: string }

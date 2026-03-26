@@ -6,6 +6,7 @@ interface ChatRoom {
   academy_id: string;
   parent_id: string;
   staff_user_id: string | null;
+  updatedAt?: Date | null;
   academy: {
     id: string;
     name: string;
@@ -196,6 +197,7 @@ export const useChatRooms = (isAdmin: boolean = false, ownOnly: boolean = false)
               academy_id: room.academy_id,
               parent_id: room.parent_id,
               staff_user_id: staffUserId,
+              updatedAt: room.updated_at ? new Date(room.updated_at) : null,
               academy: {
                 id: academy.id,
                 name: academy.name,
@@ -211,7 +213,13 @@ export const useChatRooms = (isAdmin: boolean = false, ownOnly: boolean = false)
           })
         );
 
-        setChatRooms(roomsWithMessages);
+        const sorted = [...roomsWithMessages].sort((a, b) => {
+          const aTime = (a.lastMessageAt ?? a.updatedAt)?.getTime() ?? 0;
+          const bTime = (b.lastMessageAt ?? b.updatedAt)?.getTime() ?? 0;
+          return bTime - aTime;
+        });
+
+        setChatRooms(sorted);
       } catch (error) {
         console.error('Error:', error);
       } finally {

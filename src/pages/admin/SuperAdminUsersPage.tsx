@@ -19,7 +19,7 @@ import {
   UserX,
   Trash2,
   Eye,
-  X,
+  KeyRound,
   Phone,
   Mail,
   Calendar
@@ -43,6 +43,7 @@ interface UserWithRole {
   user_id: string;
   role: 'parent' | 'admin' | 'student';
   is_super_admin: boolean;
+  require_password_change: boolean;
   profile: {
     user_name: string | null;
     email: string | null;
@@ -62,6 +63,10 @@ const SuperAdminUsersPage = () => {
   const [filterRole, setFilterRole] = useState<string>("all");
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [tempPwDialogOpen, setTempPwDialogOpen] = useState(false);
+  const [targetUserForReset, setTargetUserForReset] = useState<UserWithRole | null>(null);
+  const [tempPassword, setTempPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   useEffect(() => {
     if (!authLoading && isSuperAdmin) {
@@ -179,6 +184,91 @@ const SuperAdminUsersPage = () => {
   const handleViewDetail = (user: UserWithRole) => {
     setSelectedUser(user);
     setDetailDialogOpen(true);
+  };
+
+  /** Auth 정책에 따라 특수문자가 거절되는 경우가 있어 영문+숫자만 사용 */
+  const generateTemporaryPassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    let result = "";
+    for (let i = 0; i < 16; i += 1) {
+      result += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return result;
+  };
+
+  const openTempPasswordDialog = (user: UserWithRole) => {
+    setTargetUserForReset(user);
+    setTempPassword(generateTemporaryPassword());
+    setTempPwDialogOpen(true);
+  };
+
+  const handleResetPassword = async () => {
+    if (!targetUserForReset) return;
+    const trimmed = tempPassword.trim();
+    if (trimmed.length < 8) {
+      toast.error("임시 비밀번호는 8자 이상이어야 합니다");
+      return;
+    }
+
+    setResettingPassword(true);
+    try {
+      const baseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "") ?? "";
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
+      const url = `${baseUrl}/functions/v1/admin-reset-user-password`;
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+      };
+      if (import.meta.env.DEV && import.meta.env.VITE_DEV_BYPASS_KEY) {
+        headers["x-dev-bypass-key"] = import.meta.env.VITE_DEV_BYPASS_KEY;
+      }
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          userId: targetUserForReset.user_id.trim().toLowerCase(),
+          tempPassword: trimmed,
+          email: (targetUserForReset.profile?.email ?? "").trim(),
+        }),
+      });
+
+      const json = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        ok?: boolean;
+        mode?: string;
+        new_user_id?: string;
+        login_email?: string;
+      };
+      if (!res.ok) {
+        const msg =
+          typeof json.error === "string" && json.error.length > 0
+            ? json.error
+            : `요청 실패 (${res.status})`;
+        toast.error(msg);
+        logError("SuperAdminUsers ResetPassword", new Error(msg));
+        return;
+      }
+
+      await navigator.clipboard.writeText(trimmed).catch(() => undefined);
+      if (json.mode === "recreated" && json.new_user_id) {
+        toast.success(
+          `Auth 계정을 재생성했습니다. 임시 비밀번호가 클립보드에 복사되었습니다. (아이디: ${json.login_email ?? "확인 필요"})`
+        );
+      } else {
+        toast.success("임시 비밀번호가 발급되었습니다. 클립보드에 복사되었습니다.");
+      }
+      setTempPwDialogOpen(false);
+      setTargetUserForReset(null);
+      setTempPassword("");
+      fetchUsers();
+    } catch (error) {
+      logError("SuperAdminUsers ResetPassword", error);
+      toast.error("임시 비밀번호 발급에 실패했습니다");
+    } finally {
+      setResettingPassword(false);
+    }
   };
 
   const filteredUsers = users.filter(user => {
@@ -317,6 +407,11 @@ const SuperAdminUsersPage = () => {
                             슈퍼
                           </Badge>
                         )}
+                        {user.require_password_change && (
+                          <Badge variant="outline" className="text-amber-600 border-amber-500">
+                            첫 로그인 비번 변경 대기
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {user.profile?.email || "이메일 없음"}
@@ -334,6 +429,14 @@ const SuperAdminUsersPage = () => {
                         onClick={() => handleViewDetail(user)}
                       >
                         <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openTempPasswordDialog(user)}
+                        title="임시 비밀번호 발급"
+                      >
+                        <KeyRound className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -486,6 +589,47 @@ const SuperAdminUsersPage = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={tempPwDialogOpen} onOpenChange={setTempPwDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-primary" />
+              임시 비밀번호 발급
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              대상: <span className="font-medium text-foreground">{targetUserForReset?.profile?.user_name || "이름 없음"}</span>
+            </p>
+            <Input
+              value={tempPassword}
+              onChange={(e) => setTempPassword(e.target.value)}
+              placeholder="임시 비밀번호 (8자 이상)"
+            />
+            <p className="text-xs text-muted-foreground">
+              발급 후 해당 사용자는 첫 로그인 시 비밀번호를 반드시 변경해야 합니다.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setTempPwDialogOpen(false)}
+                disabled={resettingPassword}
+              >
+                취소
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={handleResetPassword}
+                disabled={resettingPassword}
+              >
+                {resettingPassword ? "발급 중..." : "발급하기"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

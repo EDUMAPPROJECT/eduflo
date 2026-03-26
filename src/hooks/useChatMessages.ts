@@ -24,6 +24,10 @@ interface ChatRoomInfo {
   id: string;
   status: string;
   staff_user_id: string | null;
+  staff_profile?: {
+    user_name: string | null;
+  } | null;
+  staff_role_label?: string | null;
   academy: {
     id: string;
     name: string;
@@ -98,6 +102,8 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
         
         // Fetch parent profile if user is admin
         let parentProfile = null;
+        let staffProfile: { user_name: string | null } | null = null;
+        let staffRoleLabel: string | null = null;
         if (roleData?.role === 'admin') {
           const { data: profileData } = await supabase
             .from('profiles')
@@ -107,11 +113,72 @@ export const useChatMessages = (chatRoomId: string | undefined) => {
           parentProfile = profileData;
         }
 
+        // 학부모 헤더용: 담당자 이름/직책 조회
+        const staffUserId = (roomData as { staff_user_id?: string | null }).staff_user_id ?? null;
+        if (staffUserId) {
+          const { data: staffData } = await supabase
+            .from('profiles')
+            .select('user_name')
+            .eq('id', staffUserId)
+            .maybeSingle();
+          staffProfile = staffData;
+
+          // 1) role_label RPC를 우선 사용 (실제 채팅 노출 규칙과 동일)
+          const { data: staffList } = await supabase.rpc('get_academy_staff_for_chat', {
+            _academy_id: academy.id,
+          });
+          const matchedStaff = (staffList ?? []).find(
+            (row: { user_id: string; role_label: string | null }) => row.user_id === staffUserId
+          );
+          if (matchedStaff?.role_label) {
+            staffRoleLabel = matchedStaff.role_label;
+          }
+
+          // 2) RPC에서 못 찾는 경우 fallback
+          if (!staffRoleLabel) {
+            const { data: memberData } = await supabase
+              .from('academy_members')
+              .select('role, grade')
+              .eq('academy_id', academy.id)
+              .eq('user_id', staffUserId)
+              .maybeSingle();
+
+            if (memberData) {
+              const role = (memberData as { role?: string | null }).role ?? null;
+              const grade = (memberData as { grade?: string | null }).grade ?? null;
+
+              if (role === 'owner') {
+                staffRoleLabel = '원장';
+              } else {
+                switch (grade) {
+                  case 'admin':
+                    staffRoleLabel = '원장';
+                    break;
+                  case 'vice_owner':
+                    staffRoleLabel = '부원장';
+                    break;
+                  case 'staff':
+                    staffRoleLabel = '상담실장';
+                    break;
+                  case 'teacher':
+                    staffRoleLabel = '강사';
+                    break;
+                  default:
+                    staffRoleLabel = '담당자';
+                    break;
+                }
+              }
+            }
+          }
+        }
+
         setRoomInfo({
           id: roomData.id,
           parent_id: roomData.parent_id,
           status: (roomData as { status?: string }).status ?? 'active',
-          staff_user_id: (roomData as { staff_user_id?: string | null }).staff_user_id ?? null,
+          staff_user_id: staffUserId,
+          staff_profile: staffProfile,
+          staff_role_label: staffRoleLabel,
           academy: {
             id: academy.id,
             name: academy.name,

@@ -63,6 +63,10 @@ const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showSignupDialog, setShowSignupDialog] = useState(false);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [pendingPasswordChangeUserId, setPendingPasswordChangeUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
   const resetVerificationState = () => {
     setLoginShowVerification(false);
@@ -82,6 +86,10 @@ const AuthPage = () => {
   const resetEmailState = () => {
     setEmail("");
     setPassword("");
+    setMustChangePassword(false);
+    setPendingPasswordChangeUserId(null);
+    setNewPassword("");
+    setConfirmNewPassword("");
   };
 
   // Email login handler
@@ -101,7 +109,22 @@ const AuthPage = () => {
         return;
       }
       if (data?.session?.user?.id) {
-        await navigateByDatabaseRole(data.session.user.id);
+        const userId = data.session.user.id;
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("require_password_change")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (roleData?.require_password_change) {
+          setMustChangePassword(true);
+          setPendingPasswordChangeUserId(userId);
+          setPassword("");
+          toast.info("임시 비밀번호로 로그인되었습니다. 새 비밀번호를 설정해주세요.");
+          return;
+        }
+
+        await navigateByDatabaseRole(userId);
         toast.success("로그인되었습니다");
       }
     } catch (error) {
@@ -152,6 +175,54 @@ const AuthPage = () => {
     } catch (error) {
       logError("email-signup", error);
       toast.error("회원가입에 실패했습니다");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCompleteForcedPasswordChange = async () => {
+    if (!pendingPasswordChangeUserId) {
+      toast.error("사용자 정보를 확인할 수 없습니다. 다시 로그인해주세요.");
+      return;
+    }
+    if (!newPassword.trim()) {
+      toast.error("새 비밀번호를 입력해주세요");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("새 비밀번호는 6자 이상이어야 합니다");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast.error("새 비밀번호 확인이 일치하지 않습니다");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (updateError) {
+        toast.error(updateError.message || "비밀번호 변경에 실패했습니다");
+        return;
+      }
+
+      const { error: clearFlagError } = await supabase.functions.invoke("clear-password-change-required");
+      if (clearFlagError) {
+        toast.error("비밀번호는 변경되었지만 변경 상태 해제에 실패했습니다. 관리자에게 문의해주세요.");
+        return;
+      }
+
+      setMustChangePassword(false);
+      setPendingPasswordChangeUserId(null);
+      setNewPassword("");
+      setConfirmNewPassword("");
+      await navigateByDatabaseRole(pendingPasswordChangeUserId);
+      toast.success("비밀번호가 변경되었습니다.");
+    } catch (error) {
+      logError("email-force-password-change", error);
+      toast.error("비밀번호 변경에 실패했습니다");
     } finally {
       setLoading(false);
     }
@@ -586,6 +657,43 @@ const AuthPage = () => {
           {/* Email Auth Form */}
           {authMode === "email" && (
             <div className="space-y-4">
+              {mustChangePassword ? (
+                <>
+                  <div className="rounded-lg border border-amber-500/40 bg-amber-50 p-3 text-sm text-amber-700">
+                    임시 비밀번호 로그인 상태입니다. 보안을 위해 새 비밀번호를 설정해주세요.
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      type="password"
+                      placeholder="새 비밀번호 (6자 이상)"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="pl-12 h-14 text-lg"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      type="password"
+                      placeholder="새 비밀번호 확인"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      className="pl-12 h-14 text-lg"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleCompleteForcedPasswordChange}
+                    disabled={loading}
+                    className="w-full h-14 text-base"
+                    size="xl"
+                  >
+                    {loading ? "변경 중..." : "새 비밀번호 설정"}
+                  </Button>
+                </>
+              ) : (
+                <>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -625,6 +733,8 @@ const AuthPage = () => {
               >
                 회원가입
               </Button>
+                </>
+              )}
               <EmailSignupDialog
                 open={showSignupDialog}
                 onOpenChange={setShowSignupDialog}

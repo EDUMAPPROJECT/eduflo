@@ -12,7 +12,6 @@ export async function sendIdTokenToBackend(
   isSignup: boolean,
   userName?: string
 ): Promise<{ ok: boolean; error?: string; token_hash?: string }> {
-  // Lovable 등에서 Supabase만 관리할 때는 VITE_SUPABASE_URL로 Edge Function 호출
   const backendUrl =
     import.meta.env.VITE_BACKEND_URL ?? import.meta.env.VITE_SUPABASE_URL ?? "";
   if (!backendUrl) {
