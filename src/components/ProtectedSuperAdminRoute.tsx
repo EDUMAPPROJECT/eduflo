@@ -12,8 +12,15 @@ const ProtectedSuperAdminRoute = ({ children }: ProtectedSuperAdminRouteProps) =
   const [authorized, setAuthorized] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const bypassInDev = import.meta.env.DEV;
 
   useEffect(() => {
+    if (bypassInDev) {
+      setAuthorized(true);
+      setLoading(false);
+      return;
+    }
+
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -68,7 +75,7 @@ const ProtectedSuperAdminRoute = ({ children }: ProtectedSuperAdminRouteProps) =
     );
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, location.pathname, location.search, bypassInDev]);
 
   if (loading) {
     return (

@@ -23,6 +23,7 @@ const ChatRoomPage = () => {
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -35,6 +36,9 @@ const ChatRoomPage = () => {
     const result = await sendMessage(newMessage);
     if (result.success) {
       setNewMessage("");
+      requestAnimationFrame(() => {
+        messageInputRef.current?.focus();
+      });
     } else if (result.error) {
       toast.error(result.error);
     }
@@ -95,7 +99,18 @@ const ChatRoomPage = () => {
                 <GraduationCap className="w-4 h-4 text-primary" />
               )}
             </div>
-            <h1 className="font-semibold text-foreground truncate">{roomInfo.academy.name}</h1>
+            <div className="min-w-0">
+              <h1 className="font-semibold text-foreground truncate">{roomInfo.academy.name}</h1>
+              {(roomInfo.staff_profile?.user_name || roomInfo.staff_role_label) && (
+                <p className="text-xs text-muted-foreground truncate">
+                  {roomInfo.staff_profile?.user_name && roomInfo.staff_role_label
+                    ? `${roomInfo.staff_profile.user_name} ${roomInfo.staff_role_label}님`
+                    : roomInfo.staff_profile?.user_name
+                      ? `${roomInfo.staff_profile.user_name}님`
+                      : `${roomInfo.staff_role_label}님`}
+                </p>
+              )}
+            </div>
           </button>
         </div>
       </header>
@@ -184,6 +199,7 @@ const ChatRoomPage = () => {
       <div className="sticky bottom-0 bg-card border-t border-border p-4">
         <div className="max-w-lg mx-auto flex gap-2">
           <Input
+            ref={messageInputRef}
             placeholder={isPending ? "강사가 수락할 때까지 대기 중..." : "메시지를 입력하세요..."}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
@@ -193,6 +209,7 @@ const ChatRoomPage = () => {
           />
           <Button
             size="icon"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={handleSendMessage}
             disabled={!newMessage.trim() || sending || isPending}
             className="rounded-full shrink-0"
