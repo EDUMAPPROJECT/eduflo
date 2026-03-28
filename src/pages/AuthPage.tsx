@@ -36,9 +36,10 @@ function getSafeRedirect(searchParams: URLSearchParams): string | null {
 const AuthPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const initialMode = searchParams.get("mode") === "email" ? "email" : "phone";
   const redirectAfterAuth = getSafeRedirect(searchParams);
   const roleParam = searchParams.get("role");
+  const initialMode: AuthMode =
+    searchParams.get("mode") === "email" || roleParam === "admin" ? "email" : "phone";
   const initialRole: AuthRole =
     roleParam === "student" || roleParam === "admin" ? roleParam : "parent";
 
@@ -373,7 +374,11 @@ const AuthPage = () => {
       const userCredential = await confirmation.confirm(loginVerificationCode.trim());
       const user = userCredential.user;
       const idToken = await user.getIdToken();
-      const { ok, error: backendError, token_hash } = await sendIdTokenToBackend(idToken, "parent", false);
+      const { ok, error: backendError, token_hash } = await sendIdTokenToBackend(
+        idToken,
+        selectedRole,
+        false
+      );
       if (!ok) {
         toast.error(backendError ?? "서버 인증 처리에 실패했습니다");
         if (backendError?.includes("가입된")) {
@@ -509,15 +514,32 @@ const AuthPage = () => {
   return (
     <div className="min-h-screen gradient-hero flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-        {/* Back button for email mode */}
+        {/* 역할 선택으로 (학원 관리자 로그인은 이메일만 사용) */}
         {authMode === "email" && (
           <button
+            type="button"
             onClick={() => {
-              setAuthMode("phone");
               resetEmailState();
+              if (roleParam === "admin") {
+                navigate("/");
+                return;
+              }
+              setAuthMode("phone");
               navigate("/auth");
             }}
             className="absolute top-4 left-4 p-2 text-muted-foreground hover:text-foreground"
+            aria-label="역할 선택으로 돌아가기"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+        )}
+
+        {authMode === "phone" && step === "login" && (
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="absolute top-4 left-4 p-2 text-muted-foreground hover:text-foreground"
+            aria-label="역할 선택으로 돌아가기"
           >
             <ArrowLeft className="w-6 h-6" />
           </button>

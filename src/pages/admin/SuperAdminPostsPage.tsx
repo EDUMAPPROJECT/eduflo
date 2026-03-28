@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import Logo from "@/components/Logo";
@@ -28,7 +28,11 @@ import {
   Calendar,
   PartyPopper,
   Heart,
-  Building2
+  Building2,
+  GraduationCap,
+  MessageCircle,
+  Users,
+  type LucideIcon,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -37,8 +41,9 @@ import { cn } from "@/lib/utils";
 
 interface FeedPost {
   id: string;
-  academy_id: string;
-  type: 'notice' | 'seminar' | 'event';
+  academy_id: string | null;
+  author_id: string | null;
+  type: string;
   title: string;
   body: string | null;
   like_count: number;
@@ -47,17 +52,42 @@ interface FeedPost {
     id: string;
     name: string;
     profile_image: string | null;
-  };
+  } | null;
+  /** 학원 없이 작성된 글의 표시용 (profiles.user_name) */
+  authorName: string | null;
 }
 
-const typeConfig = {
+type TypeStyle = { label: string; icon: LucideIcon; color: string };
+
+const typeConfig: Record<string, TypeStyle> = {
   notice: { label: '공지', icon: Bell, color: 'bg-blue-500 text-white' },
   seminar: { label: '설명회', icon: Calendar, color: 'bg-orange-500 text-white' },
   event: { label: '이벤트', icon: PartyPopper, color: 'bg-purple-500 text-white' },
+  admission: { label: '입시', icon: GraduationCap, color: 'bg-emerald-600 text-white' },
+  'academy-admission': { label: '학원·입학', icon: Building2, color: 'bg-teal-600 text-white' },
+  'life-parenting': { label: '육아·생활', icon: Users, color: 'bg-pink-600 text-white' },
+  'free-talk': { label: '자유수다', icon: MessageCircle, color: 'bg-slate-600 text-white' },
 };
+
+const defaultTypeStyle: TypeStyle = {
+  label: '게시물',
+  icon: MessageCircle,
+  color: 'bg-muted text-foreground',
+};
+
+const getTypeStyle = (type: string): TypeStyle =>
+  typeConfig[type] ?? defaultTypeStyle;
+
+const COMMUNITY_TYPES = new Set([
+  'admission',
+  'academy-admission',
+  'life-parenting',
+  'free-talk',
+]);
 
 const SuperAdminPostsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { isSuperAdmin, loading } = useSuperAdmin();
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -76,14 +106,79 @@ const SuperAdminPostsPage = () => {
       const { data, error } = await supabase
         .from("feed_posts")
         .select(`
-          id, academy_id, type, title, body, like_count, created_at,
+          id, academy_id, author_id, type, title, body, like_count, created_at,
           academy:academies(id, name, profile_image)
         `)
         .order("created_at", { ascending: false })
         .limit(100);
 
       if (error) throw error;
-      setPosts((data as unknown as FeedPost[]) || []);
+
+      const rows = (data || []) as Array<{
+        id: string;
+        academy_id: string | null;
+        author_id: string | null;
+        type: string;
+        title: string;
+        body: string | null;
+        like_count: number;
+        created_at: string;
+        academy:
+          | { id: string; name: string; profile_image: string | null }
+          | { id: string; name: string; profile_image: string | null }[]
+          | null;
+      }>;
+
+      const authorIds = [
+        ...new Set(
+          rows
+            .filter((r) => !r.academy_id && r.author_id)
+            .map((r) => r.author_id as string)
+        ),
+      ];
+
+      let authorsMap: Record<string, string | null> = {};
+      if (authorIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, user_name")
+          .in("id", authorIds);
+
+        if (profilesData) {
+          authorsMap = profilesData.reduce(
+            (acc, profile) => {
+              acc[profile.id] = profile.user_name;
+              return acc;
+            },
+            {} as Record<string, string | null>
+          );
+        }
+      }
+
+      const normalized: FeedPost[] = rows.map((row) => {
+        const rawAcademy = row.academy;
+        const academy = Array.isArray(rawAcademy)
+          ? rawAcademy[0] ?? null
+          : rawAcademy;
+
+        return {
+          id: row.id,
+          academy_id: row.academy_id,
+          author_id: row.author_id,
+          type: row.type,
+          title: row.title,
+          body: row.body,
+          like_count: row.like_count,
+          created_at: row.created_at,
+          academy,
+          authorName:
+            row.author_id && !row.academy_id
+              ? authorsMap[row.author_id] ?? null
+              : null,
+        };
+      });
+
+      setPosts(normalized);
     } catch (error) {
       console.error("Error fetching posts:", error);
     } finally {
@@ -112,10 +207,17 @@ const SuperAdminPostsPage = () => {
     }
   };
 
-  const filteredPosts = posts.filter(post => 
-    post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.academy.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const q = searchQuery.toLowerCase();
+  const filteredPosts = posts.filter(
+    (post) =>
+      post.title.toLowerCase().includes(q) ||
+      (post.academy?.name ?? "").toLowerCase().includes(q) ||
+      (post.authorName ?? "").toLowerCase().includes(q)
   );
+
+  const backPath = location.pathname.startsWith("/super")
+    ? "/super/center"
+    : "/admin/super";
 
   if (loading) {
     return (
@@ -145,7 +247,7 @@ const SuperAdminPostsPage = () => {
       {/* Header */}
       <header className="sticky top-0 bg-card/80 backdrop-blur-lg border-b border-border z-40">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/admin/super')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(backPath)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <Logo size="sm" showText={false} />
@@ -166,18 +268,23 @@ const SuperAdminPostsPage = () => {
         </div>
 
         {/* Stats */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Badge variant="secondary" className="gap-1">
             <Bell className="w-3 h-3" />
-            공지 {posts.filter(p => p.type === 'notice').length}
+            공지 {posts.filter((p) => p.type === "notice").length}
           </Badge>
           <Badge variant="secondary" className="gap-1">
             <Calendar className="w-3 h-3" />
-            설명회 {posts.filter(p => p.type === 'seminar').length}
+            설명회 {posts.filter((p) => p.type === "seminar").length}
           </Badge>
           <Badge variant="secondary" className="gap-1">
             <PartyPopper className="w-3 h-3" />
-            이벤트 {posts.filter(p => p.type === 'event').length}
+            이벤트 {posts.filter((p) => p.type === "event").length}
+          </Badge>
+          <Badge variant="secondary" className="gap-1">
+            <MessageCircle className="w-3 h-3" />
+            커뮤니티{" "}
+            {posts.filter((p) => COMMUNITY_TYPES.has(p.type)).length}
           </Badge>
         </div>
 
@@ -201,8 +308,12 @@ const SuperAdminPostsPage = () => {
         ) : (
           <div className="space-y-3">
             {filteredPosts.map((post) => {
-              const config = typeConfig[post.type];
+              const config = getTypeStyle(post.type);
               const TypeIcon = config.icon;
+              const sourceLabel =
+                post.academy?.name ??
+                post.authorName ??
+                (post.academy_id == null ? "커뮤니티" : "학원 정보 없음");
               
               return (
                 <Card key={post.id} className="shadow-card">
@@ -222,7 +333,7 @@ const SuperAdminPostsPage = () => {
                           {post.title}
                         </h3>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span className="truncate">{post.academy.name}</span>
+                          <span className="truncate">{sourceLabel}</span>
                           <span>•</span>
                           <span className="flex items-center gap-0.5">
                             <Heart className="w-3 h-3" />

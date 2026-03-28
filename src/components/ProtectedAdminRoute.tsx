@@ -18,7 +18,7 @@ const ProtectedAdminRoute = ({ children }: ProtectedAdminRouteProps) => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
-          navigate('/auth?role=admin');
+          navigate('/auth?role=admin&mode=email');
           return;
         }
         
@@ -49,7 +49,7 @@ const ProtectedAdminRoute = ({ children }: ProtectedAdminRouteProps) => {
         if (import.meta.env.DEV) {
           console.error('Auth check error:', error);
         }
-        navigate('/auth?role=admin');
+          navigate('/auth?role=admin&mode=email');
       } finally {
         setLoading(false);
       }
@@ -61,7 +61,7 @@ const ProtectedAdminRoute = ({ children }: ProtectedAdminRouteProps) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_OUT') {
-          navigate('/auth?role=admin');
+          navigate('/auth?role=admin&mode=email');
         }
       }
     );

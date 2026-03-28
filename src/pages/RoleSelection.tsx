@@ -1,93 +1,94 @@
+import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import Logo from "@/components/Logo";
-import { GraduationCap, Building2, User } from "lucide-react";
+import { GraduationCap, UsersRound, Presentation } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+type RoleChoice = "student" | "parent" | "admin";
+
+interface RoleCardProps {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  onClick: () => void;
+}
+
+const RoleCard = ({ icon, title, description, onClick }: RoleCardProps) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={cn(
+      "w-full flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left sm:gap-4 sm:p-5",
+      "shadow-sm transition-colors hover:bg-muted/40 active:scale-[0.99]",
+      "min-h-[4.5rem] touch-manipulation"
+    )}
+  >
+    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted sm:h-14 sm:w-14">
+      {icon}
+    </div>
+    <div className="min-w-0 flex-1">
+      <div className="text-[15px] font-semibold text-foreground sm:text-base">{title}</div>
+      <p className="mt-0.5 text-xs text-muted-foreground leading-snug sm:mt-1 sm:text-sm">
+        {description}
+      </p>
+    </div>
+  </button>
+);
 
 const RoleSelection = () => {
   const navigate = useNavigate();
 
-  const handleRoleSelect = (role: "parent" | "admin" | "student") => {
-    // Navigate to auth with role preference
-    navigate(`/auth?role=${role}`);
+  const handleSelect = (role: RoleChoice) => {
+    if (role === "student") {
+      navigate("/s/home");
+      return;
+    }
+    if (role === "parent") {
+      navigate("/p/home");
+      return;
+    }
+    navigate("/auth?role=admin");
   };
 
+  /** 첨부 디자인과 유사한 틸·민트 라인 아이콘 (Lucide는 currentColor로 선 색 적용) */
+  const iconClass = "h-6 w-6 text-edumap-mint sm:h-7 sm:w-7";
+
   return (
-    <div className="min-h-screen gradient-hero flex flex-col">
-      {/* Hero Section */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
-        {/* Logo with animation */}
-        <div className="animate-float mb-8">
-          <Logo size="lg" />
-        </div>
-
-        {/* Tagline */}
-        <div className="text-center mb-12 animate-fade-up" style={{ animationDelay: "0.2s" }}>
-          <h1 className="text-xl font-semibold text-foreground mb-2">
-            우리 동네 학원의 모든 것
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            우리 아이에게 딱 맞는 학원 탐색부터 관리까지
-          </p>
-        </div>
-
-        {/* Role Selection Cards */}
-        <div className="w-full max-w-sm space-y-4 animate-fade-up" style={{ animationDelay: "0.4s" }}>
-          <Button
-            variant="role"
-            size="xl"
-            className="w-full flex items-center gap-4 h-auto py-5"
-            onClick={() => handleRoleSelect("parent")}
-          >
-            <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-              <GraduationCap className="w-6 h-6 text-primary" />
-            </div>
-            <div className="text-left flex-1">
-              <div className="font-semibold text-base">학부모로 시작하기</div>
-              <div className="text-xs text-muted-foreground font-normal">
-                우리 아이 학원 찾기
-              </div>
-            </div>
-          </Button>
-
-          <Button
-            variant="role"
-            size="xl"
-            className="w-full flex items-center gap-4 h-auto py-5"
-            onClick={() => handleRoleSelect("student")}
-          >
-            <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-              <User className="w-6 h-6 text-primary" />
-            </div>
-            <div className="text-left flex-1">
-              <div className="font-semibold text-base">학생으로 시작하기</div>
-              <div className="text-xs text-muted-foreground font-normal">
-                내 학원 일정 관리
-              </div>
-            </div>
-          </Button>
-
-          <Button
-            variant="role"
-            size="xl"
-            className="w-full flex items-center gap-4 h-auto py-5"
-            onClick={() => handleRoleSelect("admin")}
-          >
-            <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-primary" />
-            </div>
-            <div className="text-left flex-1">
-              <div className="font-semibold text-base">학원 관계자로 시작하기</div>
-              <div className="text-xs text-muted-foreground font-normal">
-                학원 등록 또는 기존 학원 참여
-              </div>
-            </div>
-          </Button>
+    <div className="flex min-h-screen min-h-dvh flex-col overflow-y-auto bg-background">
+      <div
+        className={cn(
+          "flex flex-1 flex-col justify-center px-4 py-6 sm:px-6 sm:py-10",
+          "pt-[max(1.5rem,env(safe-area-inset-top))]"
+        )}
+      >
+        <div className="mx-auto w-full max-w-md space-y-3 sm:space-y-4">
+          <RoleCard
+            icon={<GraduationCap className={iconClass} strokeWidth={2} aria-hidden />}
+            title="학생으로 시작하기"
+            description="내 시간표를 관리하고 학원을 찾아요"
+            onClick={() => handleSelect("student")}
+          />
+          <RoleCard
+            icon={<UsersRound className={iconClass} strokeWidth={2} aria-hidden />}
+            title="학부모로 시작하기"
+            description="자녀의 학원과 일정을 관리해요"
+            onClick={() => handleSelect("parent")}
+          />
+          <RoleCard
+            icon={<Presentation className={iconClass} strokeWidth={2} aria-hidden />}
+            title="학원 관리자로 시작하기"
+            description="학원 홍보와 원생 관리가 필요해요"
+            onClick={() => handleSelect("admin")}
+          />
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="text-center pb-8 px-6">
-        <p className="text-xs text-muted-foreground">
+      <div
+        className={cn(
+          "shrink-0 px-4 text-center sm:px-6",
+          "pb-[max(2rem,env(safe-area-inset-bottom))] sm:pb-[max(2.5rem,env(safe-area-inset-bottom))]"
+        )}
+      >
+        <p className="text-xs text-muted-foreground leading-relaxed">
           시작하면 서비스 이용약관과 개인정보처리방침에 동의하게 됩니다
         </p>
       </div>

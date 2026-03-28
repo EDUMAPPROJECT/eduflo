@@ -22,7 +22,7 @@ const AcademyOnboardingPage = () => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        navigate("/auth?role=admin");
+        navigate("/auth?role=admin&mode=email");
         return;
       }
       setCheckingAuth(false);

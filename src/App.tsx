@@ -110,7 +110,7 @@ const App = () => {
           <BrowserRouter>
             <ReleaseNoticeGate>
             <Routes>
-              <Route path="/" element={<AuthPage />} />
+              <Route path="/" element={<RoleSelection />} />
               <Route path="/role-selection" element={<RoleSelection />} />
               <Route path="/auth" element={<AuthPage />} />
               
