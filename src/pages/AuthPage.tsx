@@ -39,7 +39,7 @@ const AuthPage = () => {
   const redirectAfterAuth = getSafeRedirect(searchParams);
   const roleParam = searchParams.get("role");
   const initialMode: AuthMode =
-    searchParams.get("mode") === "email" || roleParam === "admin" ? "email" : "phone";
+    searchParams.get("mode") === "email" ? "email" : "phone";
   const initialRole: AuthRole =
     roleParam === "student" || roleParam === "admin" ? roleParam : "parent";
 
