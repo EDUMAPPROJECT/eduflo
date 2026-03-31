@@ -38,9 +38,11 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface FeedPost {
   id: string;
+  academy_id: string | null;
   type: string;
   title: string;
   body: string | null;
@@ -50,6 +52,17 @@ interface FeedPost {
   author?: {
     user_name: string | null;
   };
+  academy?: {
+    id: string;
+    name: string;
+    profile_image: string | null;
+  } | null;
+}
+
+interface AcademyOption {
+  id: string;
+  name: string;
+  profile_image: string | null;
 }
 
 const postTypes = [
@@ -66,6 +79,9 @@ const SuperAdminCommunityPage = () => {
   const [postsLoading, setPostsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<FeedPost | null>(null);
+  const [academyOptions, setAcademyOptions] = useState<AcademyOption[]>([]);
+  const [academySearch, setAcademySearch] = useState("");
+  const [selectedAcademyId, setSelectedAcademyId] = useState<string>("");
   
   // Form state
   const [type, setType] = useState('notice');
@@ -76,17 +92,23 @@ const SuperAdminCommunityPage = () => {
 
   useEffect(() => {
     if (!loading && isSuperAdmin) {
-      fetchPosts();
+      fetchInitialData();
     }
   }, [loading, isSuperAdmin]);
 
+  const fetchInitialData = async () => {
+    await Promise.all([fetchPosts(), fetchAcademies()]);
+  };
+
   const fetchPosts = async () => {
     try {
-      // Fetch posts created by super admin (no academy_id)
       const { data, error } = await supabase
         .from('feed_posts')
-        .select('*')
-        .is('academy_id', null)
+        .select(`
+          *,
+          academy:academies(id, name, profile_image)
+        `)
+        .not('academy_id', 'is', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -111,7 +133,7 @@ const SuperAdminCommunityPage = () => {
 
       setPosts((data || []).map(post => ({
         ...post,
-        author: { user_name: post.author_id ? (authorsMap[post.author_id] || null) : null }
+        author: { user_name: post.author_id ? (authorsMap[post.author_id] || null) : null },
       })));
     } catch (error) {
       console.error('Error fetching posts:', error);
@@ -121,11 +143,28 @@ const SuperAdminCommunityPage = () => {
     }
   };
 
+  const fetchAcademies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("academies")
+        .select("id, name, profile_image")
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      setAcademyOptions((data || []) as AcademyOption[]);
+    } catch (error) {
+      console.error("Error fetching academies:", error);
+      toast.error("학원 목록을 불러오는데 실패했습니다");
+    }
+  };
+
   const resetForm = () => {
     setType('notice');
     setTitle('');
     setBody('');
     setImageUrls([]);
+    setAcademySearch("");
+    setSelectedAcademyId("");
     setEditingPost(null);
   };
 
@@ -135,6 +174,8 @@ const SuperAdminCommunityPage = () => {
       setType(post.type);
       setTitle(post.title);
       setBody(post.body || '');
+      setSelectedAcademyId(post.academy_id || "");
+      setAcademySearch("");
       if (post.image_url) {
         try {
           const parsed = JSON.parse(post.image_url);
@@ -156,6 +197,14 @@ const SuperAdminCommunityPage = () => {
       toast.error('제목을 입력해주세요');
       return;
     }
+    if (!body.trim()) {
+      toast.error("내용을 입력해주세요");
+      return;
+    }
+    if (!selectedAcademyId) {
+      toast.error("게시할 학원을 선택해주세요");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -169,9 +218,9 @@ const SuperAdminCommunityPage = () => {
         type,
         title: title.trim(),
         body: body.trim() || null,
-        image_url: imageUrls.length > 0 ? JSON.stringify(imageUrls) : null,
+        image_url: JSON.stringify(imageUrls),
         author_id: session.user.id,
-        academy_id: null,
+        academy_id: selectedAcademyId,
         target_regions: [],
         updated_at: new Date().toISOString(),
       };
@@ -225,6 +274,12 @@ const SuperAdminCommunityPage = () => {
   const getTypeConfig = (typeValue: string) => {
     return postTypes.find(t => t.value === typeValue) || postTypes[0];
   };
+
+  const filteredAcademies = academyOptions.filter((academy) =>
+    academy.name.toLowerCase().includes(academySearch.trim().toLowerCase())
+  );
+  const selectedAcademy =
+    academyOptions.find((academy) => academy.id === selectedAcademyId) || null;
 
   if (loading) {
     return (
@@ -290,8 +345,11 @@ const SuperAdminCommunityPage = () => {
                           <span className="text-xs text-muted-foreground">{config.label}</span>
                         </div>
                         <h3 className="font-medium text-foreground truncate">{post.title}</h3>
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                          {post.academy?.name || "학원 정보 없음"}
+                        </p>
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                          <span>{post.author?.user_name || '운영자'}</span>
+                          <span>게시자 {post.author?.user_name || '운영자'}</span>
                           <span>·</span>
                           <span>{format(new Date(post.created_at), 'M/d HH:mm', { locale: ko })}</span>
                         </div>
@@ -324,7 +382,7 @@ const SuperAdminCommunityPage = () => {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto border-0">
           <DialogHeader>
             <DialogTitle>{editingPost ? '게시물 수정' : '새 게시물 등록'}</DialogTitle>
           </DialogHeader>
@@ -353,6 +411,48 @@ const SuperAdminCommunityPage = () => {
             </div>
 
             <div className="space-y-2">
+              <Label>게시할 학원 선택 *</Label>
+              <Input
+                placeholder="학원명 검색"
+                value={academySearch}
+                onChange={(e) => setAcademySearch(e.target.value)}
+              />
+              <Select value={selectedAcademyId} onValueChange={setSelectedAcademyId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="학원을 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredAcademies.map((academy) => (
+                    <SelectItem key={academy.id} value={academy.id}>
+                      {academy.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedAcademy && (
+                <div className="flex items-center gap-3 rounded-md border border-border p-2">
+                  <div className="h-9 w-9 rounded-full overflow-hidden bg-secondary shrink-0">
+                    {selectedAcademy.profile_image ? (
+                      <img
+                        src={selectedAcademy.profile_image}
+                        alt={selectedAcademy.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-primary font-semibold">
+                        {selectedAcademy.name.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{selectedAcademy.name}</p>
+                    <p className={cn("text-xs", "text-muted-foreground")}>선택된 게시 학원</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
               <Label>제목 *</Label>
               <Input
                 placeholder="게시물 제목"
@@ -363,7 +463,7 @@ const SuperAdminCommunityPage = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>내용</Label>
+              <Label>내용 *</Label>
               <Textarea
                 placeholder="게시물 내용"
                 value={body}
@@ -386,7 +486,7 @@ const SuperAdminCommunityPage = () => {
             <Button
               className="w-full"
               onClick={handleSubmit}
-              disabled={submitting || !title.trim()}
+              disabled={submitting || !title.trim() || !body.trim() || !selectedAcademyId}
             >
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {submitting ? '저장 중...' : editingPost ? '수정' : '등록'}
