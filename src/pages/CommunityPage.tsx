@@ -134,7 +134,7 @@ const CommunityPage = () => {
 
         // rolesError가 나는 환경(비로그인 등)에서도 목록이 비지 않도록,
         // 기본적으로 academy_id=null 커뮤니티 글은 노출하고 라벨을 "학부모"로 고정한다.
-        const allPosts = (parentPosts || []).map((post) => ({
+        let allPosts = (parentPosts || []).map((post) => ({
           ...(post as FeedPost),
           academy: null,
           author: { user_name: post.author_id ? authorsMap[post.author_id]?.user_name || "학부모" : "학부모" },
