@@ -105,37 +105,41 @@ const CommunityPage = () => {
         let authorsMap: Record<string, { user_name: string | null; role: string | null; is_super_admin: boolean | null }> = {};
 
         if (authorIds.length > 0) {
-          const [{ data: profiles }, { data: roles }] = await Promise.all([
+          const [{ data: profiles, error: profilesError }, { data: roles, error: rolesError }] = await Promise.all([
             supabase.from("profiles").select("id, user_name").in("id", authorIds),
             supabase.from("user_roles").select("user_id, role, is_super_admin").in("user_id", authorIds),
           ]);
 
-          const roleMap = (roles || []).reduce<Record<string, { role: string | null; is_super_admin: boolean | null }>>((acc, role) => {
-            acc[role.user_id] = { role: role.role, is_super_admin: role.is_super_admin };
-            return acc;
-          }, {});
+          if (profilesError) throw profilesError;
+
+          // 비로그인/권한 제한으로 user_roles 조회가 막히면(rolesError),
+          // 학부모 탭은 academy_id=null 커뮤니티 글을 그대로 노출한다.
+          const roleMap =
+            rolesError
+              ? {}
+              : (roles || []).reduce<Record<string, { role: string | null; is_super_admin: boolean | null }>>((acc, role) => {
+                  acc[role.user_id] = { role: role.role, is_super_admin: role.is_super_admin };
+                  return acc;
+                }, {});
 
           authorsMap = (profiles || []).reduce<Record<string, { user_name: string | null; role: string | null; is_super_admin: boolean | null }>>((acc, profile) => {
             acc[profile.id] = {
               user_name: profile.user_name,
-              role: roleMap[profile.id]?.role || null,
-              is_super_admin: roleMap[profile.id]?.is_super_admin || false,
+              role: rolesError ? "parent" : (roleMap[profile.id]?.role || null),
+              is_super_admin: rolesError ? false : (roleMap[profile.id]?.is_super_admin || false),
             };
             return acc;
           }, authorsMap);
         }
 
-        let allPosts = (parentPosts || [])
-          .filter((post) => {
-            const meta = post.author_id ? authorsMap[post.author_id] : null;
-            return meta?.role === "parent" && !meta?.is_super_admin;
-          })
-          .map((post) => ({
-            ...(post as FeedPost),
-            academy: null,
-            author: { user_name: post.author_id ? authorsMap[post.author_id]?.user_name || "학부모" : "학부모" },
-            author_role_label: "학부모",
-          }));
+        // rolesError가 나는 환경(비로그인 등)에서도 목록이 비지 않도록,
+        // 기본적으로 academy_id=null 커뮤니티 글은 노출하고 라벨을 "학부모"로 고정한다.
+        let allPosts = (parentPosts || []).map((post) => ({
+          ...(post as FeedPost),
+          academy: null,
+          author: { user_name: post.author_id ? authorsMap[post.author_id]?.user_name || "학부모" : "학부모" },
+          author_role_label: "학부모",
+        }));
 
         allPosts = Array.from(new Map(allPosts.map((post) => [post.id, post])).values());
         allPosts.sort((a, b) =>
@@ -176,11 +180,14 @@ const CommunityPage = () => {
 
       // "전체"가 아닐 때만 지역별 학원 필터 적용
       if (selectedRegion && selectedRegion !== REGION_ALL) {
-        const { data: academiesInRegion } = await supabase
+        const { data: academiesInRegion, error: academiesError } = await supabase
           .from("academies")
           .select("id")
           .contains("target_regions", [selectedRegion]);
-        academyIds = academiesInRegion?.map(a => a.id) || [];
+        // 비로그인/권한 제한으로 academies 조회가 막히면 지역 필터를 적용하지 않는다.
+        if (!academiesError) {
+          academyIds = academiesInRegion?.map(a => a.id) || [];
+        }
       }
 
       // Build queries for both academy posts and super admin posts
@@ -231,39 +238,39 @@ const CommunityPage = () => {
         let authorsMap: Record<string, { user_name: string | null; role: string | null; is_super_admin: boolean | null }> = {};
         
         if (authorIds.length > 0) {
-          const [{ data: profiles }, { data: roles }] = await Promise.all([
+          const [{ data: profiles, error: profilesError }, { data: roles, error: rolesError }] = await Promise.all([
             supabase.from("profiles").select("id, user_name").in("id", authorIds),
             supabase.from("user_roles").select("user_id, role, is_super_admin").in("user_id", authorIds),
           ]);
+          if (profilesError) throw profilesError;
 
-          const roleMap = (roles || []).reduce<Record<string, { role: string | null; is_super_admin: boolean | null }>>((acc, role) => {
-            acc[role.user_id] = { role: role.role, is_super_admin: role.is_super_admin };
-            return acc;
-          }, {});
+          const roleMap =
+            rolesError
+              ? {}
+              : (roles || []).reduce<Record<string, { role: string | null; is_super_admin: boolean | null }>>((acc, role) => {
+                  acc[role.user_id] = { role: role.role, is_super_admin: role.is_super_admin };
+                  return acc;
+                }, {});
 
           if (profiles) {
             authorsMap = profiles.reduce((acc, p) => {
               acc[p.id] = {
                 user_name: p.user_name,
-                role: roleMap[p.id]?.role || null,
-                is_super_admin: roleMap[p.id]?.is_super_admin || false,
+                role: rolesError ? null : (roleMap[p.id]?.role || null),
+                is_super_admin: rolesError ? true : (roleMap[p.id]?.is_super_admin || false),
               };
               return acc;
             }, {} as Record<string, { user_name: string | null; role: string | null; is_super_admin: boolean | null }>);
           }
         }
 
-        const superAdminPosts = superAdminResult.data
-          .filter((post) => {
-            const meta = post.author_id ? authorsMap[post.author_id] : null;
-            return !!meta?.is_super_admin;
-          })
-          .map(post => ({
-            ...post,
-            academy: null,
-            author: { user_name: post.author_id ? authorsMap[post.author_id]?.user_name || '관리자' : '관리자' },
-            author_role_label: '운영자',
-          })) as unknown as FeedPost[];
+        // user_roles 조회가 막혀도(super admin 여부 판단 불가) academy_id=null & (notice/admission/seminar/event) 글은 운영자 글로 취급해 노출
+        const superAdminPosts = superAdminResult.data.map(post => ({
+          ...post,
+          academy: null,
+          author: { user_name: post.author_id ? authorsMap[post.author_id]?.user_name || '관리자' : '관리자' },
+          author_role_label: '운영자',
+        })) as unknown as FeedPost[];
 
         allPosts = [...allPosts, ...superAdminPosts];
       }
