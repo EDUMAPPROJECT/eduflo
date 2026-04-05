@@ -429,6 +429,7 @@ export type Database = {
           description: string | null
           fee: number | null
           id: string
+          is_active: boolean
           is_recruiting: boolean | null
           name: string
           schedule: string | null
@@ -446,6 +447,7 @@ export type Database = {
           description?: string | null
           fee?: number | null
           id?: string
+          is_active?: boolean
           is_recruiting?: boolean | null
           name: string
           schedule?: string | null
@@ -463,6 +465,7 @@ export type Database = {
           description?: string | null
           fee?: number | null
           id?: string
+          is_active?: boolean
           is_recruiting?: boolean | null
           name?: string
           schedule?: string | null

@@ -21,11 +21,11 @@ export const TAG_CATEGORIES: Record<string, TagCategory> = {
   grade: { key: 'grade', label: '학년', weight: 15, required: true },
   subject: { key: 'subject', label: '과목', weight: 25, required: true, multiSelect: true, maxSelect: 3 },
   goal: { key: 'goal', label: '학습 목표', weight: 20, required: true },
-  style: { key: 'style', label: '학습 스타일', weight: 15, required: true },
+  style: { key: 'style', label: '교육 스타일', weight: 15, required: true },
   class_size: { key: 'class_size', label: '수업 규모', weight: 10, required: true },
   delivery: { key: 'delivery', label: '수업 형태', weight: 5, required: true },
   mgmt: { key: 'mgmt', label: '관리 선호', weight: 10, required: true, multiSelect: true, maxSelect: 2 },
-  shuttle: { key: 'shuttle', label: '셔틀/거리', weight: 5, required: true },
+  shuttle: { key: 'shuttle', label: '셔틀 유무', weight: 5, required: true },
   budget: { key: 'budget', label: '예산', weight: 5, required: false },
 };
 
@@ -48,8 +48,11 @@ export const TAG_OPTIONS: Record<string, TagOption[]> = {
     { key: 'subject:science', label: '과학/탐구', category: 'subject' },
     { key: 'subject:social', label: '사회/탐구', category: 'subject' },
     { key: 'subject:coding', label: '코딩/정보', category: 'subject' },
-    { key: 'subject:essay', label: '논술', category: 'subject' },
+    { key: 'subject:essay_math', label: '수리논술', category: 'subject' },
+    { key: 'subject:essay_humanities', label: '인문논술', category: 'subject' },
+    { key: 'subject:essay_short', label: '약술형논술', category: 'subject' },
     { key: 'subject:art', label: '예체능', category: 'subject' },
+    { key: 'subject:consulting', label: '컨설팅', category: 'subject' },
   ],
   goal: [
     { key: 'goal:school_exam', label: '내신 대비', category: 'goal' },
@@ -74,7 +77,7 @@ export const TAG_OPTIONS: Record<string, TagOption[]> = {
   delivery: [
     { key: 'delivery:offline', label: '오프라인', category: 'delivery' },
     { key: 'delivery:online', label: '온라인', category: 'delivery' },
-    { key: 'delivery:hybrid', label: '혼합형', category: 'delivery' },
+    { key: 'delivery:hybrid', label: '혼합', category: 'delivery' },
   ],
   mgmt: [
     { key: 'mgmt:homework', label: '숙제 관리', category: 'mgmt' },
@@ -84,9 +87,8 @@ export const TAG_OPTIONS: Record<string, TagOption[]> = {
     { key: 'mgmt:counsel', label: '상담/소통', category: 'mgmt' },
   ],
   shuttle: [
-    { key: 'shuttle:need', label: '셔틀 필요', category: 'shuttle' },
-    { key: 'shuttle:not_need', label: '셔틀 불필요', category: 'shuttle' },
-    { key: 'shuttle:walk', label: '도보 거리 선호', category: 'shuttle' },
+    { key: 'shuttle:need', label: '셔틀 유', category: 'shuttle' },
+    { key: 'shuttle:not_need', label: '셔틀 무', category: 'shuttle' },
   ],
   budget: [
     { key: 'budget:low', label: '30만원 이하', category: 'budget' },
@@ -97,7 +99,13 @@ export const TAG_OPTIONS: Record<string, TagOption[]> = {
 };
 
 // Get label from tag key
+/** 이전 과목 키 호환 (표시용) */
+const LEGACY_TAG_LABELS: Record<string, string> = {
+  "subject:essay": "논술",
+};
+
 export const getTagLabel = (tagKey: string): string => {
+  if (LEGACY_TAG_LABELS[tagKey]) return LEGACY_TAG_LABELS[tagKey];
   for (const category of Object.values(TAG_OPTIONS)) {
     const option = category.find(opt => opt.key === tagKey);
     if (option) return option.label;

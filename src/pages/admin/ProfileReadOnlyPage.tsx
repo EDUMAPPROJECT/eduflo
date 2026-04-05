@@ -40,6 +40,7 @@ import {
   CLASS_SUBJECT_FILTER_TRIGGER_CLASS,
   filterClassesBySubject,
 } from "@/lib/classSubjects";
+import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
 
 type Academy = Database["public"]["Tables"]["academies"]["Row"];
@@ -67,6 +68,8 @@ interface Class {
   description: string | null;
   teacher_id: string | null;
   is_recruiting: boolean | null;
+  /** false면 학부모 미노출 — 읽기 전용 화면에서만 회색으로 표시 */
+  is_active?: boolean | null;
   curriculum?: CurriculumStep[];
 }
 
@@ -183,7 +186,8 @@ const ProfileReadOnlyPage = () => {
     const classesWithCurriculum = (data || []).map((cls: any) => ({
       ...cls,
       subject: cls.subject ?? null,
-      curriculum: Array.isArray(cls.curriculum) ? cls.curriculum : []
+      curriculum: Array.isArray(cls.curriculum) ? cls.curriculum : [],
+      is_active: cls.is_active !== false,
     })) as Class[];
     setClasses(classesWithCurriculum);
   };
@@ -469,10 +473,24 @@ const ProfileReadOnlyPage = () => {
                   <div className="space-y-4">
                     {filteredClasses.map((cls) => {
                       const teacher = teachers.find(t => t.id === cls.teacher_id);
+                      const isActive = cls.is_active !== false;
                       return (
-                        <div key={cls.id} className="p-4 bg-secondary/30 rounded-xl space-y-3">
+                        <div
+                          key={cls.id}
+                          className={cn(
+                            "p-4 rounded-xl space-y-3",
+                            isActive ? "bg-secondary/30" : "bg-muted/50 text-muted-foreground opacity-90"
+                          )}
+                        >
                           <div className="flex items-center justify-between">
-                            <h4 className="font-medium text-foreground">{cls.name}</h4>
+                            <h4
+                              className={cn(
+                                "font-medium",
+                                isActive ? "text-foreground" : "text-muted-foreground"
+                              )}
+                            >
+                              {cls.name}
+                            </h4>
                             <div className="flex items-center gap-2">
                               {cls.is_recruiting && (
                                 <Badge className="bg-green-100 text-green-700 text-xs">모집중</Badge>
