@@ -12,7 +12,8 @@ import {
   Loader2,
   Building2,
   MessageSquare,
-  Calendar
+  Calendar,
+  Newspaper
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import SuperAdminBottomNavigation from "@/components/SuperAdminBottomNavigation";
@@ -93,42 +94,42 @@ const SuperAdminCenterPage = () => {
       description: "등록된 사용자 및 역할을 관리합니다",
       icon: Users,
       path: "/super/users",
-      color: "text-chart-2"
+      color: "text-primary"
     },
     {
       title: "커뮤니티 게시물",
       description: "슈퍼관리자 명의로 소식을 등록합니다",
       icon: MessageSquare,
       path: "/super/posts/create",
-      color: "text-chart-4"
+      color: "text-primary"
     },
     {
       title: "설명회 관리",
       description: "슈퍼관리자 명의로 설명회를 등록합니다",
       icon: Calendar,
       path: "/super/seminars/manage",
-      color: "text-chart-1"
+      color: "text-primary"
     },
     {
       title: "등록 학원 관리",
       description: "학원 프로필, 강사, 강좌 정보 관리",
       icon: Building2,
       path: "/super/academies",
-      color: "text-chart-5"
+      color: "text-primary"
     },
     {
       title: "전체 게시물 관리",
       description: "모든 커뮤니티 게시물을 관리합니다",
-      icon: MessageSquare,
+      icon: Newspaper,
       path: "/super/posts",
-      color: "text-muted-foreground"
+      color: "text-primary"
     },
     {
       title: "시스템 설정",
       description: "플랫폼 공지사항 및 설정을 관리합니다",
       icon: Settings,
       path: "/super/settings",
-      color: "text-chart-3"
+      color: "text-primary"
     }
   ];
 
@@ -171,7 +172,7 @@ const SuperAdminCenterPage = () => {
             <div className="grid grid-cols-4 gap-2">
               <Card className="shadow-card">
                 <CardContent className="p-3 text-center">
-                  <Users className="w-5 h-5 text-primary mx-auto mb-1" />
+                  <Users className="w-5 h-5 text-black mx-auto mb-1" />
                   <p className="text-xl font-bold text-foreground">{stats.totalUsers}</p>
                   <p className="text-[10px] text-muted-foreground">전체 사용자</p>
                 </CardContent>

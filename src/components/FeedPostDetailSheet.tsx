@@ -190,9 +190,10 @@ const FeedPostDetailSheet = ({
       setCurrentUserRoleLabel(roleLabel);
       setCurrentUserName(profileData?.user_name?.trim() || "익명");
       setCurrentUserImageUrl(profileData?.image_url || null);
+      const isSuperAdmin = roleData?.role === "super_admin";
 
-      // Check if user is the author (for super admin posts)
-      if (post.author_id === session.user.id) {
+      // 슈퍼관리자 또는 작성자는 게시글 관리(삭제) 권한을 갖는다.
+      if (isSuperAdmin || post.author_id === session.user.id) {
         setIsOwner(true);
         setCanComment(nextCanComment);
         return;
@@ -217,6 +218,23 @@ const FeedPostDetailSheet = ({
 
         if (!nextCanComment && roleData?.role === "admin") {
           nextCanComment = !!member;
+        }
+
+        // Legacy fallback: academies.owner_id 기반 계정도 동일 권한 처리
+        if (!member) {
+          const { data: ownedAcademy } = await supabase
+            .from("academies")
+            .select("id")
+            .eq("id", post.academy_id)
+            .eq("owner_id", session.user.id)
+            .maybeSingle();
+
+          if (ownedAcademy) {
+            setIsOwner(true);
+            if (roleData?.role === "admin") {
+              nextCanComment = true;
+            }
+          }
         }
       }
 
