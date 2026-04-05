@@ -302,12 +302,14 @@ const AcademyDetailPage = () => {
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
     
-    // Parse curriculum JSON for each class
-    const classesWithCurriculum = (data || []).map((cls: any) => ({
-      ...cls,
-      subject: cls.subject ?? null,
-      curriculum: cls.curriculum || []
-    }));
+    // 학부모 화면: 활성(is_active !== false) 강좌만 노출
+    const classesWithCurriculum = (data || [])
+      .filter((cls: any) => cls.is_active !== false)
+      .map((cls: any) => ({
+        ...cls,
+        subject: cls.subject ?? null,
+        curriculum: cls.curriculum || [],
+      }));
     setClasses(classesWithCurriculum);
   };
 

@@ -5,15 +5,8 @@ import { logError } from "@/lib/errorLogger";
 export const useSuperAdmin = () => {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const bypassInDev = import.meta.env.DEV;
 
   useEffect(() => {
-    if (bypassInDev) {
-      setIsSuperAdmin(true);
-      setLoading(false);
-      return;
-    }
-
     const checkSuperAdmin = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -44,7 +37,7 @@ export const useSuperAdmin = () => {
     };
 
     checkSuperAdmin();
-  }, [bypassInDev]);
+  }, []);
 
   return { isSuperAdmin, loading };
 };

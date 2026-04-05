@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DndContext,
   closestCenter,
@@ -44,12 +44,28 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -66,6 +82,8 @@ import {
   BookOpen,
   Pencil,
   Trash2,
+  MoreVertical,
+  Copy,
   GraduationCap,
   ShieldCheck,
   Clock,
@@ -81,6 +99,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { logError } from "@/lib/errorLogger";
 import { academyProfileSchema, teacherSchema, classSchema, validateInput } from "@/lib/validation";
 import { SortableProfileRow } from "@/components/SortableProfileRow";
+import { cn } from "@/lib/utils";
 import {
   CLASS_SUBJECT_OPTIONS,
   CLASS_SUBJECT_FILTER_ALL,
@@ -127,9 +146,120 @@ interface Class {
   description: string | null;
   teacher_id: string | null;
   is_recruiting: boolean | null;
+  /** false면 학부모 미노출, 학원 화면에서만 회색 표시 */
+  is_active?: boolean | null;
   sort_order: number;
   curriculum?: CurriculumStep[];
   tags?: string[] | null;
+}
+
+type OpenedClassCourseCardProps = {
+  cls: Class;
+  dragHandle?: ReactNode;
+  onEdit: (cls: Class) => void;
+  onCopy: (cls: Class) => void;
+  onRequestDelete: (cls: Class) => void;
+  onToggleActive: (classId: string, isActive: boolean) => void;
+  onToggleRecruiting: (classId: string, isRecruiting: boolean) => void;
+};
+
+function OpenedClassCourseCard({
+  cls,
+  dragHandle,
+  onEdit,
+  onCopy,
+  onRequestDelete,
+  onToggleActive,
+  onToggleRecruiting,
+}: OpenedClassCourseCardProps) {
+  const isActive = cls.is_active !== false;
+  return (
+    <Card
+      className={cn(
+        "shadow-card transition-colors",
+        !isActive && "border-muted-foreground/25 bg-muted/35 opacity-[0.92]"
+      )}
+    >
+      <CardContent className="p-4">
+        <div className="mb-2 flex items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-1 items-start gap-2">
+            {dragHandle}
+            <div className="min-w-0">
+              <h4
+                className={cn(
+                  "font-medium",
+                  isActive ? "text-foreground" : "text-muted-foreground"
+                )}
+              >
+                {cls.name}
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                {cls.subject ? `과목: ${cls.subject}` : "과목 미지정"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {cls.target_grade || "대상 학년 미정"}
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 gap-1">
+            <Button variant="ghost" size="icon" onClick={() => onEdit(cls)} aria-label="강좌 편집">
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="강좌 더보기">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem
+                  onClick={() => onToggleActive(cls.id, !isActive)}
+                >
+                  {isActive ? "강좌 비활성화하기" : "강좌 활성화하기"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onCopy(cls)}>
+                  강좌 복사하기
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => onRequestDelete(cls)}
+                >
+                  삭제하기
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+        <div className="space-y-1 text-xs text-muted-foreground">
+          {cls.schedule && <p>📅 {cls.schedule}</p>}
+          {cls.fee && <p>💰 {cls.fee.toLocaleString()}원</p>}
+        </div>
+        {Array.isArray(cls.tags) && cls.tags.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {cls.tags.map((tag) => (
+              <Badge key={tag} variant="secondary" className="px-2 py-0.5 text-[10px]">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+        <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+          <span className="text-xs text-muted-foreground">모집 상태</span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-xs font-medium ${cls.is_recruiting ? "text-primary" : "text-muted-foreground"}`}
+            >
+              {cls.is_recruiting ? "모집중" : "마감"}
+            </span>
+            <Switch
+              checked={cls.is_recruiting ?? true}
+              onCheckedChange={(checked) => onToggleRecruiting(cls.id, checked)}
+            />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 async function persistTableSortOrder(
@@ -174,10 +304,24 @@ const ProfileManagementPage = () => {
   const [academyMembers, setAcademyMembers] = useState<AcademyMemberWithProfile[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [classListSubjectFilter, setClassListSubjectFilter] = useState(CLASS_SUBJECT_FILTER_ALL);
+  /** ON: 활성화된 강좌만 목록에 표시 */
+  const [classActiveFilterOnly, setClassActiveFilterOnly] = useState(true);
+  const classInsertDefaultsRef = useRef<{ is_recruiting: boolean; is_active: boolean } | null>(null);
 
   const filteredClasses = useMemo(
     () => filterClassesBySubject(classes, classListSubjectFilter),
     [classes, classListSubjectFilter]
+  );
+
+  const classesForListView = useMemo(() => {
+    if (!classActiveFilterOnly) return filteredClasses;
+    return filteredClasses.filter((c) => c.is_active !== false);
+  }, [filteredClasses, classActiveFilterOnly]);
+
+  const canReorderClasses = useMemo(
+    () =>
+      classListSubjectFilter === CLASS_SUBJECT_FILTER_ALL && !classActiveFilterOnly,
+    [classListSubjectFilter, classActiveFilterOnly]
   );
 
   // Dialog state
@@ -206,6 +350,13 @@ const ProfileManagementPage = () => {
   const [classCurriculum, setClassCurriculum] = useState<CurriculumStep[]>([]);
   const [classTags, setClassTags] = useState<string[]>([]);
   const [classNewTag, setClassNewTag] = useState("");
+
+  const [pendingDelete, setPendingDelete] = useState<
+    | { kind: "teacher"; id: string; name: string }
+    | { kind: "class"; id: string; name: string }
+    | null
+  >(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const { toast } = useToast();
 
@@ -405,7 +556,8 @@ const ProfileManagementPage = () => {
       subject: cls.subject ?? null,
       sort_order: typeof cls.sort_order === "number" ? cls.sort_order : 0,
       curriculum: Array.isArray(cls.curriculum) ? cls.curriculum : [],
-      tags: Array.isArray(cls.tags) ? cls.tags : []
+      tags: Array.isArray(cls.tags) ? cls.tags : [],
+      is_active: cls.is_active !== false,
     })) as Class[];
     setClasses(classesWithCurriculum);
   };
@@ -685,11 +837,31 @@ const ProfileManagementPage = () => {
     }
   };
 
-  const handleDeleteTeacher = async (id: string) => {
-    if (!academy) return;
-    await supabase.from("teachers").delete().eq("id", id);
-    fetchTeachers(academy.id);
-    toast({ title: "삭제 완료" });
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete || !academy) return;
+    setDeleteSubmitting(true);
+    try {
+      if (pendingDelete.kind === "teacher") {
+        const { error } = await supabase.from("teachers").delete().eq("id", pendingDelete.id);
+        if (error) throw error;
+        await fetchTeachers(academy.id);
+      } else {
+        const { error } = await supabase.from("classes").delete().eq("id", pendingDelete.id);
+        if (error) throw error;
+        await fetchClasses(academy.id);
+      }
+      toast({ title: "삭제 완료" });
+      setPendingDelete(null);
+    } catch (error) {
+      logError("profile-delete", error);
+      toast({
+        title: "삭제 실패",
+        description: "다시 시도하거나 권한을 확인해주세요.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteSubmitting(false);
+    }
   };
 
   // Class CRUD
@@ -758,9 +930,11 @@ const ProfileManagementPage = () => {
     setClassTags([]);
     setClassNewTag("");
     setEditingClass(null);
+    classInsertDefaultsRef.current = null;
   };
 
   const openClassDialog = (cls?: Class) => {
+    classInsertDefaultsRef.current = null;
     if (cls) {
       setEditingClass(cls);
       setClassName(cls.name);
@@ -777,6 +951,27 @@ const ProfileManagementPage = () => {
     } else {
       resetClassForm();
     }
+    setIsClassDialogOpen(true);
+  };
+
+  /** 강좌 추가와 동일한 다이얼로그에 기존 강좌 정보를 채워 넣음 (신규 저장 시 별도 행으로 insert) */
+  const openClassDialogAsCopy = (cls: Class) => {
+    setEditingClass(null);
+    classInsertDefaultsRef.current = {
+      is_recruiting: cls.is_recruiting ?? true,
+      is_active: cls.is_active !== false,
+    };
+    setClassName(cls.name);
+    setClassSubject(cls.subject || "");
+    const { years } = parseTargetGrade(cls.target_grade || "");
+    setClassYears(years || []);
+    setClassSchedule(cls.schedule || "");
+    setClassFee(cls.fee?.toString() || "");
+    setClassDescription(cls.description || "");
+    setClassTeacherId(cls.teacher_id || "");
+    setClassCurriculum(cls.curriculum ? [...cls.curriculum] : []);
+    setClassTags(cls.tags ? [...cls.tags] : []);
+    setClassNewTag("");
     setIsClassDialogOpen(true);
   };
 
@@ -797,6 +992,7 @@ const ProfileManagementPage = () => {
     try {
       const composedTargetGrade = classYears.length > 0 ? classYears.join(", ") : null;
 
+      const insertDefaults = classInsertDefaultsRef.current;
       const classData = {
         name: className,
         subject: classSubject.trim() || null,
@@ -818,7 +1014,13 @@ const ProfileManagementPage = () => {
             ? 0
             : Math.max(...classes.map((c) => c.sort_order ?? 0)) + 1;
         const { error } = await supabase.from("classes").insert([
-          { ...classData, academy_id: academy.id, sort_order: nextClassOrder },
+          {
+            ...classData,
+            academy_id: academy.id,
+            sort_order: nextClassOrder,
+            is_recruiting: insertDefaults?.is_recruiting ?? true,
+            is_active: insertDefaults?.is_active ?? true,
+          },
         ]);
         if (error) throw error;
       }
@@ -826,6 +1028,7 @@ const ProfileManagementPage = () => {
       toast({ title: "저장 완료" });
       setIsClassDialogOpen(false);
       resetClassForm();
+      classInsertDefaultsRef.current = null;
       await fetchClasses(academy.id);
     } catch (error) {
       console.error("Error saving class:", error);
@@ -834,11 +1037,22 @@ const ProfileManagementPage = () => {
     }
   };
 
-  const handleDeleteClass = async (id: string) => {
+  const handleToggleClassActive = async (classId: string, isActive: boolean) => {
     if (!academy) return;
-    await supabase.from("classes").delete().eq("id", id);
-    fetchClasses(academy.id);
-    toast({ title: "삭제 완료" });
+    try {
+      const { error } = await supabase.from("classes").update({ is_active: isActive }).eq("id", classId);
+      if (error) throw error;
+      setClasses((prev) =>
+        prev.map((c) => (c.id === classId ? { ...c, is_active: isActive } : c))
+      );
+      toast({
+        title: isActive ? "강좌가 활성화되었습니다" : "강좌가 비활성화되었습니다",
+        description: isActive ? "학부모에게 다시 노출됩니다." : "학부모 화면에서는 더 이상 보이지 않습니다.",
+      });
+    } catch (error) {
+      logError("toggle-class-active", error);
+      toast({ title: "상태 변경 실패", variant: "destructive" });
+    }
   };
 
   const handleToggleRecruiting = async (classId: string, isRecruiting: boolean) => {
@@ -1429,7 +1643,14 @@ const ProfileManagementPage = () => {
                                     <Button variant="ghost" size="icon" onClick={() => openTeacherDialog(teacher)}>
                                       <Pencil className="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteTeacher(teacher.id)}>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => {
+                                        const info = getTeacherDisplayInfo(teacher);
+                                        setPendingDelete({ kind: "teacher", id: teacher.id, name: info.name });
+                                      }}
+                                    >
                                       <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
                                   </div>
@@ -1592,27 +1813,48 @@ const ProfileManagementPage = () => {
                 <>
                   <div className="space-y-2">
                     <Label className="text-sm">과목별 보기</Label>
-                    <Select value={classListSubjectFilter} onValueChange={setClassListSubjectFilter}>
-                      <SelectTrigger className={CLASS_SUBJECT_FILTER_TRIGGER_CLASS}>
-                        <SelectValue placeholder="전체" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={CLASS_SUBJECT_FILTER_ALL}>전체</SelectItem>
-                        <SelectItem value={CLASS_SUBJECT_FILTER_NONE}>과목 미지정</SelectItem>
-                        {CLASS_SUBJECT_OPTIONS.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {s}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {classListSubjectFilter !== CLASS_SUBJECT_FILTER_ALL && (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <Select value={classListSubjectFilter} onValueChange={setClassListSubjectFilter}>
+                        <SelectTrigger
+                          className={cn(
+                            CLASS_SUBJECT_FILTER_TRIGGER_CLASS,
+                            "h-9 w-36 max-w-[42vw] shrink-0"
+                          )}
+                        >
+                          <SelectValue placeholder="전체" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={CLASS_SUBJECT_FILTER_ALL}>전체</SelectItem>
+                          <SelectItem value={CLASS_SUBJECT_FILTER_NONE}>과목 미지정</SelectItem>
+                          {CLASS_SUBJECT_OPTIONS.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-center gap-2">
+                        <Label
+                          htmlFor="class-active-filter-only"
+                          className="text-sm font-normal whitespace-nowrap text-foreground"
+                        >
+                          활성화 강좌
+                        </Label>
+                        <Switch
+                          id="class-active-filter-only"
+                          checked={classActiveFilterOnly}
+                          onCheckedChange={setClassActiveFilterOnly}
+                        />
+                      </div>
+                    </div>
+                    {(classListSubjectFilter !== CLASS_SUBJECT_FILTER_ALL || classActiveFilterOnly) && (
                       <p className="text-xs text-muted-foreground">
-                        과목 필터 사용 중에는 순서 변경(드래그)이 비활성화됩니다. 전체 선택 시 순서를 바꿀 수 있습니다.
+                        과목 필터를 사용하거나 「활성화 강좌」만 켜 두면 순서 변경(드래그)을 사용할 수 없습니다. 전체
+                        과목·비활성 강좌까지 표시하면 드래그로 순서를 바꿀 수 있습니다.
                       </p>
                     )}
                   </div>
-                  {filteredClasses.length === 0 ? (
+                  {classesForListView.length === 0 ? (
                     <Card className="shadow-card">
                       <CardContent className="p-6 text-center">
                         <p className="text-sm text-muted-foreground">
@@ -1620,7 +1862,7 @@ const ProfileManagementPage = () => {
                         </p>
                       </CardContent>
                     </Card>
-                  ) : classListSubjectFilter === CLASS_SUBJECT_FILTER_ALL ? (
+                  ) : canReorderClasses ? (
                     <DndContext
                       sensors={sensors}
                       collisionDetection={closestCenter}
@@ -1634,59 +1876,17 @@ const ProfileManagementPage = () => {
                           {classes.map((cls) => (
                             <SortableProfileRow key={cls.id} id={cls.id}>
                               {(dragHandle) => (
-                                <Card className="shadow-card">
-                                  <CardContent className="p-4">
-                                    <div className="mb-2 flex items-start justify-between gap-2">
-                                      <div className="flex min-w-0 flex-1 items-start gap-2">
-                                        {dragHandle}
-                                        <div className="min-w-0">
-                                          <h4 className="font-medium text-foreground">{cls.name}</h4>
-                                          <p className="text-xs text-muted-foreground">
-                                            {cls.subject ? `과목: ${cls.subject}` : "과목 미지정"}
-                                          </p>
-                                          <p className="text-xs text-muted-foreground">
-                                            {cls.target_grade || "대상 학년 미정"}
-                                          </p>
-                                        </div>
-                                      </div>
-                                      <div className="flex shrink-0 gap-1">
-                                        <Button variant="ghost" size="icon" onClick={() => openClassDialog(cls)}>
-                                          <Pencil className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteClass(cls.id)}>
-                                          <Trash2 className="h-4 w-4 text-destructive" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                    <div className="space-y-1 text-xs text-muted-foreground">
-                                      {cls.schedule && <p>📅 {cls.schedule}</p>}
-                                      {cls.fee && <p>💰 {cls.fee.toLocaleString()}원</p>}
-                                    </div>
-                                    {Array.isArray(cls.tags) && cls.tags.length > 0 && (
-                                      <div className="mt-2 flex flex-wrap gap-1">
-                                        {cls.tags.map((tag) => (
-                                          <Badge key={tag} variant="secondary" className="px-2 py-0.5 text-[10px]">
-                                            {tag}
-                                          </Badge>
-                                        ))}
-                                      </div>
-                                    )}
-                                    <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-                                      <span className="text-xs text-muted-foreground">모집 상태</span>
-                                      <div className="flex items-center gap-2">
-                                        <span
-                                          className={`text-xs font-medium ${cls.is_recruiting ? "text-primary" : "text-muted-foreground"}`}
-                                        >
-                                          {cls.is_recruiting ? "모집중" : "마감"}
-                                        </span>
-                                        <Switch
-                                          checked={cls.is_recruiting ?? true}
-                                          onCheckedChange={(checked) => handleToggleRecruiting(cls.id, checked)}
-                                        />
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
+                                <OpenedClassCourseCard
+                                  cls={cls}
+                                  dragHandle={dragHandle}
+                                  onEdit={openClassDialog}
+                                  onCopy={openClassDialogAsCopy}
+                                  onRequestDelete={(c) =>
+                                    setPendingDelete({ kind: "class", id: c.id, name: c.name })
+                                  }
+                                  onToggleActive={handleToggleClassActive}
+                                  onToggleRecruiting={handleToggleRecruiting}
+                                />
                               )}
                             </SortableProfileRow>
                           ))}
@@ -1695,57 +1895,18 @@ const ProfileManagementPage = () => {
                     </DndContext>
                   ) : (
                     <div className="space-y-3">
-                      {filteredClasses.map((cls) => (
-                        <Card key={cls.id} className="shadow-card">
-                          <CardContent className="p-4">
-                            <div className="mb-2 flex items-start justify-between">
-                              <div>
-                                <h4 className="font-medium text-foreground">{cls.name}</h4>
-                                <p className="text-xs text-muted-foreground">
-                                  {cls.subject ? `과목: ${cls.subject}` : "과목 미지정"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {cls.target_grade || "대상 학년 미정"}
-                                </p>
-                              </div>
-                              <div className="flex gap-1">
-                                <Button variant="ghost" size="icon" onClick={() => openClassDialog(cls)}>
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleDeleteClass(cls.id)}>
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </div>
-                            </div>
-                            <div className="space-y-1 text-xs text-muted-foreground">
-                              {cls.schedule && <p>📅 {cls.schedule}</p>}
-                              {cls.fee && <p>💰 {cls.fee.toLocaleString()}원</p>}
-                            </div>
-                            {Array.isArray(cls.tags) && cls.tags.length > 0 && (
-                              <div className="mt-2 flex flex-wrap gap-1">
-                                {cls.tags.map((tag) => (
-                                  <Badge key={tag} variant="secondary" className="px-2 py-0.5 text-[10px]">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-                            <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-                              <span className="text-xs text-muted-foreground">모집 상태</span>
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={`text-xs font-medium ${cls.is_recruiting ? "text-primary" : "text-muted-foreground"}`}
-                                >
-                                  {cls.is_recruiting ? "모집중" : "마감"}
-                                </span>
-                                <Switch
-                                  checked={cls.is_recruiting ?? true}
-                                  onCheckedChange={(checked) => handleToggleRecruiting(cls.id, checked)}
-                                />
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
+                      {classesForListView.map((cls) => (
+                        <OpenedClassCourseCard
+                          key={cls.id}
+                          cls={cls}
+                          onEdit={openClassDialog}
+                          onCopy={openClassDialogAsCopy}
+                          onRequestDelete={(c) =>
+                            setPendingDelete({ kind: "class", id: c.id, name: c.name })
+                          }
+                          onToggleActive={handleToggleClassActive}
+                          onToggleRecruiting={handleToggleRecruiting}
+                        />
                       ))}
                     </div>
                   )}
@@ -1766,6 +1927,42 @@ const ProfileManagementPage = () => {
           onSuccess={(newNickname) => setUserProfile({ user_name: newNickname })}
         />
       )}
+
+      <AlertDialog
+        open={!!pendingDelete}
+        onOpenChange={(open) => {
+          if (!open && !deleteSubmitting) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingDelete?.kind === "teacher" ? "강사 삭제" : "강좌 삭제"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete && (
+                <>
+                  <span className="font-medium text-foreground">{pendingDelete.name}</span> 항목을 삭제하시겠습니까?
+                  삭제된 항목은 복구할 수 없습니다.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteSubmitting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmDelete();
+              }}
+              disabled={deleteSubmitting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteSubmitting ? "삭제 중..." : "삭제"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AdminBottomNavigation />
     </div>

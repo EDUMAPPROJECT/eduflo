@@ -3,17 +3,22 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 // Available regions for the alpha test (동탄 신도시)
 export const AVAILABLE_REGIONS = {
   "동탄 1신도시": [
-    { id: "dongtan1", name: "동탄1동", district: "화성시" },
-    { id: "dongtan2", name: "동탄2동", district: "화성시" },
-    { id: "dongtan3", name: "동탄3동", district: "화성시" },
+    { id: "dongtan1", name: "석우동", district: "화성시" },
+    { id: "dongtan2", name: "반송동", district: "화성시" },
+    { id: "dongtan3", name: "능동", district: "화성시" },
   ],
   "동탄 2신도시": [
-    { id: "dongtan4", name: "동탄4동", district: "화성시" },
-    { id: "dongtan5", name: "동탄5동", district: "화성시" },
-    { id: "dongtan6", name: "동탄6동", district: "화성시" },
-    { id: "dongtan7", name: "동탄7동", district: "화성시" },
-    { id: "dongtan8", name: "동탄8동", district: "화성시" },
-    { id: "dongtan9", name: "동탄9동", district: "화성시" },
+    { id: "dongtan4", name: "청계동", district: "화성시" },
+    { id: "dongtan5", name: "영천동", district: "화성시" },
+    { id: "dongtan6", name: "중동", district: "화성시" },
+    { id: "dongtan7", name: "금곡동", district: "화성시" },
+    { id: "dongtan8", name: "방교동", district: "화성시" },
+    { id: "dongtan9", name: "여울동", district: "화성시" },
+    { id: "dongtan10", name: "산척동", district: "화성시" },
+    { id: "dongtan11", name: "송동", district: "화성시" },
+    { id: "dongtan12", name: "장지동", district: "화성시" },
+    { id: "dongtan13", name: "목동", district: "화성시" },
+    { id: "dongtan14", name: "신동", district: "화성시" },
   ],
 };
 

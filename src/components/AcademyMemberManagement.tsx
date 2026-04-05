@@ -44,6 +44,23 @@ const GRADE_OPTIONS = [
   { value: 'teacher', label: '강사', icon: GraduationCap },
 ];
 
+/** 원장·부원장·상담실장 등급에 부여하는 전체 권한 */
+function createFullPermissions(): AcademyMember["permissions"] {
+  return {
+    manage_classes: true,
+    manage_teachers: true,
+    manage_posts: true,
+    manage_seminars: true,
+    manage_consultations: true,
+    view_analytics: true,
+    manage_settings: true,
+    manage_members: true,
+    edit_profile: true,
+  };
+}
+
+const GRADES_WITH_FULL_PERMISSIONS = new Set(["admin", "vice_owner", "staff"]);
+
 function getMemberDisplayName(profile: MemberWithProfile["profile"]): string {
   if (!profile) return "이름 없음";
   const name = (profile.user_name || "").trim();
@@ -254,14 +271,25 @@ const AcademyMemberManagement = ({ academyId }: AcademyMemberManagementProps) =>
 
   const handleGradeChange = async (memberId: string, newGrade: string) => {
     try {
+      const payload: { grade: string; permissions?: AcademyMember["permissions"] } = {
+        grade: newGrade,
+      };
+      if (GRADES_WITH_FULL_PERMISSIONS.has(newGrade)) {
+        payload.permissions = createFullPermissions();
+      }
+
       const { error } = await supabase
-        .from('academy_members')
-        .update({ grade: newGrade })
-        .eq('id', memberId);
+        .from("academy_members")
+        .update(payload as Record<string, unknown>)
+        .eq("id", memberId);
 
       if (error) throw error;
 
-      toast.success("등급이 변경되었습니다");
+      toast.success(
+        GRADES_WITH_FULL_PERMISSIONS.has(newGrade)
+          ? "등급이 변경되었고, 모든 권한이 켜졌습니다"
+          : "등급이 변경되었습니다"
+      );
       fetchMembers();
       refetch();
     } catch (error) {
