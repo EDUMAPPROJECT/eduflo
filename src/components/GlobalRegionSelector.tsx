@@ -33,11 +33,11 @@ const GlobalRegionSelector = () => {
           <ChevronDown className="w-3 h-3 text-muted-foreground" />
         </Button>
       </DrawerTrigger>
-      <DrawerContent className="max-w-lg mx-auto">
+      <DrawerContent className="max-w-lg mx-auto max-h-[82vh]">
         <DrawerHeader>
           <DrawerTitle className="text-center">지역 선택</DrawerTitle>
         </DrawerHeader>
-        <div className="p-4 pb-8 max-h-[60vh] overflow-y-auto">
+        <div className="p-4 pb-[calc(env(safe-area-inset-bottom)+6rem)] max-h-[72vh] overflow-y-auto">
           {Object.entries(AVAILABLE_REGIONS).map(([groupName, regions]) => (
             <div key={groupName} className="mb-6 last:mb-0">
               <h3 className="text-sm font-semibold text-muted-foreground mb-2 px-1">
