@@ -270,6 +270,21 @@ const AcademyMemberManagement = ({ academyId }: AcademyMemberManagementProps) =>
   };
 
   const handleGradeChange = async (memberId: string, newGrade: string) => {
+    const approvedAdminGradeMembers = members.filter(
+      (m) => m.status === "approved" && m.role !== "owner" && (m.grade || "staff") === "admin"
+    );
+    const targetMember = members.find((m) => m.id === memberId);
+    const isTargetCurrentAdminGrade = targetMember && (targetMember.grade || "staff") === "admin";
+    const isDowngradeFromLastAdminGrade =
+      Boolean(isTargetCurrentAdminGrade) &&
+      newGrade !== "admin" &&
+      approvedAdminGradeMembers.length <= 1;
+
+    if (isDowngradeFromLastAdminGrade) {
+      toast.error("최소 1명의 원장 직급(원장)이 필요하여 변경할 수 없습니다");
+      return;
+    }
+
     try {
       const payload: { grade: string; permissions?: AcademyMember["permissions"] } = {
         grade: newGrade,
@@ -450,6 +465,13 @@ const AcademyMemberManagement = ({ academyId }: AcademyMemberManagementProps) =>
               {members.filter(m => m.status === 'approved').map((member) => {
                 const GradeIcon = getGradeIcon(member.role, member.grade);
                 const isOwnerMember = member.role === 'owner';
+                const approvedAdminGradeCount = members.filter(
+                  (m) => m.status === "approved" && m.role !== "owner" && (m.grade || "staff") === "admin"
+                ).length;
+                const isLastAdminGradeMember =
+                  !isOwnerMember &&
+                  (member.grade || "staff") === "admin" &&
+                  approvedAdminGradeCount <= 1;
                 return (
                   <div
                     key={member.id}
@@ -475,7 +497,13 @@ const AcademyMemberManagement = ({ academyId }: AcademyMemberManagementProps) =>
                       {hasManageMembersPermission && !isOwnerMember ? (
                         <Select
                           value={member.grade || 'staff'}
-                          onValueChange={(value) => handleGradeChange(member.id, value)}
+                          onValueChange={(value) => {
+                            if (isLastAdminGradeMember && value !== "admin") {
+                              toast.error("현재 학원의 마지막 원장 직급은 다른 직급으로 변경할 수 없습니다");
+                              return;
+                            }
+                            void handleGradeChange(member.id, value);
+                          }}
                         >
                           <SelectTrigger className="w-24 h-8 text-xs">
                             <SelectValue />
