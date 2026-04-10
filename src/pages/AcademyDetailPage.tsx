@@ -60,11 +60,7 @@ import { toast } from "sonner";
 import { logError } from "@/lib/errorLogger";
 import { MapErrorFallback } from "@/components/MapErrorFallback";
 import {
-  CLASS_SUBJECT_OPTIONS,
-  CLASS_SUBJECT_FILTER_ALL,
-  CLASS_SUBJECT_FILTER_NONE,
   CLASS_SUBJECT_FILTER_TRIGGER_CLASS,
-  filterClassesBySubject,
 } from "@/lib/classSubjects";
 
 const LocationMap = lazyWithRetry(() => import("@/components/LocationMap"));
@@ -130,6 +126,40 @@ interface ClassInfo {
   };
 }
 
+const CLASS_TARGET_GRADE_FILTER_ALL = "__all__";
+const CLASS_TARGET_GRADE_FILTER_NONE = "__none__";
+const CLASS_TARGET_GRADE_OPTIONS = [
+  "유아",
+  "초1",
+  "초2",
+  "초3",
+  "초4",
+  "초5",
+  "초6",
+  "중1",
+  "중2",
+  "중3",
+  "고1",
+  "고2",
+  "고3",
+  "성인",
+] as const;
+
+function parseTargetGradeTokens(target?: string | null): string[] {
+  if (!target) return [];
+  const tokenMatches = target.match(/(유아|성인|초[1-6]|중[1-3]|고[1-3])/g);
+  if (tokenMatches) return Array.from(new Set(tokenMatches));
+  const legacyTokenMatches = target.match(/(초[1-6]|중[1-3]|고[1-3])/g);
+  if (legacyTokenMatches) return Array.from(new Set(legacyTokenMatches));
+  const legacyMatch = target.match(/([1-6])학년/);
+  if (!legacyMatch) return [];
+  const num = legacyMatch[1];
+  if (target.includes("초등")) return [`초${num}`];
+  if (target.includes("중")) return [`중${Math.min(Number(num), 3)}`];
+  if (target.includes("고")) return [`고${Math.min(Number(num), 3)}`];
+  return [];
+}
+
 const AcademyDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -140,12 +170,20 @@ const AcademyDetailPage = () => {
   const [academy, setAcademy] = useState<Academy | null>(null);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
-  const [classSubjectFilter, setClassSubjectFilter] = useState(CLASS_SUBJECT_FILTER_ALL);
+  const [classTargetGradeFilter, setClassTargetGradeFilter] = useState(CLASS_TARGET_GRADE_FILTER_ALL);
   const [loading, setLoading] = useState(true);
 
   const filteredClasses = useMemo(
-    () => filterClassesBySubject(classes, classSubjectFilter),
-    [classes, classSubjectFilter]
+    () => {
+      if (classTargetGradeFilter === CLASS_TARGET_GRADE_FILTER_ALL) return classes;
+      if (classTargetGradeFilter === CLASS_TARGET_GRADE_FILTER_NONE) {
+        return classes.filter((c) => !c.target_grade?.trim());
+      }
+      return classes.filter((c) =>
+        parseTargetGradeTokens(c.target_grade).includes(classTargetGradeFilter)
+      );
+    },
+    [classes, classTargetGradeFilter]
   );
   const [user, setUser] = useState<any>(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
@@ -586,17 +624,17 @@ const AcademyDetailPage = () => {
             ) : (
               <>
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">과목별 보기</Label>
-                  <Select value={classSubjectFilter} onValueChange={setClassSubjectFilter}>
+                  <Label className="text-xs text-muted-foreground">대상 학년별 보기</Label>
+                  <Select value={classTargetGradeFilter} onValueChange={setClassTargetGradeFilter}>
                     <SelectTrigger className={CLASS_SUBJECT_FILTER_TRIGGER_CLASS}>
                       <SelectValue placeholder="전체" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={CLASS_SUBJECT_FILTER_ALL}>전체</SelectItem>
-                      <SelectItem value={CLASS_SUBJECT_FILTER_NONE}>과목 미지정</SelectItem>
-                      {CLASS_SUBJECT_OPTIONS.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
+                      <SelectItem value={CLASS_TARGET_GRADE_FILTER_ALL}>전체</SelectItem>
+                      <SelectItem value={CLASS_TARGET_GRADE_FILTER_NONE}>대상 학년 미지정</SelectItem>
+                      {CLASS_TARGET_GRADE_OPTIONS.map((grade) => (
+                        <SelectItem key={grade} value={grade}>
+                          {grade}
                         </SelectItem>
                       ))}
                     </SelectContent>
