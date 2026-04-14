@@ -69,7 +69,7 @@ const SettingsPage = () => {
       <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
         {/* Notification Settings */}
         <Card className="shadow-card">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-6">
             <CardTitle className="text-sm flex items-center gap-2">
               <Bell className="w-4 h-4 text-primary" />
               알림 설정
@@ -97,7 +97,7 @@ const SettingsPage = () => {
 
         {/* Display Settings */}
         <Card className="shadow-card">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-6">
             <CardTitle className="text-sm flex items-center gap-2">
               <Smartphone className="w-4 h-4 text-primary" />
               화면 설정
@@ -127,7 +127,7 @@ const SettingsPage = () => {
 
         {/* Account & Privacy */}
         <Card className="shadow-card">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-6">
             <CardTitle className="text-sm flex items-center gap-2">
               <Shield className="w-4 h-4 text-primary" />
               계정 및 개인정보
@@ -150,7 +150,7 @@ const SettingsPage = () => {
 
         {/* App Info */}
         <Card className="shadow-card">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-6">
             <CardTitle className="text-sm flex items-center gap-2">
               <Info className="w-4 h-4 text-primary" />
               앱 정보

@@ -303,7 +303,7 @@ const ConsultationReservationDialog = ({
 
               {/* Time Slots */}
               {selectedDate && (
-                <div>
+                <div className="mt-10 pt-4">
                   <h3 className="font-medium text-sm mb-2 flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     시간 선택
