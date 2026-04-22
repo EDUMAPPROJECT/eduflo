@@ -2,10 +2,9 @@ import { useState, useCallback, useRef, useEffect } from "react";
 
 interface UseInfiniteScrollOptions<T> {
   fetchFn: (page: number) => Promise<{ data: T[]; hasMore: boolean }>;
-  pageSize?: number;
 }
 
-export function useInfiniteScroll<T>({ fetchFn, pageSize = 20 }: UseInfiniteScrollOptions<T>) {
+export function useInfiniteScroll<T>({ fetchFn }: UseInfiniteScrollOptions<T>) {
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -47,10 +46,11 @@ export function useInfiniteScroll<T>({ fetchFn, pageSize = 20 }: UseInfiniteScro
     } catch (error) {
       console.error("Error loading more:", error);
     } finally {
+      // stale 응답이라도 fetch 락은 항상 해제해야 다음 요청이 진행됨
+      isFetchingRef.current = false;
+      setLoadingMore(false);
       if (requestVersion === requestVersionRef.current) {
-        setLoadingMore(false);
         setLoading(false);
-        isFetchingRef.current = false;
       }
     }
   }, [fetchFn, page, hasMore]);

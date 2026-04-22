@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useRegion, REGION_ALL } from "@/contexts/RegionContext";
@@ -14,11 +14,9 @@ import { fetchCommentCounts } from "@/lib/postComments";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
-  Newspaper, 
   Bell, 
   PartyPopper, 
   Calendar, 
-  Bookmark, 
   Search,
   Loader2,
   GraduationCap,
@@ -54,6 +52,7 @@ interface FeedPost {
 }
 
 const PAGE_SIZE = 15;
+const COMMUNITY_DEBUG_LOG = true;
 
 const academyFilterOptions = [
   { id: 'all', label: '전체', icon: null },
@@ -83,10 +82,28 @@ const CommunityPage = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [bookmarkedAcademies, setBookmarkedAcademies] = useState<string[]>([]);
   const [isParentPostDialogOpen, setIsParentPostDialogOpen] = useState(false);
+  const lastFilterKeyRef = useRef<string | null>(null);
+  const debugLog = useCallback((message: string, payload?: unknown) => {
+    if (!COMMUNITY_DEBUG_LOG) return;
+    if (payload === undefined) {
+      console.log(`[CommunityPage] ${message}`);
+      return;
+    }
+    console.log(`[CommunityPage] ${message}`, payload);
+  }, []);
 
   // Fetch function for infinite scroll
   const fetchPosts = useCallback(async (page: number): Promise<{ data: FeedPost[]; hasMore: boolean }> => {
     try {
+      debugLog("fetchPosts:start", {
+        page,
+        activeCommunityTab,
+        activeFilter,
+        feedSortOrder,
+        selectedRegion,
+        isLoggedIn: Boolean(userId),
+      });
+
       if (activeCommunityTab === 'parent') {
         let parentQuery = supabase
           .from("feed_posts")
@@ -100,6 +117,9 @@ const CommunityPage = () => {
 
         const { data: parentPosts, error: parentPostsError } = await parentQuery.order("created_at", { ascending: false });
         if (parentPostsError) throw parentPostsError;
+        debugLog("parentQuery:result", {
+          count: parentPosts?.length || 0,
+        });
 
         const authorIds = [...new Set((parentPosts || []).filter((post) => post.author_id).map((post) => post.author_id))] as string[];
         let authorsMap: Record<string, { user_name: string | null; role: string | null; is_super_admin: boolean | null }> = {};
@@ -110,7 +130,8 @@ const CommunityPage = () => {
             supabase.from("user_roles").select("user_id, role, is_super_admin").in("user_id", authorIds),
           ]);
 
-          if (profilesError) throw profilesError;
+          // 비로그인/권한 제한으로 profiles 조회가 막혀도 목록은 계속 노출
+          const safeProfiles = profilesError ? [] : (profiles || []);
 
           // 비로그인/권한 제한으로 user_roles 조회가 막히면(rolesError),
           // 학부모 탭은 academy_id=null 커뮤니티 글을 그대로 노출한다.
@@ -122,7 +143,7 @@ const CommunityPage = () => {
                   return acc;
                 }, {});
 
-          authorsMap = (profiles || []).reduce<Record<string, { user_name: string | null; role: string | null; is_super_admin: boolean | null }>>((acc, profile) => {
+          authorsMap = safeProfiles.reduce<Record<string, { user_name: string | null; role: string | null; is_super_admin: boolean | null }>>((acc, profile) => {
             acc[profile.id] = {
               user_name: profile.user_name,
               role: rolesError ? "parent" : (roleMap[profile.id]?.role || null),
@@ -130,6 +151,11 @@ const CommunityPage = () => {
             };
             return acc;
           }, authorsMap);
+
+          debugLog("parentAuthorLookup:result", {
+            authorIds: authorIds.length,
+            profilesLoaded: safeProfiles.length,
+          });
         }
 
         // rolesError가 나는 환경(비로그인 등)에서도 목록이 비지 않도록,
@@ -166,13 +192,21 @@ const CommunityPage = () => {
         }
 
         if (posts.length > 0) {
-          const commentCounts = await fetchCommentCounts(posts.map((post) => post.id));
-          posts = posts.map((post) => ({
-            ...post,
-            comment_count: commentCounts[post.id] || 0,
-          }));
+          try {
+            const commentCounts = await fetchCommentCounts(posts.map((post) => post.id));
+            posts = posts.map((post) => ({
+              ...post,
+              comment_count: commentCounts[post.id] || 0,
+            }));
+          } catch {
+            posts = posts.map((post) => ({ ...post, comment_count: post.comment_count || 0 }));
+          }
         }
 
+        debugLog("fetchPosts:end(parent)", {
+          returnedCount: posts.length,
+          hasMore: posts.length === PAGE_SIZE,
+        });
         return { data: posts, hasMore: posts.length === PAGE_SIZE };
       }
 
@@ -187,16 +221,19 @@ const CommunityPage = () => {
         // 비로그인/권한 제한으로 academies 조회가 막히면 지역 필터를 적용하지 않는다.
         if (!academiesError) {
           academyIds = academiesInRegion?.map(a => a.id) || [];
+          debugLog("regionAcademyFilter:applied", {
+            selectedRegion,
+            academyCountInRegion: academyIds.length,
+          });
+        } else {
+          debugLog("regionAcademyFilter:error", academiesError);
         }
       }
 
       // Build queries for both academy posts and super admin posts
       let academyQuery = supabase
         .from("feed_posts")
-        .select(`
-          *,
-          academy:academies(id, name, profile_image, target_regions)
-        `)
+        .select("*")
         .not("academy_id", "is", null);
       
       if (academyIds !== null) {
@@ -224,12 +261,65 @@ const CommunityPage = () => {
         academyQuery.order("created_at", { ascending: false }),
         superAdminQuery.order("created_at", { ascending: false })
       ]);
+      debugLog("academyAndSuperAdminQuery:result", {
+        academyError: academyResult.error || null,
+        superAdminError: superAdminResult.error || null,
+        academyCount: academyResult.data?.length || 0,
+        superAdminCount: superAdminResult.data?.length || 0,
+      });
 
       let allPosts: FeedPost[] = [];
       
-      // Add academy posts
-      if (academyResult.data) {
-        allPosts = [...(academyResult.data as unknown as FeedPost[])];
+      // Add academy posts (academy 조인 권한 이슈를 피하기 위해 2단계 조회)
+      if (academyResult.data && academyResult.data.length > 0) {
+        const rawAcademyPosts = academyResult.data as unknown as FeedPost[];
+        const academyPostAcademyIds = [
+          ...new Set(
+            rawAcademyPosts
+              .map((post) => post.academy_id)
+              .filter((academyId): academyId is string => Boolean(academyId))
+          ),
+        ];
+
+        let academyMap: Record<string, { id: string; name: string; profile_image: string | null }> = {};
+
+        if (academyPostAcademyIds.length > 0) {
+          const { data: academiesData, error: academiesDataError } = await supabase
+            .from("academies")
+            .select("id, name, profile_image")
+            .in("id", academyPostAcademyIds);
+
+          if (!academiesDataError && academiesData) {
+            academyMap = academiesData.reduce<Record<string, { id: string; name: string; profile_image: string | null }>>((acc, academy) => {
+              acc[academy.id] = {
+                id: academy.id,
+                name: academy.name,
+                profile_image: academy.profile_image,
+              };
+              return acc;
+            }, {});
+            debugLog("academyLookup:result", {
+              requestedAcademyIds: academyPostAcademyIds.length,
+              loadedAcademies: academiesData.length,
+            });
+          } else {
+            debugLog("academyLookup:error", academiesDataError);
+          }
+        }
+
+        const normalizedAcademyPosts = rawAcademyPosts.map((post) => ({
+          ...post,
+          academy: post.academy_id
+            ? (academyMap[post.academy_id] || {
+                id: post.academy_id,
+                name: "학원",
+                profile_image: null,
+              })
+            : null,
+          author_role_label: "학원",
+        }));
+
+        allPosts = [...normalizedAcademyPosts];
       }
 
       // Add super admin posts with author info
@@ -242,7 +332,8 @@ const CommunityPage = () => {
             supabase.from("profiles").select("id, user_name").in("id", authorIds),
             supabase.from("user_roles").select("user_id, role, is_super_admin").in("user_id", authorIds),
           ]);
-          if (profilesError) throw profilesError;
+          // 비로그인/권한 제한으로 profiles 조회가 막혀도 글 목록은 노출
+          const safeProfiles = profilesError ? [] : (profiles || []);
 
           const roleMap =
             rolesError
@@ -252,16 +343,18 @@ const CommunityPage = () => {
                   return acc;
                 }, {});
 
-          if (profiles) {
-            authorsMap = profiles.reduce((acc, p) => {
-              acc[p.id] = {
-                user_name: p.user_name,
-                role: rolesError ? null : (roleMap[p.id]?.role || null),
-                is_super_admin: rolesError ? true : (roleMap[p.id]?.is_super_admin || false),
-              };
-              return acc;
-            }, {} as Record<string, { user_name: string | null; role: string | null; is_super_admin: boolean | null }>);
-          }
+          authorsMap = safeProfiles.reduce((acc, p) => {
+            acc[p.id] = {
+              user_name: p.user_name,
+              role: rolesError ? null : (roleMap[p.id]?.role || null),
+              is_super_admin: rolesError ? true : (roleMap[p.id]?.is_super_admin || false),
+            };
+            return acc;
+          }, {} as Record<string, { user_name: string | null; role: string | null; is_super_admin: boolean | null }>);
+          debugLog("superAdminAuthorLookup:result", {
+            authorIds: authorIds.length,
+            profilesLoaded: safeProfiles.length,
+          });
         }
 
         // user_roles 조회가 막혀도(super admin 여부 판단 불가) academy_id=null & (notice/admission/seminar/event) 글은 운영자 글로 취급해 노출
@@ -311,19 +404,28 @@ const CommunityPage = () => {
       }
 
       if (posts.length > 0) {
-        const commentCounts = await fetchCommentCounts(posts.map((post) => post.id));
-        posts = posts.map((post) => ({
-          ...post,
-          comment_count: commentCounts[post.id] || 0,
-        }));
+        try {
+          const commentCounts = await fetchCommentCounts(posts.map((post) => post.id));
+          posts = posts.map((post) => ({
+            ...post,
+            comment_count: commentCounts[post.id] || 0,
+          }));
+        } catch {
+          posts = posts.map((post) => ({ ...post, comment_count: post.comment_count || 0 }));
+        }
       }
 
+      debugLog("fetchPosts:end(academy)", {
+        mergedCount: allPosts.length,
+        returnedCount: posts.length,
+        hasMore: posts.length === PAGE_SIZE,
+      });
       return { data: posts, hasMore: posts.length === PAGE_SIZE };
     } catch (error) {
-      console.error("Error fetching posts:", error);
+      console.error("[CommunityPage] fetchPosts:error", error);
       return { data: [], hasMore: false };
     }
-  }, [activeCommunityTab, selectedRegion, activeFilter, feedSortOrder, bookmarkedAcademies, userId]);
+  }, [activeCommunityTab, selectedRegion, activeFilter, feedSortOrder, bookmarkedAcademies, userId, debugLog]);
 
   const {
     items: posts,
@@ -333,11 +435,15 @@ const CommunityPage = () => {
     hasMore,
     reset,
     setLoadMoreElement
-  } = useInfiniteScroll<FeedPost>({ fetchFn: fetchPosts, pageSize: PAGE_SIZE });
+  } = useInfiniteScroll<FeedPost>({ fetchFn: fetchPosts });
 
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      debugLog("init:session", {
+        hasSession: Boolean(session),
+        userId: session?.user?.id || null,
+      });
       if (session?.user) {
         setUserId(session.user.id);
         const { data: roleData } = await supabase
@@ -346,6 +452,7 @@ const CommunityPage = () => {
           .eq("user_id", session.user.id)
           .maybeSingle();
         setUserRole(roleData?.role || null);
+        debugLog("init:userRole", { role: roleData?.role || null });
 
         // Get bookmarked academies
         const { data: bookmarks } = await supabase
@@ -355,16 +462,53 @@ const CommunityPage = () => {
         
         if (bookmarks) {
           setBookmarkedAcademies(bookmarks.map(b => b.academy_id));
+          debugLog("init:bookmarksLoaded", { count: bookmarks.length });
         }
       }
     };
     init();
-  }, []);
+  }, [debugLog]);
 
   // Reset and refetch when filter, region, or sort changes
   useEffect(() => {
+    const filterKey = JSON.stringify({
+      activeCommunityTab,
+      selectedRegion,
+      activeFilter,
+      feedSortOrder,
+    });
+
+    if (lastFilterKeyRef.current === null) {
+      lastFilterKeyRef.current = filterKey;
+      return;
+    }
+
+    // React StrictMode에서 mount 시 effect가 2회 실행될 수 있으므로
+    // 실제 값 변화가 없으면 reset을 건너뛴다.
+    if (lastFilterKeyRef.current === filterKey) {
+      return;
+    }
+
+    lastFilterKeyRef.current = filterKey;
+    debugLog("filtersChanged:reset", {
+      activeCommunityTab,
+      activeFilter,
+      feedSortOrder,
+      selectedRegion,
+    });
     reset();
-  }, [activeCommunityTab, selectedRegion, activeFilter, feedSortOrder, reset]);
+  }, [activeCommunityTab, selectedRegion, activeFilter, feedSortOrder, reset, debugLog]);
+
+  useEffect(() => {
+    debugLog("renderState", {
+      postCount: posts.length,
+      loading,
+      loadingMore,
+      hasMore,
+      activeCommunityTab,
+      activeFilter,
+    });
+  }, [posts.length, loading, loadingMore, hasMore, activeCommunityTab, activeFilter, debugLog]);
 
   const currentFilterOptions = activeCommunityTab === 'academy' ? academyFilterOptions : parentFilterOptions;
 

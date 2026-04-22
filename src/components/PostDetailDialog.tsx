@@ -5,9 +5,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Megaphone, Bell, PartyPopper, X } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { Megaphone, Bell, PartyPopper } from "lucide-react";
+import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 
 interface Post {
@@ -41,6 +40,17 @@ const PostDetailDialog = ({ post, open, onClose }: PostDetailDialogProps) => {
 
   const config = categoryConfig[post.category] || categoryConfig.news;
   const CategoryIcon = config.icon;
+  const getImageUrls = (): string[] => {
+    if (!post.image_url) return [];
+    try {
+      const parsed = JSON.parse(post.image_url);
+      if (Array.isArray(parsed)) return parsed.filter((url) => typeof url === "string");
+      return [post.image_url];
+    } catch {
+      return [post.image_url];
+    }
+  };
+  const imageUrls = getImageUrls();
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -76,10 +86,10 @@ const PostDetailDialog = ({ post, open, onClose }: PostDetailDialogProps) => {
           <DialogTitle className="text-left text-lg">{post.title}</DialogTitle>
         </DialogHeader>
         
-        {post.image_url && (
+        {imageUrls.length > 0 && (
           <div className="rounded-lg overflow-hidden my-4">
             <img 
-              src={post.image_url} 
+              src={imageUrls[0]} 
               alt={post.title}
               className="w-full h-auto object-cover"
             />

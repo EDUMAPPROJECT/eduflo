@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useRegion } from "@/contexts/RegionContext";
+import { useRegion, REGION_ALL } from "@/contexts/RegionContext";
 import BottomNavigation from "@/components/BottomNavigation";
 import Logo from "@/components/Logo";
 import QuickActionMenu from "@/components/QuickActionMenu";
@@ -44,15 +43,12 @@ interface Post {
 }
 
 const HomePage = () => {
-  const navigate = useNavigate();
   const { selectedRegion } = useRegion();
   const [seminars, setSeminars] = useState<Seminar[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loadingSeminars, setLoadingSeminars] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
-  const [profileTags, setProfileTags] = useState<string[]>([]);
   const [userName, setUserName] = useState<string | null>(null);
-  const [checkingProfile, setCheckingProfile] = useState(true);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [postDialogOpen, setPostDialogOpen] = useState(false);
 
@@ -86,7 +82,7 @@ const HomePage = () => {
 
       // 지역이 있으면 해당 지역만, 없으면 신청 가능한 설명회 전부 표시
       const filteredAcademy = (academySeminars || []).filter((s: any) => {
-        if (!regionId) return true;
+        if (!regionId || regionId === REGION_ALL) return true;
         return s.academy?.target_regions?.includes(regionId);
       });
 
@@ -149,6 +145,7 @@ const HomePage = () => {
       // Filter by target_regions (stored on feed_posts table)
       const filtered = (data || []).filter((post: any) => {
         const regions = post.target_regions || [];
+        if (!regionId || regionId === REGION_ALL) return true;
         return regions.includes(regionId);
       });
 
@@ -179,21 +176,16 @@ const HomePage = () => {
         if (user) {
           const { data: profile } = await supabase
             .from("profiles")
-            .select("learning_style, user_name, profile_tags")
+            .select("user_name")
             .eq("id", user.id)
             .maybeSingle();
           
           if (profile?.user_name) {
             setUserName(profile.user_name);
           }
-          if (profile?.profile_tags && profile.profile_tags.length > 0) {
-            setProfileTags(profile.profile_tags);
-          }
         }
       } catch (error) {
         console.error("Error checking profile:", error);
-      } finally {
-        setCheckingProfile(false);
       }
     };
 
