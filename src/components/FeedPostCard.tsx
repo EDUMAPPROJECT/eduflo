@@ -71,7 +71,7 @@ const formatPostTimestamp = (createdAt: string) => {
 const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedPostCardProps) => {
   const navigate = useNavigate();
   const prefix = useRoutePrefix();
-  const config = typeConfig[post.type];
+  const config = typeConfig[post.type] ?? typeConfig.notice;
   const TypeIcon = config.icon;
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
@@ -110,7 +110,7 @@ const FeedPostCard = ({ post, onLikeToggle, onAcademyClick, onCardClick }: FeedP
           text: `${post.academy?.name || post.author?.user_name || "운영자"}의 새 소식: ${post.title}`,
           url: window.location.href,
         });
-      } catch (error) {
+      } catch {
         console.log('Share cancelled');
       }
     }
